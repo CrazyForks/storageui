@@ -1,0 +1,186 @@
+import type { ReactNode, RefObject } from "react"
+
+export type FileSystemView = "icons" | "list" | "columns" | "gallery"
+
+export type FileSystemFolderItem = {
+  kind: "folder"
+  /** Folder prefix, e.g. `"invoices/2026/"`. A trailing slash is added when missing. */
+  path: string
+  name?: string
+  parentPath?: string
+  /** Set when children exist but are not in `items` yet; enables `loadChildren`. */
+  hasChildren?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type FileSystemFileItem = {
+  kind: "file"
+  /** Display/canonical path, e.g. `"invoices/2026/jan.pdf"`. */
+  path: string
+  /** Original object key (S3/R2). Defaults to `path`. */
+  key?: string
+  name?: string
+  parentPath?: string
+  contentType?: string
+  size?: number
+  createdAt?: string
+  updatedAt?: string
+  etag?: string
+  /** Optional if already public/presigned. Otherwise resolved via `getFileUrl`. */
+  url?: string
+  /** Externally generated thumbnail. */
+  previewImageUrl?: string | null
+  previewImageUrls?: string[] | null
+  previewPageCount?: number
+  /** Thumbnail aspect ratio (width / height). */
+  previewAspectRatio?: number
+  metadata?: Record<string, string>
+}
+
+export type FileSystemItem = FileSystemFolderItem | FileSystemFileItem
+
+export type FileSystemLoadChildrenArgs = {
+  path: string
+  cursor: string | null
+}
+
+export type FileSystemLoadChildrenResult = {
+  items: FileSystemItem[]
+  nextCursor?: string | null
+}
+
+export type FileSystemSortKey =
+  | "createdAt"
+  | "kind"
+  | "name"
+  | "size"
+  | "updatedAt"
+
+export type FileSystemSortState = {
+  direction: "asc" | "desc"
+  key: FileSystemSortKey
+}
+
+export type FileSystemFilterType = "dateCreated" | "dateModified" | "fileType"
+
+export type FileSystemFilterOperator =
+  | "after"
+  | "before"
+  | "in-range"
+  | "is"
+  | "is-any-of"
+  | "is-not"
+  | "not-in-range"
+
+export type FileSystemFilter = {
+  id: string
+  operator: FileSystemFilterOperator
+  type: FileSystemFilterType
+  value: string[]
+}
+
+export type FileSystemViewerKind = "docx" | "image" | "pdf" | "xlsx"
+
+export type FileSystemProps = {
+  items: FileSystemItem[]
+  isLoading?: boolean
+  reloadToken?: number | string
+  className?: string
+  title?: string
+  defaultView?: FileSystemView
+  view?: FileSystemView
+  onViewChange?: (view: FileSystemView) => void
+  defaultSort?: FileSystemSortState
+  sort?: FileSystemSortState
+  onSortChange?: (sort: FileSystemSortState) => void
+  defaultFilters?: FileSystemFilter[]
+  filters?: FileSystemFilter[]
+  onFiltersChange?: (filters: FileSystemFilter[]) => void
+  showFileExtensions?: boolean
+  defaultPath?: string
+  onPathChange?: (path: string) => void
+  onSelectionChange?: (item: FileSystemItem | null) => void
+  onCreateFolder?: (path: string) => void | Promise<void>
+  onDownloadEntry?: (item: FileSystemItem) => void | Promise<void>
+  onDeleteEntry?: (item: FileSystemItem) => void | Promise<void>
+  onDeleteEntries?: (items: FileSystemItem[]) => void | Promise<void>
+  onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
+  onMoveEntry?: (
+    item: FileSystemItem,
+    destinationFolder: string
+  ) => void | Promise<void>
+  onMoveEntries?: (
+    items: FileSystemItem[],
+    destinationFolder: string
+  ) => void | Promise<void>
+  isStarred?: (item: FileSystemFileItem) => boolean
+  onToggleStar?: (item: FileSystemFileItem) => void
+  onFileOpen?: (file: FileSystemFileItem, url: string | null) => void
+  getFileUrl?: (file: FileSystemFileItem) => string | Promise<string>
+  loadChildren?: (
+    args: FileSystemLoadChildrenArgs
+  ) => Promise<FileSystemLoadChildrenResult>
+  renderFilePreview?: (file: FileSystemFileItem) => ReactNode
+  loadPreviewImageUrl?: (
+    file: FileSystemFileItem,
+    pageIndex: number
+  ) => Promise<string | null>
+}
+
+export type FolderEntry = FileSystemFolderItem & {
+  name: string
+  parentPath: string
+}
+
+export type FileEntry = FileSystemFileItem & {
+  key: string
+  name: string
+  parentPath: string
+}
+
+export type FileSystemEntry = FolderEntry | FileEntry
+
+export type FileSystemIndex = {
+  children: Map<string, FileSystemEntry[]>
+  files: Map<string, FileEntry>
+  folders: Map<string, FolderEntry>
+}
+
+export type SelectionModifiers = {
+  range?: boolean
+  toggle?: boolean
+}
+
+export type FileSystemViewProps = {
+  currentPath: string
+  entries: FileSystemEntry[]
+  fileFilter: ((file: FileEntry) => boolean) | null
+  getFileUrl?: (file: FileSystemFileItem) => string | Promise<string>
+  index: FileSystemIndex
+  loadPreviewImageUrl?: (
+    file: FileSystemFileItem,
+    pageIndex: number
+  ) => Promise<string | null>
+  loadingFolders: Set<string>
+  onOpen: (entry: FileSystemEntry) => void
+  onSelect: (
+    entry: FileSystemEntry | null,
+    modifiers?: SelectionModifiers
+  ) => void
+  onSelectMany: (entries: FileSystemEntry[]) => void
+  onSortColumnClick: (key: FileSystemSortKey) => void
+  attachedStagePaths: string[]
+  pageUrlCache: Map<string, string>
+  poolStagePath: (path: string) => void
+  registerStageHost: (path: string, element: HTMLElement | null) => void
+  renderFilePreview?: (file: FileSystemFileItem) => ReactNode
+  searchQuery: string
+  selectedEntry: FileSystemEntry | null
+  selectedPath: string | null
+  selectedPaths: ReadonlySet<string>
+  sort: FileSystemSortState
+  treeExpansionRef: RefObject<Map<string, readonly string[]>>
+  onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
+  startTreeRenameRef: RefObject<((entry: FileSystemEntry) => void) | null>
+}

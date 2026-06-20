@@ -29,7 +29,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SettingsDialog } from "@/components/settings-dialog"
+import { SettingsDialog } from "@/components/settings/settings-dialog"
 
 // This app has no backend — it talks to S3 / R2 directly from the browser
 // using credentials from env vars or the "Add connection" dialog (stored in

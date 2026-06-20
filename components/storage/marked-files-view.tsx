@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import {
   FileSystemIconSpriteSheet,
   FileTypeIcon,
-} from "@/components/ui/file-system"
+} from "@/components/explorer/file-system"
 
 const SECTION_LABELS = {
   recents: "Recents",

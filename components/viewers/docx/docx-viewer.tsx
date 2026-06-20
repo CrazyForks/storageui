@@ -28,15 +28,6 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
-  DocumentViewerThumbnailSidebar,
-  useElementWidth,
-  useInlineThumbnailSidebar,
-} from "@/components/ui/document-viewer-sidebar"
-import {
-  renderDocxCommentCard,
-  renderDocxTrackedChangeCard,
-} from "@/components/ui/docx-annotation-card"
-import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -44,7 +35,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { FileThumbnail } from "@/components/ui/file-thumbnail"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -62,6 +52,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { FileThumbnail } from "@/components/explorer/file-thumbnail"
+import {
+  renderDocxCommentCard,
+  renderDocxTrackedChangeCard,
+} from "@/components/viewers/docx/docx-annotation-card"
+import {
+  DocumentViewerThumbnailSidebar,
+  useElementWidth,
+  useInlineThumbnailSidebar,
+} from "@/components/viewers/shared/document-viewer-sidebar"
 
 const DOCX_MIME_TYPE =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document"

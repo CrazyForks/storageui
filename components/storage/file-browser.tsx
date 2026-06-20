@@ -24,13 +24,11 @@ import { useUploadUiStore } from "@/lib/store/upload-ui-store"
 import { useS3FileSystem } from "@/lib/use-s3-file-system"
 import { useUploads } from "@/lib/use-uploads"
 import { Button } from "@/components/ui/button"
-import {
-  FileSystem,
-  type FileSystemFileItem,
-} from "@/components/ui/file-system"
-import { FileViewerDialog } from "@/components/file-viewer-dialog"
-import { MarkedFilesView } from "@/components/marked-files-view"
-import { UploadProgressPanel } from "@/components/upload-progress-panel"
+import { FileSystem } from "@/components/explorer/file-system"
+import type { FileSystemFileItem } from "@/components/explorer/types"
+import { FileViewerDialog } from "@/components/storage/file-viewer-dialog"
+import { MarkedFilesView } from "@/components/storage/marked-files-view"
+import { UploadProgressPanel } from "@/components/storage/upload-progress-panel"
 
 const EMPTY_MARKS: MarkedFile[] = []
 
@@ -259,6 +257,11 @@ export function FileBrowser() {
             refresh()
             setRefreshNonce((nonce) => nonce + 1)
           }}
+          onDeleteEntries={async (items) => {
+            for (const item of items) await deleteEntry(item)
+            refresh()
+            setRefreshNonce((nonce) => nonce + 1)
+          }}
           onRenameEntry={async (item, name) => {
             await renameEntry(item, name)
             refresh()
@@ -266,6 +269,11 @@ export function FileBrowser() {
           }}
           onMoveEntry={async (item, destinationFolder) => {
             await moveEntry(item, destinationFolder)
+            refresh()
+            setRefreshNonce((nonce) => nonce + 1)
+          }}
+          onMoveEntries={async (items, destinationFolder) => {
+            for (const item of items) await moveEntry(item, destinationFolder)
             refresh()
             setRefreshNonce((nonce) => nonce + 1)
           }}

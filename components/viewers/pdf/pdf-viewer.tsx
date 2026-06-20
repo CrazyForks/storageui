@@ -76,12 +76,6 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
-  DocumentViewerSidebarSkeleton,
-  DocumentViewerThumbnailSidebar,
-  useElementWidth,
-  useInlineThumbnailSidebar,
-} from "@/components/ui/document-viewer-sidebar"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -109,7 +103,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { loadSharedPdfEngine } from "@/components/pdf-thumbnail-utils"
+import { loadSharedPdfEngine } from "@/components/viewers/pdf/pdf-thumbnail-utils"
+import {
+  DocumentViewerSidebarSkeleton,
+  DocumentViewerThumbnailSidebar,
+  useElementWidth,
+  useInlineThumbnailSidebar,
+} from "@/components/viewers/shared/document-viewer-sidebar"
 
 export type PDFViewerPageOverlayProps = {
   pageNumber: number

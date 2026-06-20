@@ -1,7 +1,7 @@
 import { type Metadata } from "next"
 
-import { FileBrowser } from "@/components/file-browser"
-import { SectionUrlSync } from "@/components/section-url-sync"
+import { FileBrowser } from "@/components/storage/file-browser"
+import { SectionUrlSync } from "@/components/storage/section-url-sync"
 
 const title = "File System"
 const description =

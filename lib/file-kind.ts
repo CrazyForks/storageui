@@ -1,4 +1,4 @@
-import type { FileSystemFileItem } from "@/components/ui/file-system"
+import type { FileSystemFileItem } from "@/components/explorer/types"
 
 export type FileKind =
   | "text"

@@ -20,22 +20,25 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { type FileSystemFileItem } from "@/components/ui/file-system"
 import { Spinner } from "@/components/ui/spinner"
-import { CodeViewer, type CodeViewerHandle } from "@/components/code-viewer"
+import type { FileSystemFileItem } from "@/components/explorer/types"
+import {
+  CodeViewer,
+  type CodeViewerHandle,
+} from "@/components/viewers/code/code-viewer"
 
 const LazyPDFViewer = React.lazy(() =>
-  import("@/components/ui/pdf-viewer").then((mod) => ({
+  import("@/components/viewers/pdf/pdf-viewer").then((mod) => ({
     default: mod.PDFViewer,
   }))
 )
 const LazyDocxViewerPreview = React.lazy(() =>
-  import("@/components/ui/docx-viewer").then((mod) => ({
+  import("@/components/viewers/docx/docx-viewer").then((mod) => ({
     default: mod.DocxViewerPreview,
   }))
 )
 const LazyXlsxViewerPreview = React.lazy(() =>
-  import("@/components/ui/xlsx-viewer").then((mod) => ({
+  import("@/components/viewers/xlsx/xlsx-viewer").then((mod) => ({
     default: mod.XlsxViewerPreview,
   }))
 )

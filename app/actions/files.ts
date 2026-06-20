@@ -12,7 +12,7 @@ import {
 import type {
   FileSystemItem,
   FileSystemLoadChildrenResult,
-} from "@/components/ui/file-system"
+} from "@/components/explorer/types"
 
 const PAGE_LIMIT = 1000
 const URL_EXPIRES_IN = 3600

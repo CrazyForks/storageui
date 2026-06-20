@@ -1,7 +1,7 @@
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { AddConnectionDialog } from "@/components/add-connection-dialog"
 import { AppSidebar } from "@/components/app-sidebar"
-import { ConnectionStoreHydrator } from "@/components/connection-store-hydrator"
+import { AddConnectionDialog } from "@/components/connections/add-connection-dialog"
+import { ConnectionStoreHydrator } from "@/components/connections/connection-store-hydrator"
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (

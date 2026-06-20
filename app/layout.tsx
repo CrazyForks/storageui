@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils"
 import { withUiBasePath } from "@/lib/zone-path"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { ActiveThemeProvider } from "@/components/active-theme"
-import { TailwindIndicator } from "@/components/tailwind-indicator"
-import { ThemeProvider } from "@/components/theme-provider"
+import { ActiveThemeProvider } from "@/components/providers/active-theme"
+import { TailwindIndicator } from "@/components/providers/tailwind-indicator"
+import { ThemeProvider } from "@/components/providers/theme-provider"
 
 import "@/app/globals.css"
 

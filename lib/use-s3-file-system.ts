@@ -8,7 +8,7 @@ import type {
   FileSystemFileItem,
   FileSystemItem,
   FileSystemLoadChildrenResult,
-} from "@/components/ui/file-system"
+} from "@/components/explorer/types"
 import {
   createFolderAction,
   deleteEntryAction,

@@ -8,7 +8,7 @@ import type {
   FileSystemFilter,
   FileSystemSortState,
   FileSystemView,
-} from "@/components/ui/file-system"
+} from "@/components/explorer/types"
 
 const STORE_NAME = "filesystem.bucket-browser-store"
 const STORE_VERSION = 1
