@@ -14,6 +14,7 @@ import {
 } from "@/lib/icons"
 import { useConnections } from "@/lib/store/connection-store"
 import { useUploadUiStore } from "@/lib/store/upload-ui-store"
+import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
@@ -47,7 +48,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const [isSettingsOpen, setSettingsOpen] = React.useState(false)
   const { connections, activeConnection, setActiveConnection, openAddDialog } =
     useConnections()
-  const setUploadOpen = useUploadUiStore((state) => state.setUploadOpen)
+  const pickFiles = useUploadUiStore((state) => state.pickFiles)
 
   return (
     <>
@@ -56,15 +57,18 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroup>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton
-                  variant="primary"
-                  tooltip="Upload files"
+                <Button
+                  variant="default"
+                  title="Upload files"
                   disabled={!activeConnection}
-                  onClick={() => setUploadOpen(true)}
+                  onClick={() => pickFiles?.()}
+                  className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
                 >
                   <AppIcon icon={Upload01Icon} />
-                  <span>Upload</span>
-                </SidebarMenuButton>
+                  <span className="group-data-[collapsible=icon]:hidden">
+                    Upload
+                  </span>
+                </Button>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>

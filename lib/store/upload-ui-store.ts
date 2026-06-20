@@ -1,16 +1,17 @@
 "use client"
 
-// Ephemeral UI state for the upload dialog, shared between the sidebar (which
-// owns the trigger) and the file browser (which owns the dialog + queue). Not
-// persisted — it's transient, unlike the other stores in this folder.
+// Bridges the sidebar's Upload button to the file browser's hidden file input.
+// The browser owns the <input> (and the current folder); the sidebar just calls
+// the registered opener synchronously within its click handler so the native
+// file picker still counts as a user gesture. Not persisted.
 import { create } from "zustand"
 
 type UploadUiStore = {
-  isUploadOpen: boolean
-  setUploadOpen: (open: boolean) => void
+  pickFiles: (() => void) | null
+  setPickFiles: (fn: (() => void) | null) => void
 }
 
 export const useUploadUiStore = create<UploadUiStore>((set) => ({
-  isUploadOpen: false,
-  setUploadOpen: (open) => set({ isUploadOpen: open }),
+  pickFiles: null,
+  setPickFiles: (fn) => set({ pickFiles: fn }),
 }))

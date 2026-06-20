@@ -24,7 +24,6 @@ import {
   type FileSystemFileItem,
 } from "@/components/ui/file-system"
 import { FileViewerDialog } from "@/components/file-viewer-dialog"
-import { UploadDialog } from "@/components/upload-dialog"
 import { UploadProgressPanel } from "@/components/upload-progress-panel"
 
 function EmptyState() {
@@ -75,10 +74,16 @@ export function FileBrowser() {
     file: FileSystemFileItem
     url: string | null
   } | null>(null)
-  // The upload dialog is triggered from the sidebar, so its open state lives in
-  // a shared store rather than local component state.
-  const isUploadOpen = useUploadUiStore((state) => state.isUploadOpen)
-  const setUploadOpen = useUploadUiStore((state) => state.setUploadOpen)
+  // The Upload trigger lives in the sidebar, but the file input (and the
+  // current folder) live here. Expose an opener through the shared store so the
+  // sidebar can pop the native picker; selected files upload straight to the
+  // current folder, no intermediate dialog.
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const setPickFiles = useUploadUiStore((state) => state.setPickFiles)
+  React.useEffect(() => {
+    setPickFiles(() => fileInputRef.current?.click())
+    return () => setPickFiles(null)
+  }, [setPickFiles])
   // The folder FileSystem is currently showing, tagged with the connection it
   // belongs to. On a connection switch the path is stale, so we fall back to
   // the root — otherwise the remount opens a non-root folder with no back
@@ -195,11 +200,17 @@ export function FileBrowser() {
         }}
       />
 
-      <UploadDialog
-        open={isUploadOpen}
-        onOpenChange={setUploadOpen}
-        defaultPrefix={currentPath}
-        onSubmit={(files, prefix) => enqueue(files, prefix)}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.length) {
+            enqueue(Array.from(e.target.files), currentPath)
+          }
+          e.target.value = ""
+        }}
       />
 
       <UploadProgressPanel
