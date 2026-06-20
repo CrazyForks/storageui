@@ -1818,7 +1818,7 @@ function PDFViewerInner({
   const { state: zoomState, provides: zoom } = useZoom(documentId)
   const { provides: thumbnails } = useThumbnailCapability()
   const { plugin: thumbnailPlugin } = useThumbnailPlugin()
-  const [sidebarOpen, setSidebarOpen] = React.useState(false)
+  const [sidebarOpen, setSidebarOpen] = React.useState(true)
   const [isPreparingDownload, setIsPreparingDownload] = React.useState(false)
   const [pageRotationDeltas, setPageRotationDeltas] =
     React.useState<PageRotationDeltas>(() => new Map())
@@ -2517,7 +2517,7 @@ function PDFViewerDocumentLoader({
         className={innerProps.className}
         showToolbar={innerProps.showToolbar}
         showUpload={innerProps.showUpload}
-        sidebarOpen={false}
+        sidebarOpen={Boolean(pdfFile) && !documentFailed}
         state={!pdfFile ? "empty" : documentFailed ? "error" : "loading"}
         onUploadFile={(file) => {
           innerProps.onUploadFile(file)
@@ -2655,7 +2655,10 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
             <div className="min-h-12 border-b bg-background" />
           ) : null}
           <div className="relative min-h-0 flex-1">
-            <PDFViewerLoadingSkeleton sidebarInline sidebarOpen={false} />
+            <PDFViewerLoadingSkeleton
+              sidebarInline
+              sidebarOpen={Boolean(pdfFile)}
+            />
           </div>
         </div>
       )

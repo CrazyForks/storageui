@@ -7,6 +7,7 @@ import {
   migrateLegacyConnectionStorage,
   useConnectionStore,
 } from "@/lib/store/connection-store"
+import { useFileMarksStore } from "@/lib/store/file-marks-store"
 import { usePreferencesStore } from "@/lib/store/preferences-store"
 
 export function ConnectionStoreHydrator({
@@ -19,6 +20,7 @@ export function ConnectionStoreHydrator({
     void useConnectionStore.persist.rehydrate()
     void usePreferencesStore.persist.rehydrate()
     void useBucketBrowserStore.persist.rehydrate()
+    void useFileMarksStore.persist.rehydrate()
   }, [])
 
   return children

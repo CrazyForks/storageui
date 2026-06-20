@@ -8,6 +8,7 @@ import {
   AppIcon,
   Cancel01Icon,
   Download01Icon,
+  FavouriteIcon,
   File01Icon,
   Search01Icon,
 } from "@/lib/icons"
@@ -148,16 +149,44 @@ function ViewerBody({
   }
 }
 
+function StarButton({
+  isStarred,
+  onToggleStar,
+}: {
+  isStarred: boolean
+  onToggleStar: () => void
+}) {
+  return (
+    <Button
+      size="icon"
+      variant="ghost"
+      aria-label={isStarred ? "Remove star" : "Add star"}
+      title={isStarred ? "Remove star" : "Add star"}
+      onClick={onToggleStar}
+      className={isStarred ? "text-amber-500 hover:text-amber-500" : undefined}
+    >
+      <AppIcon
+        icon={FavouriteIcon}
+        className={isStarred ? "fill-current" : undefined}
+      />
+    </Button>
+  )
+}
+
 export function FileViewerDialog({
   file,
   url,
   open,
   onOpenChange,
+  isStarred = false,
+  onToggleStar,
 }: {
   file: FileSystemFileItem | null
   url: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  isStarred?: boolean
+  onToggleStar?: () => void
 }) {
   const kind = file ? getFileKind(file) : "other"
   const fileName = file
@@ -206,6 +235,12 @@ export function FileViewerDialog({
                   <span />
                 )}
                 <div className="flex shrink-0 items-center gap-1">
+                  {onToggleStar ? (
+                    <StarButton
+                      isStarred={isStarred}
+                      onToggleStar={onToggleStar}
+                    />
+                  ) : null}
                   {kind === "text" ? (
                     <Button
                       aria-label="Search"
@@ -238,7 +273,17 @@ export function FileViewerDialog({
               <div className="min-h-0 flex-1">{body}</div>
             </div>
           ) : (
-            body
+            <>
+              {onToggleStar ? (
+                <div className="absolute end-11 top-2 z-10">
+                  <StarButton
+                    isStarred={isStarred}
+                    onToggleStar={onToggleStar}
+                  />
+                </div>
+              ) : null}
+              {body}
+            </>
           )}
         </DialogContent>
       ) : null}

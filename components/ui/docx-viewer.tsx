@@ -508,6 +508,7 @@ function DocxPageNumberControl({
 function DocxToolbar({
   activePageStore,
   controlsDisabled,
+  fileName,
   isDark,
   isPreparingDownload,
   onDownload,
@@ -527,6 +528,7 @@ function DocxToolbar({
 }: {
   activePageStore: DocxActivePageStore
   controlsDisabled: boolean
+  fileName: string
   isDark: boolean
   isPreparingDownload: boolean
   onDownload: () => void
@@ -551,6 +553,13 @@ function DocxToolbar({
     <div className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b bg-background px-3 py-2">
       <TooltipProvider>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span
+            className="max-w-48 truncate text-sm font-medium sm:max-w-72"
+            title={fileName}
+          >
+            {fileName}
+          </span>
+          <Separator orientation="vertical" className="mx-1 h-4 self-center" />
           <ToolbarTooltip label="Toggle thumbnails">
             <Button
               type="button"
@@ -1091,7 +1100,7 @@ function DocxViewerContent({
   const [viewerShellRef, viewerShellWidth] = useElementWidth<HTMLDivElement>()
   const [uploadedDocxFile, setUploadedDocxFile] =
     React.useState<UploadedDocxFile | null>(null)
-  const [sidebarOpen, setSidebarOpen] = React.useState(false)
+  const [sidebarOpen, setSidebarOpen] = React.useState(true)
   const activePageStore = React.useMemo(createDocxActivePageStore, [])
   const resolvedDefaultZoomScale = normalizeDocxZoomScale(defaultZoom)
   const activeUploadedDocxFile =
@@ -1167,7 +1176,7 @@ function DocxViewerContent({
       ? Math.max(1, reportedPageCount || editor.totalPages)
       : 0
   const thumbnailSidebarVisible = Boolean(
-    sidebarOpen && (pageCount || isLoadingDocument)
+    sidebarOpen && hasDocument && (pageCount || isLoadingDocument)
   )
   const controlsDisabled =
     !hasDocument || isLoadingDocument || Boolean(loadError)
@@ -1422,6 +1431,7 @@ function DocxViewerContent({
         <DocxToolbar
           activePageStore={activePageStore}
           controlsDisabled={controlsDisabled}
+          fileName={displayFileName}
           isDark={effectiveIsDark}
           isPreparingDownload={isPreparingDownload}
           onDownload={handleDownload}

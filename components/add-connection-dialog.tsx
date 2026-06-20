@@ -36,6 +36,33 @@ const PROVIDER_OPTIONS: { value: ConnectionProvider; label: string }[] = [
   { value: "s3-compatible", label: "S3-compatible (custom endpoint)" },
 ]
 
+// A browser request that never gets a response (blocked by CORS, or the
+// endpoint is unreachable) throws "Failed to fetch" / "Load failed", which the
+// SDK surfaces as a generic `Provider` error. That bare message is unhelpful,
+// so point at the usual culprits — CORS and bucket permissions — instead.
+const NETWORK_ERROR_PATTERN = /failed to fetch|load failed|networkerror/i
+
+const CORS_HINT =
+  "Couldn’t reach the bucket. This is usually the bucket’s CORS policy not allowing this site, or the credentials lacking permission to list it. Check the bucket’s CORS configuration and the key’s permissions, then try again."
+
+function describeConnectionError(err: unknown): string {
+  if (err instanceof FilesError) {
+    if (NETWORK_ERROR_PATTERN.test(err.message)) return CORS_HINT
+    if (err.code === "Unauthorized") {
+      return "Access denied. Check the access key and secret, and that the credentials have permission to list this bucket."
+    }
+    if (err.code === "NotFound") {
+      return "Bucket not found. Check the bucket name, and the region or endpoint."
+    }
+    return `${err.message} (${err.code})`
+  }
+  if (err instanceof Error) {
+    if (NETWORK_ERROR_PATTERN.test(err.message)) return CORS_HINT
+    return err.message
+  }
+  return "Could not connect. Check the bucket, credentials, and CORS."
+}
+
 type FormState = {
   name: string
   provider: ConnectionProvider
@@ -171,13 +198,7 @@ export function AddConnectionDialog() {
       else addConnection(connection)
       setAddDialogOpen(false)
     } catch (err) {
-      if (err instanceof FilesError) {
-        setError(`${err.message} (${err.code})`)
-      } else if (err instanceof Error) {
-        setError(err.message)
-      } else {
-        setError("Could not connect. Check the bucket, credentials, and CORS.")
-      }
+      setError(describeConnectionError(err))
     } finally {
       setStatus("idle")
     }
@@ -202,6 +223,16 @@ export function AddConnectionDialog() {
             <form
               id="add-connection-form"
               onSubmit={handleSubmit}
+              onKeyDown={(event) => {
+                if (
+                  editingConnection &&
+                  (event.metaKey || event.ctrlKey) &&
+                  event.key === "Enter"
+                ) {
+                  event.preventDefault()
+                  event.currentTarget.requestSubmit()
+                }
+              }}
               className="grid gap-4"
             >
               <Field label="Provider">

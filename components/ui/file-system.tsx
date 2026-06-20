@@ -10,6 +10,7 @@ import {
 } from "@pierre/trees"
 import { FileTree as PierreFileTree, useFileTree } from "@pierre/trees/react"
 import { createPortal } from "react-dom"
+import { toast } from "sonner"
 
 import {
   AppIcon,
@@ -20,7 +21,10 @@ import {
   ArrowUpDownIcon,
   Calendar03Icon,
   Cancel01Icon,
+  Delete02Icon,
   Download01Icon,
+  Edit02Icon,
+  FavouriteIcon,
   File01Icon,
   FilterIcon,
   Folder01Icon,
@@ -165,6 +169,14 @@ export type FileSystemProps = {
   items: FileSystemItem[]
   /** Replace the file content area with a loading message while keeping the toolbar visible. */
   isLoading?: boolean
+  /**
+   * Bump this to re-list the current folder in place after an external
+   * mutation (upload, delete, rename). The folder's lazily-loaded children are
+   * dropped and re-fetched without remounting, so navigation history (Back /
+   * Forward) and the current location are preserved. The root folder re-lists
+   * from `items`, so refresh that alongside bumping the token.
+   */
+  reloadToken?: number | string
   className?: string
   /** Label for the root folder. */
   title?: string
@@ -190,6 +202,16 @@ export type FileSystemProps = {
   onSelectionChange?: (item: FileSystemItem | null) => void
   /** Create an empty folder marker at the supplied full path. */
   onCreateFolder?: (path: string) => void | Promise<void>
+  /** Download a file, or a folder as an archive. */
+  onDownloadEntry?: (item: FileSystemItem) => void | Promise<void>
+  /** Delete a file, or recursively delete a folder after confirmation. */
+  onDeleteEntry?: (item: FileSystemItem) => void | Promise<void>
+  /** Rename a file or folder within its current parent folder. */
+  onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
+  /** Whether a file is starred — drives the context menu's star label/icon. */
+  isStarred?: (item: FileSystemFileItem) => boolean
+  /** Toggle a file's starred state from the context menu. Files only. */
+  onToggleStar?: (item: FileSystemFileItem) => void
   /**
    * Called on file open (double-click), replacing the built-in behavior. By
    * default PDF, DOCX, XLSX, and image files open in a viewer dialog and
@@ -1025,7 +1047,7 @@ const FILE_ICON_COLOR_CSS = `
 .dark [data-file-system-on-primary] { ${fileIconColorVariables(0)} }
 `
 
-function FileSystemIconSpriteSheet() {
+export function FileSystemIconSpriteSheet() {
   return (
     <>
       <span
@@ -1038,7 +1060,7 @@ function FileSystemIconSpriteSheet() {
   )
 }
 
-function FileTypeIcon({
+export function FileTypeIcon({
   fileName,
   className,
 }: {
@@ -1393,11 +1415,17 @@ export function FileSystem({
   onPathChange,
   onSelectionChange,
   onCreateFolder,
+  onDownloadEntry,
+  onDeleteEntry,
+  onRenameEntry,
+  isStarred,
+  onToggleStar,
   onFileOpen,
   getFileUrl,
   loadChildren,
   loadPreviewImageUrl,
   renderFilePreview,
+  reloadToken,
 }: FileSystemProps) {
   const [internalView, setInternalView] = React.useState(defaultView)
   const view = viewProp ?? internalView
@@ -1861,6 +1889,19 @@ export function FileSystem({
   } | null>(null)
   const [contextMenuEntry, setContextMenuEntry] =
     React.useState<FileSystemEntry | null>(null)
+  const [deleteEntryTarget, setDeleteEntryTarget] =
+    React.useState<FileSystemEntry | null>(null)
+  const [deleteEntryError, setDeleteEntryError] = React.useState<string | null>(
+    null
+  )
+  const [isDeletingEntry, setDeletingEntry] = React.useState(false)
+  const [renameEntryTarget, setRenameEntryTarget] =
+    React.useState<FileSystemEntry | null>(null)
+  const [renameEntryName, setRenameEntryName] = React.useState("")
+  const [renameEntryError, setRenameEntryError] = React.useState<string | null>(
+    null
+  )
+  const [isRenamingEntry, setRenamingEntry] = React.useState(false)
   const [isNewFolderOpen, setNewFolderOpen] = React.useState(false)
   const [newFolderName, setNewFolderName] = React.useState("")
   const [newFolderError, setNewFolderError] = React.useState<string | null>(
@@ -2087,6 +2128,91 @@ export function FileSystem({
     },
     [resolveFileUrl]
   )
+
+  const handleDownloadEntry = React.useCallback(
+    (entry: FileSystemEntry) => {
+      if (!onDownloadEntry) {
+        if (entry.kind === "file") downloadFile(entry)
+        return
+      }
+
+      void Promise.resolve(onDownloadEntry(entry)).catch((error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Could not download item."
+        )
+      })
+    },
+    [downloadFile, onDownloadEntry]
+  )
+
+  const confirmDeleteEntry = React.useCallback(async () => {
+    if (!deleteEntryTarget || !onDeleteEntry || isDeletingEntry) return
+
+    setDeletingEntry(true)
+    setDeleteEntryError(null)
+
+    try {
+      await onDeleteEntry(deleteEntryTarget)
+      setDeleteEntryTarget(null)
+      selectEntry(null)
+    } catch (error) {
+      setDeleteEntryError(
+        error instanceof Error ? error.message : "Could not delete item."
+      )
+    } finally {
+      setDeletingEntry(false)
+    }
+  }, [deleteEntryTarget, isDeletingEntry, onDeleteEntry, selectEntry])
+
+  const confirmRenameEntry = React.useCallback(async () => {
+    if (!renameEntryTarget || !onRenameEntry || isRenamingEntry) return
+
+    const name = renameEntryName.trim()
+    if (!name) {
+      setRenameEntryError("Enter a name.")
+      return
+    }
+    if (name === "." || name === ".." || name.includes("/")) {
+      setRenameEntryError("Names cannot be '.', '..', or contain '/'.")
+      return
+    }
+
+    const filePath = `${renameEntryTarget.parentPath}${name}`
+    const folderPath = normalizeFolderPath(filePath)
+    const hasCollision =
+      (sortedIndex.files.has(filePath) &&
+        renameEntryTarget.path !== filePath) ||
+      (sortedIndex.folders.has(folderPath) &&
+        renameEntryTarget.path !== folderPath)
+
+    if (hasCollision) {
+      setRenameEntryError("An item with this name already exists.")
+      return
+    }
+
+    setRenamingEntry(true)
+    setRenameEntryError(null)
+
+    try {
+      await onRenameEntry(renameEntryTarget, name)
+      setRenameEntryTarget(null)
+      selectEntry(null)
+    } catch (error) {
+      setRenameEntryError(
+        error instanceof Error ? error.message : "Could not rename item."
+      )
+    } finally {
+      setRenamingEntry(false)
+    }
+  }, [
+    isRenamingEntry,
+    onRenameEntry,
+    renameEntryName,
+    renameEntryTarget,
+    selectEntry,
+    sortedIndex.files,
+    sortedIndex.folders,
+  ])
 
   const openEntry = React.useCallback(
     (entry: FileSystemEntry) => {
@@ -2481,14 +2607,63 @@ export function FileSystem({
                   />
                   Open
                 </ContextMenuItem>
-                {contextMenuEntry.kind === "file" ? (
+                {contextMenuEntry.kind === "file" && onToggleStar ? (
                   <>
                     <ContextMenuSeparator />
                     <ContextMenuItem
-                      onClick={() => downloadFile(contextMenuEntry)}
+                      onClick={() => onToggleStar(contextMenuEntry)}
                     >
-                      <AppIcon icon={Download01Icon} />
-                      Download
+                      <AppIcon
+                        icon={FavouriteIcon}
+                        className={
+                          isStarred?.(contextMenuEntry)
+                            ? "fill-current text-amber-500"
+                            : undefined
+                        }
+                      />
+                      {isStarred?.(contextMenuEntry)
+                        ? "Remove Star"
+                        : "Add Star"}
+                    </ContextMenuItem>
+                  </>
+                ) : null}
+                {onDownloadEntry ||
+                onRenameEntry ||
+                contextMenuEntry.kind === "file" ? (
+                  <ContextMenuSeparator />
+                ) : null}
+                {onDownloadEntry || contextMenuEntry.kind === "file" ? (
+                  <ContextMenuItem
+                    onClick={() => handleDownloadEntry(contextMenuEntry)}
+                  >
+                    <AppIcon icon={Download01Icon} />
+                    Download
+                  </ContextMenuItem>
+                ) : null}
+                {onRenameEntry ? (
+                  <ContextMenuItem
+                    onClick={() => {
+                      setRenameEntryTarget(contextMenuEntry)
+                      setRenameEntryName(contextMenuEntry.name)
+                      setRenameEntryError(null)
+                    }}
+                  >
+                    <AppIcon icon={Edit02Icon} />
+                    Rename
+                  </ContextMenuItem>
+                ) : null}
+                {onDeleteEntry ? (
+                  <>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      variant="destructive"
+                      onClick={() => {
+                        setDeleteEntryError(null)
+                        setDeleteEntryTarget(contextMenuEntry)
+                      }}
+                    >
+                      <AppIcon icon={Delete02Icon} />
+                      Delete
                     </ContextMenuItem>
                   </>
                 ) : null}
@@ -2597,6 +2772,139 @@ export function FileSystem({
                   disabled={!newFolderName.trim()}
                 >
                   Create
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          ) : null}
+        </Dialog>
+        <Dialog
+          open={renameEntryTarget !== null}
+          onOpenChange={(open) => {
+            if (isRenamingEntry) return
+            if (!open) {
+              setRenameEntryTarget(null)
+              setRenameEntryError(null)
+            }
+          }}
+        >
+          {renameEntryTarget ? (
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>
+                  Rename{" "}
+                  {renameEntryTarget.kind === "folder" ? "Folder" : "File"}
+                </DialogTitle>
+                <DialogDescription>
+                  Enter a new name for “{renameEntryTarget.name}”.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogPanel>
+                <form
+                  id="rename-entry-form"
+                  className="grid gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void confirmRenameEntry()
+                  }}
+                >
+                  <Input
+                    autoFocus
+                    value={renameEntryName}
+                    onFocus={(event) => {
+                      const extensionIndex =
+                        renameEntryTarget.kind === "file"
+                          ? renameEntryName.lastIndexOf(".")
+                          : -1
+
+                      event.currentTarget.setSelectionRange(
+                        0,
+                        extensionIndex > 0
+                          ? extensionIndex
+                          : renameEntryName.length
+                      )
+                    }}
+                    onChange={(event) => {
+                      setRenameEntryName(event.target.value)
+                      setRenameEntryError(null)
+                    }}
+                    aria-invalid={renameEntryError ? true : undefined}
+                  />
+                  {renameEntryError ? (
+                    <p className="text-sm text-destructive">
+                      {renameEntryError}
+                    </p>
+                  ) : null}
+                </form>
+              </DialogPanel>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isRenamingEntry}
+                  onClick={() => setRenameEntryTarget(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  form="rename-entry-form"
+                  loading={isRenamingEntry}
+                  disabled={
+                    !renameEntryName.trim() ||
+                    renameEntryName.trim() === renameEntryTarget.name
+                  }
+                >
+                  Rename
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          ) : null}
+        </Dialog>
+        <Dialog
+          open={deleteEntryTarget !== null}
+          onOpenChange={(open) => {
+            if (isDeletingEntry) return
+            if (!open) {
+              setDeleteEntryTarget(null)
+              setDeleteEntryError(null)
+            }
+          }}
+        >
+          {deleteEntryTarget ? (
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>
+                  Delete{" "}
+                  {deleteEntryTarget.kind === "folder" ? "Folder" : "File"}?
+                </DialogTitle>
+                <DialogDescription>
+                  “{deleteEntryTarget.name}” will be permanently deleted
+                  {deleteEntryTarget.kind === "folder"
+                    ? " along with everything inside it."
+                    : "."}
+                </DialogDescription>
+              </DialogHeader>
+              {deleteEntryError ? (
+                <DialogPanel>
+                  <p className="text-sm text-destructive">{deleteEntryError}</p>
+                </DialogPanel>
+              ) : null}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isDeletingEntry}
+                  onClick={() => setDeleteEntryTarget(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  loading={isDeletingEntry}
+                  onClick={() => void confirmDeleteEntry()}
+                >
+                  Delete
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -4094,7 +4402,7 @@ function FileSystemListView({
       {/* Paddings match the tree's row geometry: name text starts 46px in
           (16px tree padding + 30px icon lane), metadata ends 24px from the
           right (16px tree padding + 8px decoration inset). */}
-      <div className="flex shrink-0 items-center border-b py-1 pr-6 pl-[46px] text-xs font-medium text-muted-foreground">
+      <div className="mb-1.5 flex shrink-0 items-center border-b py-1 pr-6 pl-[46px] text-xs font-medium text-muted-foreground">
         <FileSystemListColumnHeader
           className="flex-1 justify-start"
           label="Name"

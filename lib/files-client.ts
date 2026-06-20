@@ -1,14 +1,17 @@
-import { Files } from "files-sdk"
+import { createFiles as createFilesSdk, type Files } from "files-sdk"
 import { r2 } from "files-sdk/r2"
 import { s3 } from "files-sdk/s3"
+import { zip, type ZipApi } from "files-sdk/zip"
 
 import type { Connection } from "@/lib/connections"
 
-const clientCache = new Map<string, Files>()
+export type FilesClient = Files & ZipApi
 
-function buildFiles(connection: Connection): Files {
+const clientCache = new Map<string, FilesClient>()
+
+function buildFiles(connection: Connection): FilesClient {
   if (connection.provider === "r2") {
-    return new Files({
+    return createFilesSdk({
       adapter: r2({
         bucket: connection.bucket,
         accountId: connection.accountId,
@@ -16,12 +19,13 @@ function buildFiles(connection: Connection): Files {
         secretAccessKey: connection.secretAccessKey,
         publicBaseUrl: connection.publicBaseUrl,
       }),
+      plugins: [zip()],
     })
   }
 
   // s3 + s3-compatible. AWS SDK requires a region even with a custom
   // endpoint; "auto" is the conventional value for S3-compatible services.
-  return new Files({
+  return createFilesSdk({
     adapter: s3({
       bucket: connection.bucket,
       region: connection.region || "auto",
@@ -33,6 +37,7 @@ function buildFiles(connection: Connection): Files {
       },
       publicBaseUrl: connection.publicBaseUrl || undefined,
     }),
+    plugins: [zip()],
   })
 }
 
@@ -53,7 +58,7 @@ function fingerprint(c: Connection): string {
 }
 
 /** Build (and cache) a `Files` client for a connection. */
-export function createFiles(connection: Connection): Files {
+export function createFiles(connection: Connection): FilesClient {
   const key = fingerprint(connection)
   let files = clientCache.get(key)
   if (!files) {

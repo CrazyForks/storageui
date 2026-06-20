@@ -14,6 +14,11 @@ import {
   useBucketBrowserStore,
 } from "@/lib/store/bucket-browser-store"
 import { useConnections } from "@/lib/store/connection-store"
+import {
+  useFileMarksStore,
+  type MarkedFile,
+} from "@/lib/store/file-marks-store"
+import { useNavStore } from "@/lib/store/nav-store"
 import { usePreferencesStore } from "@/lib/store/preferences-store"
 import { useUploadUiStore } from "@/lib/store/upload-ui-store"
 import { useS3FileSystem } from "@/lib/use-s3-file-system"
@@ -24,7 +29,33 @@ import {
   type FileSystemFileItem,
 } from "@/components/ui/file-system"
 import { FileViewerDialog } from "@/components/file-viewer-dialog"
+import { MarkedFilesView } from "@/components/marked-files-view"
 import { UploadProgressPanel } from "@/components/upload-progress-panel"
+
+const EMPTY_MARKS: MarkedFile[] = []
+
+function toMarkedFile(file: FileSystemFileItem): MarkedFile {
+  return {
+    key: file.key ?? file.path,
+    path: file.path,
+    name: file.name,
+    contentType: file.contentType,
+    size: file.size,
+    updatedAt: file.updatedAt,
+  }
+}
+
+function fromMarkedFile(file: MarkedFile): FileSystemFileItem {
+  return {
+    kind: "file",
+    path: file.path,
+    key: file.key,
+    name: file.name,
+    contentType: file.contentType,
+    size: file.size,
+    updatedAt: file.updatedAt,
+  }
+}
 
 function EmptyState() {
   const { openAddDialog } = useConnections()
@@ -60,12 +91,29 @@ export function FileBrowser() {
   const showFileExtensions = usePreferencesStore(
     (state) => state.showFileExtensions
   )
+  const section = useNavStore((state) => state.section)
+  const recents = useFileMarksStore(
+    (state) => state.buckets[bucketKey]?.recents ?? EMPTY_MARKS
+  )
+  const starred = useFileMarksStore(
+    (state) => state.buckets[bucketKey]?.starred ?? EMPTY_MARKS
+  )
+  const recordRecent = useFileMarksStore((state) => state.recordRecent)
+  const toggleStar = useFileMarksStore((state) => state.toggleStar)
+  const clearRecents = useFileMarksStore((state) => state.clearRecents)
+  const starredKeys = React.useMemo(
+    () => new Set(starred.map((file) => file.key)),
+    [starred]
+  )
   const {
     items,
     loadChildren,
     getFileUrl,
     uploadFile,
     createFolder,
+    downloadEntry,
+    deleteEntry,
+    renameEntry,
     refresh,
     isLoading,
     error,
@@ -112,9 +160,29 @@ export function FileBrowser() {
     e.preventDefault()
     dragDepth.current = 0
     setIsDragging(false)
+    if (section !== "all") return
     if (e.dataTransfer.files.length) {
       enqueue(Array.from(e.dataTransfer.files), currentPath)
     }
+  }
+
+  // Opening any file (from the browser or the Recents/Starred lists) records it
+  // as recent. Marked-list opens also re-resolve a fresh URL via the S3 key.
+  const openFile = (file: FileSystemFileItem, url: string | null) => {
+    recordRecent(bucketKey, toMarkedFile(file))
+    setOpened({ file, url })
+  }
+
+  const openMarkedFile = async (marked: MarkedFile) => {
+    const file = fromMarkedFile(marked)
+    recordRecent(bucketKey, marked)
+    let url: string | null = null
+    try {
+      url = await getFileUrl(file)
+    } catch {
+      url = null
+    }
+    setOpened({ file, url })
   }
 
   // Until the persisted store rehydrates, we don't yet know if a bucket is
@@ -127,7 +195,7 @@ export function FileBrowser() {
     return <EmptyState />
   }
 
-  if (error && !isLoading) {
+  if (error && !isLoading && section === "all") {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
         <h2 className="text-base font-semibold">Couldn’t load this bucket</h2>
@@ -144,6 +212,7 @@ export function FileBrowser() {
     <div
       className="relative flex h-full min-h-0 flex-col"
       onDragEnter={(e) => {
+        if (section !== "all") return
         if (!Array.from(e.dataTransfer.types).includes("Files")) return
         dragDepth.current += 1
         setIsDragging(true)
@@ -158,32 +227,58 @@ export function FileBrowser() {
       }}
       onDrop={handleDrop}
     >
-      <FileSystem
-        key={`${activeConnection.id}:${refreshNonce}`}
-        items={items}
-        isLoading={isLoading}
-        title={activeConnection.name}
-        view={browserSettings.view}
-        onViewChange={(view) => setBucketView(bucketKey, view)}
-        sort={browserSettings.sort}
-        onSortChange={(sort) => setBucketSort(bucketKey, sort)}
-        filters={browserSettings.filters}
-        onFiltersChange={(filters) => setBucketFilters(bucketKey, filters)}
-        showFileExtensions={showFileExtensions}
-        className="min-h-0 flex-1 rounded-none border-0"
-        defaultPath={currentPath}
-        loadChildren={loadChildren}
-        getFileUrl={getFileUrl}
-        onCreateFolder={async (path) => {
-          await createFolder(path)
-          refresh()
-          setRefreshNonce((nonce) => nonce + 1)
-        }}
-        onPathChange={(path) =>
-          setFolder({ connId: activeConnection.id, path })
-        }
-        onFileOpen={(file, url) => setOpened({ file, url })}
-      />
+      {section === "all" ? (
+        <FileSystem
+          key={`${activeConnection.id}:${refreshNonce}`}
+          items={items}
+          isLoading={isLoading}
+          title={activeConnection.name}
+          view={browserSettings.view}
+          onViewChange={(view) => setBucketView(bucketKey, view)}
+          sort={browserSettings.sort}
+          onSortChange={(sort) => setBucketSort(bucketKey, sort)}
+          filters={browserSettings.filters}
+          onFiltersChange={(filters) => setBucketFilters(bucketKey, filters)}
+          showFileExtensions={showFileExtensions}
+          className="min-h-0 flex-1 rounded-none border-0"
+          defaultPath={currentPath}
+          loadChildren={loadChildren}
+          getFileUrl={getFileUrl}
+          onCreateFolder={async (path) => {
+            await createFolder(path)
+            refresh()
+            setRefreshNonce((nonce) => nonce + 1)
+          }}
+          onDownloadEntry={downloadEntry}
+          onDeleteEntry={async (item) => {
+            await deleteEntry(item)
+            refresh()
+            setRefreshNonce((nonce) => nonce + 1)
+          }}
+          onRenameEntry={async (item, name) => {
+            await renameEntry(item, name)
+            refresh()
+            setRefreshNonce((nonce) => nonce + 1)
+          }}
+          isStarred={(item) => starredKeys.has(item.key ?? item.path)}
+          onToggleStar={(item) => toggleStar(bucketKey, toMarkedFile(item))}
+          onPathChange={(path) =>
+            setFolder({ connId: activeConnection.id, path })
+          }
+          onFileOpen={openFile}
+        />
+      ) : (
+        <MarkedFilesView
+          section={section}
+          connectionName={activeConnection.name}
+          files={section === "recents" ? recents : starred}
+          isStarred={(key) => starredKeys.has(key)}
+          onOpen={openMarkedFile}
+          onToggleStar={(file) => toggleStar(bucketKey, file)}
+          onClearRecents={() => clearRecents(bucketKey)}
+          showFileExtensions={showFileExtensions}
+        />
+      )}
 
       {isDragging ? (
         <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-primary/5 backdrop-blur-[1px]">
@@ -204,6 +299,14 @@ export function FileBrowser() {
         onOpenChange={(next) => {
           if (!next) setOpened(null)
         }}
+        isStarred={
+          opened ? starredKeys.has(opened.file.key ?? opened.file.path) : false
+        }
+        onToggleStar={
+          opened
+            ? () => toggleStar(bucketKey, toMarkedFile(opened.file))
+            : undefined
+        }
       />
 
       <input
