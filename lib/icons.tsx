@@ -37,6 +37,7 @@ export {
   IconTrash as Delete02Icon,
   IconDownload as Download01Icon,
   IconPencil as Edit02Icon,
+  IconExternalLink as ExternalLinkIcon,
   IconStar as FavouriteIcon,
   IconFile as File01Icon,
   IconFilter as FilterIcon,

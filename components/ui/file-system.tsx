@@ -24,6 +24,7 @@ import {
   Delete02Icon,
   Download01Icon,
   Edit02Icon,
+  ExternalLinkIcon,
   FavouriteIcon,
   File01Icon,
   FilterIcon,
@@ -298,6 +299,116 @@ function useFormatEntryName() {
   return React.useCallback(
     (entry: FileSystemEntry) => formatEntryName(entry, showFileExtensions),
     [showFileExtensions]
+  )
+}
+
+// Inline rename: the views render an editable input in place of the name label
+// for the entry currently being renamed, instead of opening a dialog.
+type RenameController = {
+  targetPath: string | null
+  value: string
+  error: boolean
+  /** Paths whose rename is saving in the background (show a spinner). */
+  pendingPaths: ReadonlySet<string>
+  setValue: (value: string) => void
+  commit: () => void
+  cancel: () => void
+}
+
+const RenameContext = React.createContext<RenameController | null>(null)
+
+// Renders an inline text input when `entry` is the active rename target, and
+// otherwise the supplied label. Used by the icons, columns, and gallery views.
+// `multiline` renders an auto-growing textarea so long names wrap (like the
+// icon grid's two-line label) instead of scrolling in a single-line field.
+function InlineRenameName({
+  entry,
+  children,
+  className,
+  multiline = false,
+}: {
+  entry: FileSystemEntry
+  children: React.ReactNode
+  className?: string
+  multiline?: boolean
+}): React.ReactElement {
+  const rename = React.useContext(RenameContext)
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null)
+
+  // Grow the textarea to fit its wrapped content on every change.
+  React.useLayoutEffect(() => {
+    const element = textareaRef.current
+    if (!element) return
+    element.style.height = "auto"
+    element.style.height = `${element.scrollHeight}px`
+  })
+
+  if (!rename || rename.targetPath !== entry.path) {
+    return <>{children}</>
+  }
+
+  const selectBaseName = (element: HTMLInputElement | HTMLTextAreaElement) => {
+    // Select the base name (sans extension) like Finder.
+    const dotIndex = entry.kind === "file" ? rename.value.lastIndexOf(".") : -1
+    element.setSelectionRange(0, dotIndex > 0 ? dotIndex : rename.value.length)
+  }
+
+  const handleKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    event.stopPropagation()
+    if (event.key === "Enter") {
+      // Names are single-line, so Enter commits rather than inserting a break.
+      event.preventDefault()
+      rename.commit()
+    } else if (event.key === "Escape") {
+      event.preventDefault()
+      rename.cancel()
+    }
+  }
+
+  const baseClassName = cn(
+    "min-w-0 rounded-sm border border-primary bg-background px-1 py-0.5 text-foreground outline-none aria-invalid:border-destructive",
+    className
+  )
+
+  // Keep clicks/double-clicks on the field from selecting or opening the row.
+  const stop = (event: React.SyntheticEvent) => event.stopPropagation()
+
+  if (multiline) {
+    return (
+      <textarea
+        ref={textareaRef}
+        autoFocus
+        rows={1}
+        value={rename.value}
+        aria-invalid={rename.error || undefined}
+        onClick={stop}
+        onDoubleClick={stop}
+        onPointerDown={stop}
+        onChange={(event) => rename.setValue(event.target.value)}
+        onFocus={(event) => selectBaseName(event.currentTarget)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => rename.commit()}
+        className={cn("resize-none overflow-hidden break-words", baseClassName)}
+      />
+    )
+  }
+
+  return (
+    <input
+      autoFocus
+      value={rename.value}
+      aria-invalid={rename.error || undefined}
+      onClick={stop}
+      onDoubleClick={stop}
+      onPointerDown={stop}
+      onChange={(event) => rename.setValue(event.target.value)}
+      onFocus={(event) => selectBaseName(event.currentTarget)}
+      onKeyDown={handleKeyDown}
+      onBlur={() => rename.commit()}
+      className={baseClassName}
+    />
   )
 }
 
@@ -1964,7 +2075,17 @@ export function FileSystem({
   const [renameEntryError, setRenameEntryError] = React.useState<string | null>(
     null
   )
-  const [isRenamingEntry, setRenamingEntry] = React.useState(false)
+  // Paths whose background rename (move + re-list) is still in flight; the
+  // views show a spinner on these so the save is visible after the inline
+  // editor closes.
+  const [renamingPaths, setRenamingPaths] = React.useState<ReadonlySet<string>>(
+    () => new Set()
+  )
+  // Set by the list view's tree so the context menu can start its native inline
+  // rename; the other views rename through RenameContext.
+  const startTreeRenameRef = React.useRef<
+    ((entry: FileSystemEntry) => void) | null
+  >(null)
   const [moveEntryTarget, setMoveEntryTarget] =
     React.useState<FileSystemEntry | null>(null)
   const [moveDestination, setMoveDestination] = React.useState("")
@@ -2179,6 +2300,19 @@ export function FileSystem({
     [onFileOpen, poolStagePath, resolveFileUrl]
   )
 
+  const openFileInNewTab = React.useCallback(
+    (file: FileEntry) => {
+      void (async () => {
+        const url = await resolveFileUrl(file)
+
+        if (url && typeof window !== "undefined") {
+          window.open(url, "_blank", "noopener,noreferrer")
+        }
+      })()
+    },
+    [resolveFileUrl]
+  )
+
   const downloadFile = React.useCallback(
     (file: FileEntry) => {
       void (async () => {
@@ -2234,9 +2368,10 @@ export function FileSystem({
     }
   }, [deleteEntryTarget, isDeletingEntry, onDeleteEntry, selectEntry])
 
-  const confirmRenameEntry = React.useCallback(async () => {
-    if (!renameEntryTarget || !onRenameEntry || isRenamingEntry) return
+  const confirmRenameEntry = React.useCallback(() => {
+    if (!renameEntryTarget || !onRenameEntry) return
 
+    const target = renameEntryTarget
     const name = renameEntryName.trim()
     if (!name) {
       setRenameEntryError("Enter a name.")
@@ -2246,36 +2381,45 @@ export function FileSystem({
       setRenameEntryError("Names cannot be '.', '..', or contain '/'.")
       return
     }
+    // Unchanged name: just close the inline editor.
+    if (name === target.name) {
+      setRenameEntryTarget(null)
+      setRenameEntryError(null)
+      return
+    }
 
-    const filePath = `${renameEntryTarget.parentPath}${name}`
+    const filePath = `${target.parentPath}${name}`
     const folderPath = normalizeFolderPath(filePath)
     const hasCollision =
-      (sortedIndex.files.has(filePath) &&
-        renameEntryTarget.path !== filePath) ||
-      (sortedIndex.folders.has(folderPath) &&
-        renameEntryTarget.path !== folderPath)
+      (sortedIndex.files.has(filePath) && target.path !== filePath) ||
+      (sortedIndex.folders.has(folderPath) && target.path !== folderPath)
 
     if (hasCollision) {
       setRenameEntryError("An item with this name already exists.")
       return
     }
 
-    setRenamingEntry(true)
+    // Close the editor immediately so Enter feels instant; the actual rename
+    // (an S3 move + re-list) runs in the background. A spinner on the item
+    // shows it's saving, and failures surface via a toast.
+    setRenameEntryTarget(null)
     setRenameEntryError(null)
-
-    try {
-      await onRenameEntry(renameEntryTarget, name)
-      setRenameEntryTarget(null)
-      selectEntry(null)
-    } catch (error) {
-      setRenameEntryError(
-        error instanceof Error ? error.message : "Could not rename item."
-      )
-    } finally {
-      setRenamingEntry(false)
-    }
+    selectEntry(null)
+    setRenamingPaths((previous) => new Set(previous).add(target.path))
+    void Promise.resolve(onRenameEntry(target, name))
+      .catch((error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Could not rename item."
+        )
+      })
+      .finally(() => {
+        setRenamingPaths((previous) => {
+          const next = new Set(previous)
+          next.delete(target.path)
+          return next
+        })
+      })
   }, [
-    isRenamingEntry,
     onRenameEntry,
     renameEntryName,
     renameEntryTarget,
@@ -2283,6 +2427,40 @@ export function FileSystem({
     sortedIndex.files,
     sortedIndex.folders,
   ])
+
+  const startRename = React.useCallback((entry: FileSystemEntry) => {
+    setRenameEntryTarget(entry)
+    setRenameEntryName(entry.name)
+    setRenameEntryError(null)
+  }, [])
+
+  const cancelRename = React.useCallback(() => {
+    setRenameEntryTarget(null)
+    setRenameEntryError(null)
+  }, [])
+
+  const renameController = React.useMemo<RenameController>(
+    () => ({
+      targetPath: renameEntryTarget?.path ?? null,
+      value: renameEntryName,
+      error: renameEntryError !== null,
+      pendingPaths: renamingPaths,
+      setValue: (value) => {
+        setRenameEntryName(value)
+        setRenameEntryError(null)
+      },
+      commit: () => void confirmRenameEntry(),
+      cancel: cancelRename,
+    }),
+    [
+      cancelRename,
+      confirmRenameEntry,
+      renameEntryError,
+      renameEntryName,
+      renameEntryTarget,
+      renamingPaths,
+    ]
+  )
 
   // Folders the move target can go to: the root plus every known folder, minus
   // the target folder itself and its descendants (a folder can't move into
@@ -2503,6 +2681,8 @@ export function FileSystem({
     selectedPath,
     sort,
     treeExpansionRef,
+    onRenameEntry,
+    startTreeRenameRef,
   }
 
   const openedFileName = openedFile
@@ -2520,701 +2700,650 @@ export function FileSystem({
 
   return (
     <ShowFileExtensionsContext.Provider value={showFileExtensions}>
-      <div
-        ref={rootRef}
-        tabIndex={-1}
-        data-slot="file-system"
-        onKeyDown={(event) => {
-          // ⌘F focuses the toolbar search while focus is inside the component.
-          if ((event.metaKey || event.ctrlKey) && event.key === "f") {
-            event.preventDefault()
-            setIsSearchExpanded(true)
-            searchInputRef.current?.focus()
-          }
-        }}
-        className={cn(
-          "flex h-[480px] min-h-0 flex-col overflow-hidden rounded-xl border bg-background text-foreground outline-none",
-          className
-        )}
-      >
-        <FileSystemIconSpriteSheet />
-        <div className="relative grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b bg-muted/40 px-2">
-          <div className="flex min-w-0 items-center gap-0.5">
-            <button
-              type="button"
-              aria-label="Back"
-              title="Back"
-              disabled={!canGoBack}
-              onClick={goBack}
-              className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
+      <RenameContext.Provider value={renameController}>
+        <div
+          ref={rootRef}
+          tabIndex={-1}
+          data-slot="file-system"
+          onKeyDown={(event) => {
+            // ⌘F focuses the toolbar search while focus is inside the component.
+            if ((event.metaKey || event.ctrlKey) && event.key === "f") {
+              event.preventDefault()
+              setIsSearchExpanded(true)
+              searchInputRef.current?.focus()
+            }
+          }}
+          className={cn(
+            "flex h-[480px] min-h-0 flex-col overflow-hidden rounded-xl border bg-background text-foreground outline-none",
+            className
+          )}
+        >
+          <FileSystemIconSpriteSheet />
+          <div className="relative grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b bg-muted/40 px-2">
+            <div className="flex min-w-0 items-center gap-0.5">
+              <button
+                type="button"
+                aria-label="Back"
+                title="Back"
+                disabled={!canGoBack}
+                onClick={goBack}
+                className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
+              >
+                <AppIcon icon={ArrowLeft01Icon} className="size-4.5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Forward"
+                title="Forward"
+                disabled={!canGoForward}
+                onClick={goForward}
+                className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
+              >
+                <AppIcon icon={ArrowRight01Icon} className="size-4.5" />
+              </button>
+              {headerLayout !== "minimal" ? (
+                <span className="ml-1.5 truncate text-sm font-semibold">
+                  {currentFolderName}
+                </span>
+              ) : null}
+            </div>
+            {headerLayout !== "full" || isBelowIpadWidth ? (
+              <Select
+                value={view}
+                onValueChange={(value) => setView(value as FileSystemView)}
+              >
+                <SelectTrigger
+                  size="sm"
+                  aria-label="View"
+                  // Icon-only like the sort select: sheds the base min-width to
+                  // hug icon + chevron at the filter button's 28px height.
+                  className="h-7 min-h-7 w-auto min-w-0 [&_svg]:size-4"
+                >
+                  <SelectValue>
+                    {activeViewOption ? (
+                      <AppIcon
+                        icon={activeViewOption.icon}
+                        className="size-4"
+                      />
+                    ) : null}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {VIEW_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <span className="flex items-center gap-2">
+                        <AppIcon icon={option.icon} className="size-4" />
+                        {option.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Tabs
+                size="sm"
+                value={view}
+                onValueChange={(value) => setView(value as FileSystemView)}
+                className="gap-0"
+              >
+                <TabsList>
+                  {VIEW_OPTIONS.map((option) => (
+                    <TabsTrigger
+                      key={option.value}
+                      value={option.value}
+                      aria-label={`${option.label} view`}
+                      title={option.label}
+                      className="grow-0"
+                    >
+                      <AppIcon icon={option.icon} className="size-4" />
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            )}
+            <div className="flex min-w-0 items-center justify-end gap-1">
+              <FileSystemSortSelect
+                layout={headerLayout}
+                onKeyChange={applySortKey}
+                showLabel={!isBelowIpadWidth}
+                sort={sort}
+              />
+              <FileSystemFilterMenu
+                fileTypeOptions={fileTypeOptions}
+                filters={filters}
+                onOpenCustomRange={openDateRangeDialog}
+                onSelectDatePreset={setDatePresetFilter}
+                onToggleFileType={toggleFileTypeFilterValue}
+              />
+              <FileSystemSearchField
+                inputRef={searchInputRef}
+                isExpanded={isSearchExpanded}
+                layout={headerLayout}
+                onExpandedChange={setIsSearchExpanded}
+                onValueChange={setSearchInput}
+                value={searchInput}
+              />
+            </div>
+          </div>
+          {hasActiveFilters ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-1 border-b bg-muted/20 px-2 py-1.5 text-xs text-muted-foreground">
+              {filters.map((filter) => {
+                const dateFilterType =
+                  filter.type === "fileType" ? null : filter.type
+
+                return (
+                  <FileSystemFilterPill
+                    key={filter.id}
+                    fileTypeOptions={fileTypeOptions}
+                    filter={filter}
+                    onOpenCustomRange={
+                      dateFilterType
+                        ? () => openDateRangeDialog(dateFilterType)
+                        : undefined
+                    }
+                    onOperatorChange={(operator) =>
+                      setFilters((previous) =>
+                        previous.map((entry) =>
+                          entry.id === filter.id
+                            ? { ...entry, operator }
+                            : entry
+                        )
+                      )
+                    }
+                    onRemove={() =>
+                      setFilters((previous) =>
+                        previous.filter((entry) => entry.id !== filter.id)
+                      )
+                    }
+                    onSelectDatePreset={(preset) =>
+                      setFilters((previous) =>
+                        previous.map((entry) =>
+                          entry.id === filter.id
+                            ? {
+                                ...entry,
+                                operator:
+                                  entry.operator === "before" ||
+                                  entry.operator === "after"
+                                    ? entry.operator
+                                    : "after",
+                                value: [preset],
+                              }
+                            : entry
+                        )
+                      )
+                    }
+                    onToggleFileType={toggleFileTypeFilterValue}
+                  />
+                )
+              })}
+              <button
+                type="button"
+                onClick={() => setFilters([])}
+                className="rounded-md px-1.5 py-0.5 transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Clear
+              </button>
+            </div>
+          ) : null}
+          <ContextMenu
+            onOpenChange={(open) => {
+              if (!open) setContextMenuEntry(null)
+            }}
+          >
+            <ContextMenuTrigger
+              className="relative min-h-0 flex-1"
+              onContextMenuCapture={handleContextMenuCapture}
             >
-              <AppIcon icon={ArrowLeft01Icon} className="size-4.5" />
-            </button>
-            <button
-              type="button"
-              aria-label="Forward"
-              title="Forward"
-              disabled={!canGoForward}
-              onClick={goForward}
-              className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
-            >
-              <AppIcon icon={ArrowRight01Icon} className="size-4.5" />
-            </button>
-            {headerLayout !== "minimal" ? (
-              <span className="ml-1.5 truncate text-sm font-semibold">
-                {currentFolderName}
+              {isLoading ? (
+                <FileSystemEmptyState label="Loading..." />
+              ) : isLoadingCurrentFolder && currentEntries.length === 0 ? (
+                <FileSystemEmptyState label="Loading…" isLoading />
+              ) : currentEntries.length === 0 &&
+                (view !== "columns" || isSearching || hasActiveFilters) ? (
+                <FileSystemEmptyState
+                  label={
+                    isSearching
+                      ? `No results for “${searchInput.trim()}”`
+                      : hasActiveFilters
+                        ? "No items match the active filters"
+                        : "This folder is empty"
+                  }
+                />
+              ) : view === "icons" ? (
+                <FileSystemIconsView {...viewProps} />
+              ) : view === "list" ? (
+                <FileSystemListView {...viewProps} />
+              ) : view === "columns" ? (
+                <FileSystemColumnsView {...viewProps} />
+              ) : (
+                <FileSystemGalleryView {...viewProps} />
+              )}
+            </ContextMenuTrigger>
+            <ContextMenuPopup align="start" side="bottom">
+              {contextMenuEntry ? (
+                <>
+                  <ContextMenuItem onClick={() => openEntry(contextMenuEntry)}>
+                    <AppIcon
+                      icon={
+                        contextMenuEntry.kind === "folder"
+                          ? Folder01Icon
+                          : File01Icon
+                      }
+                    />
+                    Open
+                  </ContextMenuItem>
+                  {contextMenuEntry.kind === "file" ? (
+                    <ContextMenuItem
+                      onClick={() => openFileInNewTab(contextMenuEntry)}
+                    >
+                      <AppIcon icon={ExternalLinkIcon} />
+                      Open in New Tab
+                    </ContextMenuItem>
+                  ) : null}
+                  {contextMenuEntry.kind === "file" && onToggleStar ? (
+                    <>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem
+                        onClick={() => onToggleStar(contextMenuEntry)}
+                      >
+                        <AppIcon
+                          icon={FavouriteIcon}
+                          className={
+                            isStarred?.(contextMenuEntry)
+                              ? "fill-current text-amber-500"
+                              : undefined
+                          }
+                        />
+                        {isStarred?.(contextMenuEntry)
+                          ? "Remove Star"
+                          : "Add Star"}
+                      </ContextMenuItem>
+                    </>
+                  ) : null}
+                  {onDownloadEntry ||
+                  onRenameEntry ||
+                  onMoveEntry ||
+                  contextMenuEntry.kind === "file" ? (
+                    <ContextMenuSeparator />
+                  ) : null}
+                  {onDownloadEntry || contextMenuEntry.kind === "file" ? (
+                    <ContextMenuItem
+                      onClick={() => handleDownloadEntry(contextMenuEntry)}
+                    >
+                      <AppIcon icon={Download01Icon} />
+                      Download
+                    </ContextMenuItem>
+                  ) : null}
+                  {onRenameEntry ? (
+                    <ContextMenuItem
+                      onClick={() => {
+                        const entry = contextMenuEntry
+                        // The list view renames inline inside the tree's own row;
+                        // the other views render an inline input via context.
+                        if (view === "list" && startTreeRenameRef.current) {
+                          // Let the context menu finish closing before the tree
+                          // grabs focus for its input.
+                          window.setTimeout(
+                            () => startTreeRenameRef.current?.(entry),
+                            0
+                          )
+                        } else {
+                          startRename(entry)
+                        }
+                      }}
+                    >
+                      <AppIcon icon={Edit02Icon} />
+                      Rename
+                    </ContextMenuItem>
+                  ) : null}
+                  {onMoveEntry ? (
+                    <ContextMenuItem
+                      onClick={() => {
+                        setMoveEntryTarget(contextMenuEntry)
+                        setMoveDestination(contextMenuEntry.parentPath)
+                        setMoveEntryError(null)
+                      }}
+                    >
+                      <AppIcon icon={Folder01Icon} />
+                      Move
+                    </ContextMenuItem>
+                  ) : null}
+                  {onDeleteEntry ? (
+                    <>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem
+                        variant="destructive"
+                        onClick={() => {
+                          setDeleteEntryError(null)
+                          setDeleteEntryTarget(contextMenuEntry)
+                        }}
+                      >
+                        <AppIcon icon={Delete02Icon} />
+                        Delete
+                      </ContextMenuItem>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  {onCreateFolder ? (
+                    <>
+                      <ContextMenuItem onClick={openNewFolderDialog}>
+                        <AppIcon icon={Folder01Icon} />
+                        New Folder
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                    </>
+                  ) : null}
+                  <ContextMenuItem disabled={!canGoBack} onClick={goBack}>
+                    <AppIcon icon={ArrowLeft01Icon} />
+                    Back
+                  </ContextMenuItem>
+                  <ContextMenuItem disabled={!canGoForward} onClick={goForward}>
+                    <AppIcon icon={ArrowRight01Icon} />
+                    Forward
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onClick={() => window.location.reload()}>
+                    <AppIcon icon={RotateClockwiseIcon} />
+                    Reload
+                  </ContextMenuItem>
+                </>
+              )}
+            </ContextMenuPopup>
+          </ContextMenu>
+          <div
+            aria-live="polite"
+            className="flex h-7 shrink-0 items-center justify-center gap-1 border-t bg-muted/40 px-3 text-xs text-muted-foreground"
+          >
+            <span>
+              {currentEntries.length}{" "}
+              {isSearching
+                ? currentEntries.length === 1
+                  ? "result"
+                  : "results"
+                : currentEntries.length === 1
+                  ? "item"
+                  : "items"}
+            </span>
+            {selectedEntry ? (
+              <span>
+                · “{formatEntryName(selectedEntry, showFileExtensions)}”
+                selected
               </span>
             ) : null}
           </div>
-          {headerLayout !== "full" || isBelowIpadWidth ? (
-            <Select
-              value={view}
-              onValueChange={(value) => setView(value as FileSystemView)}
-            >
-              <SelectTrigger
-                size="sm"
-                aria-label="View"
-                // Icon-only like the sort select: sheds the base min-width to
-                // hug icon + chevron at the filter button's 28px height.
-                className="h-7 min-h-7 w-auto min-w-0 [&_svg]:size-4"
-              >
-                <SelectValue>
-                  {activeViewOption ? (
-                    <AppIcon icon={activeViewOption.icon} className="size-4" />
-                  ) : null}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {VIEW_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <span className="flex items-center gap-2">
-                      <AppIcon icon={option.icon} className="size-4" />
-                      {option.label}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Tabs
-              size="sm"
-              value={view}
-              onValueChange={(value) => setView(value as FileSystemView)}
-              className="gap-0"
-            >
-              <TabsList>
-                {VIEW_OPTIONS.map((option) => (
-                  <TabsTrigger
-                    key={option.value}
-                    value={option.value}
-                    aria-label={`${option.label} view`}
-                    title={option.label}
-                    className="grow-0"
-                  >
-                    <AppIcon icon={option.icon} className="size-4" />
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          )}
-          <div className="flex min-w-0 items-center justify-end gap-1">
-            <FileSystemSortSelect
-              layout={headerLayout}
-              onKeyChange={applySortKey}
-              showLabel={!isBelowIpadWidth}
-              sort={sort}
-            />
-            <FileSystemFilterMenu
-              fileTypeOptions={fileTypeOptions}
-              filters={filters}
-              onOpenCustomRange={openDateRangeDialog}
-              onSelectDatePreset={setDatePresetFilter}
-              onToggleFileType={toggleFileTypeFilterValue}
-            />
-            <FileSystemSearchField
-              inputRef={searchInputRef}
-              isExpanded={isSearchExpanded}
-              layout={headerLayout}
-              onExpandedChange={setIsSearchExpanded}
-              onValueChange={setSearchInput}
-              value={searchInput}
-            />
-          </div>
-        </div>
-        {hasActiveFilters ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-1 border-b bg-muted/20 px-2 py-1.5 text-xs text-muted-foreground">
-            {filters.map((filter) => {
-              const dateFilterType =
-                filter.type === "fileType" ? null : filter.type
-
-              return (
-                <FileSystemFilterPill
-                  key={filter.id}
-                  fileTypeOptions={fileTypeOptions}
-                  filter={filter}
-                  onOpenCustomRange={
-                    dateFilterType
-                      ? () => openDateRangeDialog(dateFilterType)
-                      : undefined
-                  }
-                  onOperatorChange={(operator) =>
-                    setFilters((previous) =>
-                      previous.map((entry) =>
-                        entry.id === filter.id ? { ...entry, operator } : entry
-                      )
-                    )
-                  }
-                  onRemove={() =>
-                    setFilters((previous) =>
-                      previous.filter((entry) => entry.id !== filter.id)
-                    )
-                  }
-                  onSelectDatePreset={(preset) =>
-                    setFilters((previous) =>
-                      previous.map((entry) =>
-                        entry.id === filter.id
-                          ? {
-                              ...entry,
-                              operator:
-                                entry.operator === "before" ||
-                                entry.operator === "after"
-                                  ? entry.operator
-                                  : "after",
-                              value: [preset],
-                            }
-                          : entry
-                      )
-                    )
-                  }
-                  onToggleFileType={toggleFileTypeFilterValue}
-                />
-              )
-            })}
-            <button
-              type="button"
-              onClick={() => setFilters([])}
-              className="rounded-md px-1.5 py-0.5 transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Clear
-            </button>
-          </div>
-        ) : null}
-        <ContextMenu
-          onOpenChange={(open) => {
-            if (!open) setContextMenuEntry(null)
-          }}
-        >
-          <ContextMenuTrigger
-            className="relative min-h-0 flex-1"
-            onContextMenuCapture={handleContextMenuCapture}
+          <Dialog
+            open={isNewFolderOpen}
+            onOpenChange={(open) => {
+              if (isCreatingFolder) return
+              setNewFolderOpen(open)
+              if (!open) setNewFolderError(null)
+            }}
           >
-            {isLoading ? (
-              <FileSystemEmptyState label="Loading..." />
-            ) : isLoadingCurrentFolder && currentEntries.length === 0 ? (
-              <FileSystemEmptyState label="Loading…" isLoading />
-            ) : currentEntries.length === 0 &&
-              (view !== "columns" || isSearching || hasActiveFilters) ? (
-              <FileSystemEmptyState
-                label={
-                  isSearching
-                    ? `No results for “${searchInput.trim()}”`
-                    : hasActiveFilters
-                      ? "No items match the active filters"
-                      : "This folder is empty"
-                }
-              />
-            ) : view === "icons" ? (
-              <FileSystemIconsView {...viewProps} />
-            ) : view === "list" ? (
-              <FileSystemListView {...viewProps} />
-            ) : view === "columns" ? (
-              <FileSystemColumnsView {...viewProps} />
-            ) : (
-              <FileSystemGalleryView {...viewProps} />
-            )}
-          </ContextMenuTrigger>
-          <ContextMenuPopup align="start" side="bottom">
-            {contextMenuEntry ? (
-              <>
-                <ContextMenuItem onClick={() => openEntry(contextMenuEntry)}>
-                  <AppIcon
-                    icon={
-                      contextMenuEntry.kind === "folder"
-                        ? Folder01Icon
-                        : File01Icon
-                    }
-                  />
-                  Open
-                </ContextMenuItem>
-                {contextMenuEntry.kind === "file" && onToggleStar ? (
-                  <>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem
-                      onClick={() => onToggleStar(contextMenuEntry)}
-                    >
-                      <AppIcon
-                        icon={FavouriteIcon}
-                        className={
-                          isStarred?.(contextMenuEntry)
-                            ? "fill-current text-amber-500"
-                            : undefined
-                        }
-                      />
-                      {isStarred?.(contextMenuEntry)
-                        ? "Remove Star"
-                        : "Add Star"}
-                    </ContextMenuItem>
-                  </>
-                ) : null}
-                {onDownloadEntry ||
-                onRenameEntry ||
-                onMoveEntry ||
-                contextMenuEntry.kind === "file" ? (
-                  <ContextMenuSeparator />
-                ) : null}
-                {onDownloadEntry || contextMenuEntry.kind === "file" ? (
-                  <ContextMenuItem
-                    onClick={() => handleDownloadEntry(contextMenuEntry)}
+            {isNewFolderOpen ? (
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>New Folder</DialogTitle>
+                  <DialogDescription>
+                    Create a folder in {currentFolderName}.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogPanel>
+                  <form
+                    id="new-folder-form"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      void createNewFolder()
+                    }}
+                    className="grid gap-2"
                   >
-                    <AppIcon icon={Download01Icon} />
-                    Download
-                  </ContextMenuItem>
-                ) : null}
-                {onRenameEntry ? (
-                  <ContextMenuItem
-                    onClick={() => {
-                      setRenameEntryTarget(contextMenuEntry)
-                      setRenameEntryName(contextMenuEntry.name)
-                      setRenameEntryError(null)
+                    <Input
+                      autoFocus
+                      value={newFolderName}
+                      onChange={(event) => {
+                        setNewFolderName(event.target.value)
+                        setNewFolderError(null)
+                      }}
+                      placeholder="Untitled Folder"
+                      aria-invalid={newFolderError ? true : undefined}
+                    />
+                    {newFolderError ? (
+                      <p className="text-sm text-destructive">
+                        {newFolderError}
+                      </p>
+                    ) : null}
+                  </form>
+                </DialogPanel>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isCreatingFolder}
+                    onClick={() => setNewFolderOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    form="new-folder-form"
+                    loading={isCreatingFolder}
+                    disabled={!newFolderName.trim()}
+                  >
+                    Create
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            ) : null}
+          </Dialog>
+          <Dialog
+            open={moveEntryTarget !== null}
+            onOpenChange={(open) => {
+              if (isMovingEntry) return
+              if (!open) {
+                setMoveEntryTarget(null)
+                setMoveEntryError(null)
+              }
+            }}
+          >
+            {moveEntryTarget ? (
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>
+                    Move {moveEntryTarget.kind === "folder" ? "Folder" : "File"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Choose a destination folder for “{moveEntryTarget.name}”.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogPanel>
+                  <form
+                    id="move-entry-form"
+                    className="grid gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      void confirmMoveEntry()
                     }}
                   >
-                    <AppIcon icon={Edit02Icon} />
-                    Rename
-                  </ContextMenuItem>
-                ) : null}
-                {onMoveEntry ? (
-                  <ContextMenuItem
-                    onClick={() => {
-                      setMoveEntryTarget(contextMenuEntry)
-                      setMoveDestination(contextMenuEntry.parentPath)
-                      setMoveEntryError(null)
-                    }}
-                  >
-                    <AppIcon icon={Folder01Icon} />
-                    Move
-                  </ContextMenuItem>
-                ) : null}
-                {onDeleteEntry ? (
-                  <>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem
-                      variant="destructive"
-                      onClick={() => {
-                        setDeleteEntryError(null)
-                        setDeleteEntryTarget(contextMenuEntry)
+                    <Select
+                      value={moveDestination}
+                      onValueChange={(value) => {
+                        setMoveDestination(String(value))
+                        setMoveEntryError(null)
                       }}
                     >
-                      <AppIcon icon={Delete02Icon} />
-                      Delete
-                    </ContextMenuItem>
-                  </>
-                ) : null}
-              </>
-            ) : (
-              <>
-                {onCreateFolder ? (
-                  <>
-                    <ContextMenuItem onClick={openNewFolderDialog}>
-                      <AppIcon icon={Folder01Icon} />
-                      New Folder
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                  </>
-                ) : null}
-                <ContextMenuItem disabled={!canGoBack} onClick={goBack}>
-                  <AppIcon icon={ArrowLeft01Icon} />
-                  Back
-                </ContextMenuItem>
-                <ContextMenuItem disabled={!canGoForward} onClick={goForward}>
-                  <AppIcon icon={ArrowRight01Icon} />
-                  Forward
-                </ContextMenuItem>
-                <ContextMenuSeparator />
-                <ContextMenuItem onClick={() => window.location.reload()}>
-                  <AppIcon icon={RotateClockwiseIcon} />
-                  Reload
-                </ContextMenuItem>
-              </>
-            )}
-          </ContextMenuPopup>
-        </ContextMenu>
-        <div
-          aria-live="polite"
-          className="flex h-7 shrink-0 items-center justify-center gap-1 border-t bg-muted/40 px-3 text-xs text-muted-foreground"
-        >
-          <span>
-            {currentEntries.length}{" "}
-            {isSearching
-              ? currentEntries.length === 1
-                ? "result"
-                : "results"
-              : currentEntries.length === 1
-                ? "item"
-                : "items"}
-          </span>
-          {selectedEntry ? (
-            <span>
-              · “{formatEntryName(selectedEntry, showFileExtensions)}” selected
-            </span>
-          ) : null}
-        </div>
-        <Dialog
-          open={isNewFolderOpen}
-          onOpenChange={(open) => {
-            if (isCreatingFolder) return
-            setNewFolderOpen(open)
-            if (!open) setNewFolderError(null)
-          }}
-        >
-          {isNewFolderOpen ? (
-            <DialogContent className="max-w-sm">
-              <DialogHeader>
-                <DialogTitle>New Folder</DialogTitle>
-                <DialogDescription>
-                  Create a folder in {currentFolderName}.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogPanel>
-                <form
-                  id="new-folder-form"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    void createNewFolder()
-                  }}
-                  className="grid gap-2"
-                >
-                  <Input
-                    autoFocus
-                    value={newFolderName}
-                    onChange={(event) => {
-                      setNewFolderName(event.target.value)
-                      setNewFolderError(null)
-                    }}
-                    placeholder="Untitled Folder"
-                    aria-invalid={newFolderError ? true : undefined}
-                  />
-                  {newFolderError ? (
-                    <p className="text-sm text-destructive">{newFolderError}</p>
-                  ) : null}
-                </form>
-              </DialogPanel>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isCreatingFolder}
-                  onClick={() => setNewFolderOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  form="new-folder-form"
-                  loading={isCreatingFolder}
-                  disabled={!newFolderName.trim()}
-                >
-                  Create
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          ) : null}
-        </Dialog>
-        <Dialog
-          open={renameEntryTarget !== null}
-          onOpenChange={(open) => {
-            if (isRenamingEntry) return
-            if (!open) {
-              setRenameEntryTarget(null)
-              setRenameEntryError(null)
-            }
-          }}
-        >
-          {renameEntryTarget ? (
-            <DialogContent className="max-w-sm">
-              <DialogHeader>
-                <DialogTitle>
-                  Rename{" "}
-                  {renameEntryTarget.kind === "folder" ? "Folder" : "File"}
-                </DialogTitle>
-                <DialogDescription>
-                  Enter a new name for “{renameEntryTarget.name}”.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogPanel>
-                <form
-                  id="rename-entry-form"
-                  className="grid gap-2"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    void confirmRenameEntry()
-                  }}
-                >
-                  <Input
-                    autoFocus
-                    value={renameEntryName}
-                    onFocus={(event) => {
-                      const extensionIndex =
-                        renameEntryTarget.kind === "file"
-                          ? renameEntryName.lastIndexOf(".")
-                          : -1
-
-                      event.currentTarget.setSelectionRange(
-                        0,
-                        extensionIndex > 0
-                          ? extensionIndex
-                          : renameEntryName.length
-                      )
-                    }}
-                    onChange={(event) => {
-                      setRenameEntryName(event.target.value)
-                      setRenameEntryError(null)
-                    }}
-                    aria-invalid={renameEntryError ? true : undefined}
-                  />
-                  {renameEntryError ? (
-                    <p className="text-sm text-destructive">
-                      {renameEntryError}
-                    </p>
-                  ) : null}
-                </form>
-              </DialogPanel>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isRenamingEntry}
-                  onClick={() => setRenameEntryTarget(null)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  form="rename-entry-form"
-                  loading={isRenamingEntry}
-                  disabled={
-                    !renameEntryName.trim() ||
-                    renameEntryName.trim() === renameEntryTarget.name
-                  }
-                >
-                  Rename
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          ) : null}
-        </Dialog>
-        <Dialog
-          open={moveEntryTarget !== null}
-          onOpenChange={(open) => {
-            if (isMovingEntry) return
-            if (!open) {
-              setMoveEntryTarget(null)
-              setMoveEntryError(null)
-            }
-          }}
-        >
-          {moveEntryTarget ? (
-            <DialogContent className="max-w-sm">
-              <DialogHeader>
-                <DialogTitle>
-                  Move {moveEntryTarget.kind === "folder" ? "Folder" : "File"}
-                </DialogTitle>
-                <DialogDescription>
-                  Choose a destination folder for “{moveEntryTarget.name}”.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogPanel>
-                <form
-                  id="move-entry-form"
-                  className="grid gap-2"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    void confirmMoveEntry()
-                  }}
-                >
-                  <Select
-                    value={moveDestination}
-                    onValueChange={(value) => {
-                      setMoveDestination(String(value))
-                      setMoveEntryError(null)
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {moveDestinations.map((destination) => (
-                        <SelectItem
-                          key={destination.value}
-                          value={destination.value}
-                        >
-                          {destination.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {moveEntryError ? (
-                    <p className="text-sm text-destructive">{moveEntryError}</p>
-                  ) : null}
-                </form>
-              </DialogPanel>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isMovingEntry}
-                  onClick={() => setMoveEntryTarget(null)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  form="move-entry-form"
-                  loading={isMovingEntry}
-                  disabled={moveDestination === moveEntryTarget.parentPath}
-                >
-                  Move
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          ) : null}
-        </Dialog>
-        <Dialog
-          open={deleteEntryTarget !== null}
-          onOpenChange={(open) => {
-            if (isDeletingEntry) return
-            if (!open) {
-              setDeleteEntryTarget(null)
-              setDeleteEntryError(null)
-            }
-          }}
-        >
-          {deleteEntryTarget ? (
-            <DialogContent className="max-w-sm">
-              <DialogHeader>
-                <DialogTitle>
-                  Delete{" "}
-                  {deleteEntryTarget.kind === "folder" ? "Folder" : "File"}?
-                </DialogTitle>
-                <DialogDescription>
-                  “{deleteEntryTarget.name}” will be permanently deleted
-                  {deleteEntryTarget.kind === "folder"
-                    ? " along with everything inside it."
-                    : "."}
-                </DialogDescription>
-              </DialogHeader>
-              {deleteEntryError ? (
-                <DialogPanel>
-                  <p className="text-sm text-destructive">{deleteEntryError}</p>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {moveDestinations.map((destination) => (
+                          <SelectItem
+                            key={destination.value}
+                            value={destination.value}
+                          >
+                            {destination.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {moveEntryError ? (
+                      <p className="text-sm text-destructive">
+                        {moveEntryError}
+                      </p>
+                    ) : null}
+                  </form>
                 </DialogPanel>
-              ) : null}
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isDeletingEntry}
-                  onClick={() => setDeleteEntryTarget(null)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  loading={isDeletingEntry}
-                  onClick={() => void confirmDeleteEntry()}
-                >
-                  Delete
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          ) : null}
-        </Dialog>
-        <Dialog
-          open={openedFile !== null}
-          onOpenChange={(open) => {
-            if (!open) setOpenedFile(null)
-          }}
-        >
-          {openedFile ? (
-            <DialogContent
-              className={cn(
-                "overflow-hidden p-0",
-                VIEWER_DIALOG_CLASSNAMES[openedFile.kind]
-              )}
-              showCloseButton={openedFile.kind === "image"}
-            >
-              <DialogTitle className="sr-only">{openedFileName}</DialogTitle>
-              {openedFile.kind === "image" ? (
-                // eslint-disable-next-line @next/next/no-img-element -- File previews render caller-provided URLs that may be object or presigned URLs.
-                <img
-                  src={openedFile.url}
-                  alt={openedFileName}
-                  className="max-h-[88vh] w-auto max-w-full rounded-2xl object-contain"
-                />
-              ) : (
-                // The pooled preview reparents into this host (see the layout
-                // effect above), so a viewer the gallery already loaded
-                // carries over live instead of remounting behind a loading
-                // state.
-                <div
-                  ref={dialogStageHostRef}
-                  className="flex h-full min-h-0 flex-1 flex-col"
-                />
-              )}
-            </DialogContent>
-          ) : null}
-          {/* The pooled previews. Rendered inside <Dialog> so the dialog
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isMovingEntry}
+                    onClick={() => setMoveEntryTarget(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    form="move-entry-form"
+                    loading={isMovingEntry}
+                    disabled={moveDestination === moveEntryTarget.parentPath}
+                  >
+                    Move
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            ) : null}
+          </Dialog>
+          <Dialog
+            open={deleteEntryTarget !== null}
+            onOpenChange={(open) => {
+              if (isDeletingEntry) return
+              if (!open) {
+                setDeleteEntryTarget(null)
+                setDeleteEntryError(null)
+              }
+            }}
+          >
+            {deleteEntryTarget ? (
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>
+                    Delete{" "}
+                    {deleteEntryTarget.kind === "folder" ? "Folder" : "File"}?
+                  </DialogTitle>
+                  <DialogDescription>
+                    “{deleteEntryTarget.name}” will be permanently deleted
+                    {deleteEntryTarget.kind === "folder"
+                      ? " along with everything inside it."
+                      : "."}
+                  </DialogDescription>
+                </DialogHeader>
+                {deleteEntryError ? (
+                  <DialogPanel>
+                    <p className="text-sm text-destructive">
+                      {deleteEntryError}
+                    </p>
+                  </DialogPanel>
+                ) : null}
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isDeletingEntry}
+                    onClick={() => setDeleteEntryTarget(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    loading={isDeletingEntry}
+                    onClick={() => void confirmDeleteEntry()}
+                  >
+                    Delete
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            ) : null}
+          </Dialog>
+          <Dialog
+            open={openedFile !== null}
+            onOpenChange={(open) => {
+              if (!open) setOpenedFile(null)
+            }}
+          >
+            {openedFile ? (
+              <DialogContent
+                className={cn(
+                  "overflow-hidden p-0",
+                  VIEWER_DIALOG_CLASSNAMES[openedFile.kind]
+                )}
+                showCloseButton={openedFile.kind === "image"}
+              >
+                <DialogTitle className="sr-only">{openedFileName}</DialogTitle>
+                {openedFile.kind === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- File previews render caller-provided URLs that may be object or presigned URLs.
+                  <img
+                    src={openedFile.url}
+                    alt={openedFileName}
+                    className="max-h-[88vh] w-auto max-w-full rounded-2xl object-contain"
+                  />
+                ) : (
+                  // The pooled preview reparents into this host (see the layout
+                  // effect above), so a viewer the gallery already loaded
+                  // carries over live instead of remounting behind a loading
+                  // state.
+                  <div
+                    ref={dialogStageHostRef}
+                    className="flex h-full min-h-0 flex-1 flex-col"
+                  />
+                )}
+              </DialogContent>
+            ) : null}
+            {/* The pooled previews. Rendered inside <Dialog> so the dialog
             variant's close toolbar button keeps its context; each portal's
             container never changes, the container's parent does. */}
-          {stagePool.map((path) => {
-            const file = index.files.get(path)
-            const container = stageContainers.get(path)
+            {stagePool.map((path) => {
+              const file = index.files.get(path)
+              const container = stageContainers.get(path)
 
-            if (!file || !container) return null
+              if (!file || !container) return null
 
-            const isOpenedInDialog =
-              openedFile !== null &&
-              openedFile.kind !== "image" &&
-              openedFile.file.path === path
+              const isOpenedInDialog =
+                openedFile !== null &&
+                openedFile.kind !== "image" &&
+                openedFile.file.path === path
 
-            return createPortal(
-              <FileSystemGalleryStage
-                file={file}
-                getFileUrl={getFileUrl}
-                loadPreviewImageUrl={loadPreviewImageUrl}
-                pageUrlCache={pageUrlCache}
-                renderFilePreview={renderFilePreview}
-                toolbarActions={
-                  isOpenedInDialog ? viewerCloseToolbarAction : undefined
-                }
-                urlCache={resolvedUrlCache}
-                variant={isOpenedInDialog ? "dialog" : "stage"}
-              />,
-              container,
-              path
-            )
-          })}
-        </Dialog>
-        {dateRangeDialog ? (
-          <FileSystemDateRangeDialog
-            initialRange={dateRangeDialog.initialRange}
-            onApply={(from, to) => {
-              applyCustomDateRange(dateRangeDialog.type, from, to)
-              setDateRangeDialog(null)
-            }}
-            onClose={() => setDateRangeDialog(null)}
-          />
-        ) : null}
-      </div>
+              return createPortal(
+                <FileSystemGalleryStage
+                  file={file}
+                  getFileUrl={getFileUrl}
+                  loadPreviewImageUrl={loadPreviewImageUrl}
+                  pageUrlCache={pageUrlCache}
+                  renderFilePreview={renderFilePreview}
+                  toolbarActions={
+                    isOpenedInDialog ? viewerCloseToolbarAction : undefined
+                  }
+                  urlCache={resolvedUrlCache}
+                  variant={isOpenedInDialog ? "dialog" : "stage"}
+                />,
+                container,
+                path
+              )
+            })}
+          </Dialog>
+          {dateRangeDialog ? (
+            <FileSystemDateRangeDialog
+              initialRange={dateRangeDialog.initialRange}
+              onApply={(from, to) => {
+                applyCustomDateRange(dateRangeDialog.type, from, to)
+                setDateRangeDialog(null)
+              }}
+              onClose={() => setDateRangeDialog(null)}
+            />
+          ) : null}
+        </div>
+      </RenameContext.Provider>
     </ShowFileExtensionsContext.Provider>
   )
 }
@@ -4060,6 +4189,11 @@ type FileSystemViewProps = {
   sort: FileSystemSortState
   /** Expanded tree folders per folder path, surviving view switches. */
   treeExpansionRef: React.RefObject<Map<string, readonly string[]>>
+  /** Commit a rename (list view uses the tree's native inline rename). */
+  onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
+  /** The list view registers a starter here so the context menu can begin its
+   *  native inline rename. */
+  startTreeRenameRef: React.RefObject<((entry: FileSystemEntry) => void) | null>
 }
 
 // Resolves a display URL for a file: its own `url`, else via `getFileUrl`.
@@ -4320,6 +4454,7 @@ function FileSystemIconsView({
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const typeAhead = useEntryTypeAhead()
   const formatName = useFormatEntryName()
+  const rename = React.useContext(RenameContext)
   // The column count mirrors what `repeat(auto-fill, minmax(6.5rem, 1fr))`
   // produces (the CSS owns the actual layout) so item indices map to grid
   // rows — the windowing below depends on that mapping. It stays null until
@@ -4463,6 +4598,60 @@ function FileSystemIconsView({
         >
           {visibleEntries.map((entry) => {
             const isSelected = entry.path === selectedPath
+            const isRenaming = rename?.targetPath === entry.path
+            const isSaving = rename?.pendingPaths.has(entry.path) ?? false
+
+            const glyph = (
+              <span
+                className={cn(
+                  "relative flex h-16 w-20 shrink-0 items-center justify-center rounded-lg p-1 transition-colors",
+                  isSelected && "bg-accent"
+                )}
+              >
+                {entry.kind === "folder" ? (
+                  <FileSystemFolderGlyph className="h-13 w-auto drop-shadow-sm" />
+                ) : (
+                  <FileVisual
+                    file={entry}
+                    className={cn(
+                      "rounded-sm shadow-xs",
+                      // Landscape thumbnails get extra width so they fill
+                      // the tile instead of rendering as a short sliver.
+                      (entry.previewAspectRatio ?? 0.78) > 1.2
+                        ? "w-[4.75rem]"
+                        : "w-12"
+                    )}
+                    previewAspectRatio={0.78}
+                    renderFilePreview={renderFilePreview}
+                  />
+                )}
+                {isSaving ? (
+                  <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/60">
+                    <Spinner className="size-5 text-muted-foreground" />
+                  </span>
+                ) : null}
+              </span>
+            )
+
+            // The tile is a <button>, which can't contain an <input>; while
+            // renaming, render a plain container with the inline editor.
+            if (isRenaming) {
+              return (
+                <div
+                  key={entry.path}
+                  className="flex h-[6.375rem] flex-col items-center gap-1.5"
+                >
+                  {glyph}
+                  <InlineRenameName
+                    entry={entry}
+                    multiline
+                    className="w-20 text-center text-xs leading-tight"
+                  >
+                    {formatName(entry)}
+                  </InlineRenameName>
+                </div>
+              )
+            }
 
             return (
               <button
@@ -4486,30 +4675,7 @@ function FileSystemIconsView({
                 }}
                 className="group flex h-[6.375rem] flex-col items-center gap-1.5 outline-none"
               >
-                <span
-                  className={cn(
-                    "flex h-16 w-20 shrink-0 items-center justify-center rounded-lg p-1 transition-colors",
-                    isSelected && "bg-accent"
-                  )}
-                >
-                  {entry.kind === "folder" ? (
-                    <FileSystemFolderGlyph className="h-13 w-auto drop-shadow-sm" />
-                  ) : (
-                    <FileVisual
-                      file={entry}
-                      className={cn(
-                        "rounded-sm shadow-xs",
-                        // Landscape thumbnails get extra width so they fill
-                        // the tile instead of rendering as a short sliver.
-                        (entry.previewAspectRatio ?? 0.78) > 1.2
-                          ? "w-[4.75rem]"
-                          : "w-12"
-                      )}
-                      previewAspectRatio={0.78}
-                      renderFilePreview={renderFilePreview}
-                    />
-                  )}
-                </span>
+                {glyph}
                 <span
                   className={cn(
                     "max-w-full rounded-sm px-1.5 py-px text-center text-xs leading-tight break-words",
@@ -4574,6 +4740,8 @@ function FileSystemListView({
   onOpen,
   onSelect,
   onSortColumnClick,
+  onRenameEntry,
+  startTreeRenameRef,
   searchQuery,
   selectedPath,
   sort,
@@ -4668,6 +4836,8 @@ function FileSystemListView({
         }
         onOpen={onOpen}
         onSelect={onSelect}
+        onRenameEntry={onRenameEntry}
+        startTreeRenameRef={startTreeRenameRef}
         relativePaths={relativePaths}
         searchQuery={searchQuery}
         sort={sort}
@@ -4689,6 +4859,8 @@ function FileSystemPierreTree({
   initialSelectedPath,
   onOpen,
   onSelect,
+  onRenameEntry,
+  startTreeRenameRef,
   relativePaths,
   searchQuery,
   sort,
@@ -4700,6 +4872,8 @@ function FileSystemPierreTree({
   initialSelectedPath: string | null
   onOpen: (entry: FileSystemEntry) => void
   onSelect: (entry: FileSystemEntry | null) => void
+  onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
+  startTreeRenameRef: React.RefObject<((entry: FileSystemEntry) => void) | null>
   relativePaths: string[]
   searchQuery: string
   sort: FileSystemSortState
@@ -4822,6 +4996,19 @@ function FileSystemPierreTree({
     itemHeight: 28,
     overscan: 12,
     preparedInput,
+    // Native inline rename: the row turns into an input, and the committed name
+    // is forwarded to the consumer's rename handler.
+    renaming: {
+      onRename: ({ sourcePath, destinationPath }) => {
+        if (!onRenameEntry) return
+        const source =
+          index.files.get(`${currentPath}${sourcePath}`) ??
+          index.folders.get(normalizeFolderPath(`${currentPath}${sourcePath}`))
+        const name = destinationPath.replace(/\/$/, "").split("/").pop()
+        if (!source || !name) return
+        void onRenameEntry(source, name)
+      },
+    },
     renderRowDecoration: ({ row }) => {
       const entry =
         row.kind === "file"
@@ -4916,6 +5103,20 @@ function FileSystemPierreTree({
   React.useEffect(() => {
     model.setIcons(icons)
   }, [icons, model])
+
+  // Let the (shared) context menu start the tree's native inline rename.
+  React.useEffect(() => {
+    startTreeRenameRef.current = (entry) => {
+      const relative = entry.path.slice(currentPath.length).replace(/\/$/, "")
+      const item = model.getItem(relative) ?? model.getItem(`${relative}/`)
+      if (!item) return
+      model.scrollToPath(item.getPath())
+      model.startRenaming(item.getPath())
+    }
+    return () => {
+      startTreeRenameRef.current = null
+    }
+  }, [currentPath, model, startTreeRenameRef])
 
   // The folders currently expanded in the mounted model, derived from the
   // given path list (the model knows the rows; the paths name the
@@ -5469,6 +5670,7 @@ const FileSystemColumn = React.memo(function FileSystemColumn({
 }) {
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const formatName = useFormatEntryName()
+  const rename = React.useContext(RenameContext)
   const { end, start } = useVirtualWindow({
     count: entries.length,
     itemStride: COLUMN_ROW_STRIDE,
@@ -5523,6 +5725,45 @@ const FileSystemColumn = React.memo(function FileSystemColumn({
 
               const coverUrl =
                 entry.kind === "file" ? filePreviewUrls(entry)[0] : undefined
+              const isRenaming = rename?.targetPath === entry.path
+              const isSaving = rename?.pendingPaths.has(entry.path) ?? false
+
+              const rowIcon =
+                entry.kind === "folder" ? (
+                  <FileSystemFolderGlyph className="h-3.5 w-auto shrink-0" />
+                ) : coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- Cover thumbnails come from caller-provided file preview URLs.
+                  <img
+                    src={coverUrl}
+                    alt=""
+                    draggable={false}
+                    className="size-4 shrink-0 rounded-[3px] bg-white object-cover"
+                  />
+                ) : (
+                  <FileTypeIcon
+                    fileName={entry.name}
+                    className="size-4 shrink-0"
+                  />
+                )
+
+              // The row is a <button>, which can't contain an <input>; while
+              // renaming, render a plain container with the inline editor.
+              if (isRenaming) {
+                return (
+                  <div
+                    key={entry.path}
+                    className="flex h-7 shrink-0 items-center gap-2 rounded-md px-2 py-1 text-sm"
+                  >
+                    {rowIcon}
+                    <InlineRenameName
+                      entry={entry}
+                      className="min-w-0 flex-1 text-sm"
+                    >
+                      {formatName(entry)}
+                    </InlineRenameName>
+                  </div>
+                )
+              }
 
               return (
                 <button
@@ -5566,27 +5807,19 @@ const FileSystemColumn = React.memo(function FileSystemColumn({
                         : "hover:bg-accent/50"
                   )}
                 >
-                  {entry.kind === "folder" ? (
-                    <FileSystemFolderGlyph className="h-3.5 w-auto shrink-0" />
-                  ) : coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- Cover thumbnails come from caller-provided file preview URLs.
-                    <img
-                      src={coverUrl}
-                      alt=""
-                      draggable={false}
-                      className="size-4 shrink-0 rounded-[3px] bg-white object-cover"
-                    />
-                  ) : (
-                    <FileTypeIcon
-                      fileName={entry.name}
-                      className="size-4 shrink-0"
-                    />
-                  )}
+                  {rowIcon}
                   <span className="min-w-0 flex-1 truncate">
                     {formatName(entry)}
                   </span>
-                  {entry.kind === "folder" &&
-                  folderHasChildren(index, entry) ? (
+                  {isSaving ? (
+                    <Spinner
+                      className={cn(
+                        "size-3.5 shrink-0",
+                        !isSelected && "text-muted-foreground"
+                      )}
+                    />
+                  ) : entry.kind === "folder" &&
+                    folderHasChildren(index, entry) ? (
                     <AppIcon
                       icon={ArrowRight01Icon}
                       className={cn(
@@ -5820,6 +6053,7 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
   const stripViewportRef = React.useRef<HTMLDivElement | null>(null)
   const typeAhead = useEntryTypeAhead()
   const formatName = useFormatEntryName()
+  const rename = React.useContext(RenameContext)
   const activeEntry =
     selectedEntry && entries.some((entry) => entry.path === selectedEntry.path)
       ? selectedEntry
@@ -6042,8 +6276,16 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
                 <FileSystemFolderGlyph className="h-8 w-auto shrink-0" />
               )}
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold break-words">
-                  {formatName(activeEntry)}
+                <div className="flex items-center gap-1.5 text-sm font-semibold break-words">
+                  <InlineRenameName
+                    entry={activeEntry}
+                    className="w-full text-sm font-semibold"
+                  >
+                    {formatName(activeEntry)}
+                  </InlineRenameName>
+                  {rename?.pendingPaths.has(activeEntry.path) ? (
+                    <Spinner className="size-3.5 shrink-0 text-muted-foreground" />
+                  ) : null}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {activeFile ? fileKindLabel(activeFile) : "Folder"}

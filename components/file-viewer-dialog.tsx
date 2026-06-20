@@ -46,8 +46,8 @@ const DIALOG_CLASSNAMES: Record<FileKind, string> = {
   pdf: "h-[88vh] w-[min(96vw,68rem)] max-w-none p-0",
   docx: "h-[88vh] w-[min(96vw,68rem)] max-w-none p-0",
   xlsx: "h-[85vh] w-[min(96vw,100rem)] max-w-none p-0",
-  image: "max-h-[88vh] w-fit max-w-[min(96vw,64rem)] p-2",
-  video: "w-[min(96vw,72rem)] max-w-none p-2",
+  image: "max-h-[88vh] w-fit min-w-[18rem] max-w-[min(96vw,64rem)] p-0",
+  video: "w-[min(96vw,72rem)] max-w-none p-0",
   other: "max-w-md",
 }
 
@@ -143,7 +143,7 @@ function ViewerBody({
         <img
           src={url}
           alt={fileName}
-          className="max-h-[84vh] w-auto max-w-full rounded-lg object-contain"
+          className="max-h-[80vh] w-auto max-w-full rounded-lg object-contain"
         />
       )
     case "video":
@@ -207,8 +207,9 @@ export function FileViewerDialog({
   // These viewers render their own top toolbars, which would collide with the
   // dialog's default top-right close button. Give them a dedicated title bar
   // with the close control instead, and hide the built-in one.
-  const isFramed =
-    kind === "text" || kind === "pdf" || kind === "docx" || kind === "xlsx"
+  // Image and video get a header bar (title + close) like the document viewers,
+  // and their media is centered below it.
+  const isMedia = kind === "image" || kind === "video"
 
   const body = url ? (
     <ViewerBody
@@ -227,17 +228,20 @@ export function FileViewerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open && file ? (
         <DialogContent
-          showCloseButton={!isFramed}
+          showCloseButton={kind === "other"}
           className={cn("overflow-hidden", DIALOG_CLASSNAMES[kind])}
         >
           <DialogTitle className="sr-only">{fileName}</DialogTitle>
-          {isFramed ? (
+          {kind === "other" ? (
+            body
+          ) : (
             <div className="flex h-full min-h-0 flex-col">
-              {/* Text and PDF viewers don't show the filename themselves, so
-                  this bar provides the title (and download for text). DOCX/XLSX
-                  render their own titled toolbars, so the bar is close-only. */}
+              {/* The text, PDF, XLSX, image, and video viewers don't show the
+                  filename themselves, so this bar provides the title (plus
+                  search/download for text and the star toggle). DOCX renders
+                  its own titled toolbar, so its bar is close-only. */}
               <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b px-3">
-                {kind === "text" || kind === "pdf" ? (
+                {kind !== "docx" ? (
                   <span className="min-w-0 truncate text-sm font-medium">
                     {fileName}
                   </span>
@@ -280,20 +284,16 @@ export function FileViewerDialog({
                   </DialogClose>
                 </div>
               </div>
-              <div className="min-h-0 flex-1">{body}</div>
+              <div
+                className={
+                  isMedia
+                    ? "flex min-h-0 flex-1 items-center justify-center p-2"
+                    : "min-h-0 flex-1"
+                }
+              >
+                {body}
+              </div>
             </div>
-          ) : (
-            <>
-              {onToggleStar && kind !== "other" ? (
-                <div className="absolute end-11 top-2 z-10">
-                  <StarButton
-                    isStarred={isStarred}
-                    onToggleStar={onToggleStar}
-                  />
-                </div>
-              ) : null}
-              {body}
-            </>
           )}
         </DialogContent>
       ) : null}
