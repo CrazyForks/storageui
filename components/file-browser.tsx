@@ -290,13 +290,17 @@ export function FileBrowser() {
       )}
 
       {isDragging ? (
-        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center bg-primary/5 backdrop-blur-[1px]">
-          <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary bg-background/80 px-8 py-6 text-center shadow-sm">
-            <AppIcon icon={Upload01Icon} className="size-7 text-primary" />
-            <p className="text-sm font-medium">Drop files to upload</p>
-            <p className="text-xs text-muted-foreground">
-              {currentPath ? `to ${currentPath}` : "to the bucket root"}
-            </p>
+        <div className="pointer-events-none absolute inset-0 z-40 p-2.5">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/[0.04] backdrop-blur-[1px]">
+            <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <AppIcon icon={Upload01Icon} className="size-6" />
+            </div>
+            <div className="space-y-0.5 text-center">
+              <p className="text-sm font-medium">Drop files to upload</p>
+              <p className="text-xs text-muted-foreground">
+                {currentPath ? `to ${currentPath}` : "to the bucket root"}
+              </p>
+            </div>
           </div>
         </div>
       ) : null}
