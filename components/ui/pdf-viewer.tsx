@@ -137,6 +137,8 @@ export type PDFViewerProps = {
   showToolbar?: boolean
   showRotateControls?: boolean
   showUpload?: boolean
+  /** Show the page-thumbnail navigation sidebar. Defaults to `true`. */
+  showThumbnailSidebar?: boolean
   src?: string
   toolbarActions?: React.ReactNode
   pageClassName?: (pageNumber: number) => string | undefined
@@ -1778,6 +1780,7 @@ type PDFViewerInnerProps = {
   showToolbar: boolean
   showRotateControls: boolean
   showUpload: boolean
+  showThumbnailSidebar: boolean
   toolbarActions?: React.ReactNode
   pageClassName?: (pageNumber: number) => string | undefined
   renderPageOverlay?: (props: PDFViewerPageOverlayProps) => React.ReactNode
@@ -1802,6 +1805,7 @@ function PDFViewerInner({
   showToolbar,
   showRotateControls,
   showUpload,
+  showThumbnailSidebar,
   toolbarActions,
   pageClassName,
   renderPageOverlay,
@@ -1844,7 +1848,8 @@ function PDFViewerInner({
   const isLoading = !pdfDocument
   const controlsDisabled = !numPages
   const downloadDisabled = controlsDisabled || isPreparingDownload
-  const thumbnailSidebarVisible = sidebarOpen && !isLoading
+  const thumbnailSidebarVisible =
+    sidebarOpen && !isLoading && showThumbnailSidebar
   const currentZoomLevel = zoomState.currentZoomLevel
   const alignedThumbnailSidebarDocumentRef = React.useRef<string | null>(null)
 
@@ -2239,20 +2244,22 @@ function PDFViewerInner({
       {showToolbar ? (
         <div className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b bg-background px-3 py-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <TooltipProvider>
-              <ToolbarTooltip label="Toggle thumbnails">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Toggle thumbnails"
-                  disabled={controlsDisabled}
-                  onClick={() => setSidebarOpen((open) => !open)}
-                >
-                  <AppIcon icon={SidebarLeftIcon} className="size-4" />
-                </Button>
-              </ToolbarTooltip>
-            </TooltipProvider>
+            {showThumbnailSidebar ? (
+              <TooltipProvider>
+                <ToolbarTooltip label="Toggle thumbnails">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Toggle thumbnails"
+                    disabled={controlsDisabled}
+                    onClick={() => setSidebarOpen((open) => !open)}
+                  >
+                    <AppIcon icon={SidebarLeftIcon} className="size-4" />
+                  </Button>
+                </ToolbarTooltip>
+              </TooltipProvider>
+            ) : null}
             <PDFViewerPageNumberControl
               activePage={activePage}
               controlsDisabled={controlsDisabled}
@@ -2517,7 +2524,9 @@ function PDFViewerDocumentLoader({
         className={innerProps.className}
         showToolbar={innerProps.showToolbar}
         showUpload={innerProps.showUpload}
-        sidebarOpen={Boolean(pdfFile) && !documentFailed}
+        sidebarOpen={
+          Boolean(pdfFile) && !documentFailed && innerProps.showThumbnailSidebar
+        }
         state={!pdfFile ? "empty" : documentFailed ? "error" : "loading"}
         onUploadFile={(file) => {
           innerProps.onUploadFile(file)
@@ -2548,6 +2557,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
       showRotateControls = true,
       showToolbar = true,
       showUpload = true,
+      showThumbnailSidebar = true,
       src,
       toolbarActions,
       pageClassName,
@@ -2676,6 +2686,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
           showToolbar={showToolbar}
           showRotateControls={showRotateControls}
           showUpload={showUpload}
+          showThumbnailSidebar={showThumbnailSidebar}
           toolbarActions={toolbarActions}
           pageClassName={pageClassName}
           renderPageOverlay={renderPageOverlay}

@@ -6002,6 +6002,7 @@ function FileSystemGalleryStage({
             )}
             fileName={file.name}
             showToolbar={isDialog}
+            showThumbnailSidebar={isDialog}
             showUpload={false}
             toolbarActions={toolbarActions}
           />
@@ -6023,6 +6024,7 @@ function FileSystemGalleryStage({
             )}
             onIsDarkChange={setIsDark}
             showToolbar={isDialog}
+            showThumbnailSidebar={isDialog}
             showUpload={false}
             toolbarActions={toolbarActions}
           />

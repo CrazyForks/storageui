@@ -87,7 +87,7 @@ export function MarkedFilesView({
       <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b px-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="text-sm font-medium">{SECTION_LABELS[section]}</span>
-          <Badge variant="secondary" className="truncate">
+          <Badge variant="secondary" className="truncate text-sm">
             {connectionName}
           </Badge>
         </div>

@@ -1037,6 +1037,7 @@ export function DocxViewerPreview({
   showDownload = true,
   showToolbar = true,
   showUpload = true,
+  showThumbnailSidebar = true,
   src,
   toolbarActions,
 }: {
@@ -1048,6 +1049,8 @@ export function DocxViewerPreview({
   showDownload?: boolean
   showToolbar?: boolean
   showUpload?: boolean
+  /** Show the page-thumbnail navigation sidebar. Defaults to `true`. */
+  showThumbnailSidebar?: boolean
   src?: string
   toolbarActions?: React.ReactNode
 }) {
@@ -1062,6 +1065,7 @@ export function DocxViewerPreview({
       showDownload={showDownload}
       showToolbar={showToolbar}
       showUpload={showUpload}
+      showThumbnailSidebar={showThumbnailSidebar}
       toolbarActions={toolbarActions}
       url={src}
     />
@@ -1078,6 +1082,7 @@ function DocxViewerContent({
   showDownload,
   showToolbar = true,
   showUpload,
+  showThumbnailSidebar = true,
   toolbarActions,
   url,
 }: {
@@ -1090,6 +1095,7 @@ function DocxViewerContent({
   showDownload: boolean
   showToolbar?: boolean
   showUpload: boolean
+  showThumbnailSidebar?: boolean
   toolbarActions?: React.ReactNode
   url?: string
 }) {
@@ -1176,7 +1182,10 @@ function DocxViewerContent({
       ? Math.max(1, reportedPageCount || editor.totalPages)
       : 0
   const thumbnailSidebarVisible = Boolean(
-    sidebarOpen && hasDocument && (pageCount || isLoadingDocument)
+    showThumbnailSidebar &&
+    sidebarOpen &&
+    hasDocument &&
+    (pageCount || isLoadingDocument)
   )
   const controlsDisabled =
     !hasDocument || isLoadingDocument || Boolean(loadError)

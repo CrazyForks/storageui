@@ -122,10 +122,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   {connections.map((connection) => (
                     <SidebarMenuItem key={connection.id}>
                       <SidebarMenuButton
-                        isActive={
-                          connection.id === activeConnection?.id &&
-                          section === "all"
-                        }
+                        isActive={connection.id === activeConnection?.id}
                         tooltip={connection.bucket}
                         onClick={() => {
                           setActiveConnection(connection.id)

@@ -1,6 +1,7 @@
 import { type Metadata } from "next"
 
 import { FileBrowser } from "@/components/file-browser"
+import { SectionUrlSync } from "@/components/section-url-sync"
 
 const title = "File System"
 const description =
@@ -14,9 +15,17 @@ export const metadata: Metadata = {
   description,
 }
 
+// Pre-render the browse tabs so `/`, `/Recents`, and `/Starred` all resolve on
+// a hard reload or bookmark. The section itself is driven client-side by
+// SectionUrlSync, so every path renders the same FileBrowser.
+export function generateStaticParams() {
+  return [{ section: [] }, { section: ["Recents"] }, { section: ["Starred"] }]
+}
+
 export default function IndexPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <SectionUrlSync />
       <FileBrowser />
     </div>
   )
