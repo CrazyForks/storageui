@@ -36,6 +36,7 @@ export {
   IconMessageCircle as Comment01Icon,
   IconTrash as Delete02Icon,
   IconDownload as Download01Icon,
+  IconPencil as Edit02Icon,
   IconStar as FavouriteIcon,
   IconFile as File01Icon,
   IconFilter as FilterIcon,

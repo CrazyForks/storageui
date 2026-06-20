@@ -20,6 +20,7 @@ type PersistedConnectionState = {
 }
 
 type ConnectionStore = PersistedConnectionState & {
+  hasHydrated: boolean
   isAddDialogOpen: boolean
   editingConnection: Connection | null
   setActiveConnection: (id: string) => void
@@ -49,6 +50,7 @@ export const useConnectionStore = create<ConnectionStore>()(
     (set) => ({
       connections: withEnvConnection([]),
       activeConnectionId: null,
+      hasHydrated: false,
       isAddDialogOpen: false,
       editingConnection: null,
 
@@ -119,6 +121,7 @@ export const useConnectionStore = create<ConnectionStore>()(
 
       finishHydration: () =>
         set((state) => ({
+          hasHydrated: true,
           activeConnectionId: state.connections.some(
             (connection) => connection.id === state.activeConnectionId
           )
@@ -150,8 +153,10 @@ export const useConnectionStore = create<ConnectionStore>()(
               : null,
         }
       },
-      onRehydrateStorage: () => (state, error) => {
-        if (!error) state?.finishHydration()
+      onRehydrateStorage: () => (state) => {
+        // Always resolve hydration (even on error) so the UI never sticks on
+        // its pre-hydration loading state.
+        state?.finishHydration()
       },
     }
   )

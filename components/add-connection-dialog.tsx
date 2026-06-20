@@ -9,6 +9,7 @@ import {
   type ConnectionProvider,
 } from "@/lib/connections"
 import { createFiles } from "@/lib/files-client"
+import { AppIcon, Delete02Icon } from "@/lib/icons"
 import { useConnections } from "@/lib/store/connection-store"
 import { Button } from "@/components/ui/button"
 import {
@@ -126,6 +127,7 @@ export function AddConnectionDialog() {
     setAddDialogOpen,
     addConnection,
     updateConnection,
+    removeConnection,
   } = useConnections()
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM)
   const [status, setStatus] = React.useState<"idle" | "testing">("idle")
@@ -340,6 +342,20 @@ export function AddConnectionDialog() {
           </DialogPanel>
 
           <DialogFooter>
+            {editingConnection ? (
+              <Button
+                type="button"
+                variant="destructive-outline"
+                className="sm:me-auto"
+                onClick={() => {
+                  removeConnection(editingConnection.id)
+                  setAddDialogOpen(false)
+                }}
+              >
+                <AppIcon icon={Delete02Icon} className="size-4" />
+                Delete
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"

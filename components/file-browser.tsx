@@ -49,7 +49,7 @@ function EmptyState() {
 }
 
 export function FileBrowser() {
-  const { activeConnection } = useConnections()
+  const { activeConnection, hasHydrated } = useConnections()
   const bucketKey = activeConnection ? bucketBrowserKey(activeConnection) : ""
   const browserSettings = useBucketBrowserStore(
     (state) => state.buckets[bucketKey] ?? DEFAULT_BUCKET_BROWSER_SETTINGS
@@ -115,6 +115,12 @@ export function FileBrowser() {
     if (e.dataTransfer.files.length) {
       enqueue(Array.from(e.dataTransfer.files), currentPath)
     }
+  }
+
+  // Until the persisted store rehydrates, we don't yet know if a bucket is
+  // connected — render nothing rather than flashing the "No bucket" empty state.
+  if (!hasHydrated) {
+    return <div className="h-full" />
   }
 
   if (!activeConnection) {

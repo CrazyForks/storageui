@@ -5,6 +5,7 @@ import * as React from "react"
 import {
   AppIcon,
   Clock01Icon,
+  Edit02Icon,
   FavouriteIcon,
   FolderLibraryIcon,
   HardDriveIcon,
@@ -46,8 +47,13 @@ const BROWSE: BrowseItem[] = [
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const [isSettingsOpen, setSettingsOpen] = React.useState(false)
-  const { connections, activeConnection, setActiveConnection, openAddDialog } =
-    useConnections()
+  const {
+    connections,
+    activeConnection,
+    setActiveConnection,
+    openAddDialog,
+    openEditDialog,
+  } = useConnections()
   const pickFiles = useUploadUiStore((state) => state.pickFiles)
 
   return (
@@ -108,6 +114,19 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                       </span>
                     ) : null}
                   </SidebarMenuButton>
+                  {connection.source !== "env" ? (
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      data-sidebar="menu-action"
+                      aria-label="Edit connection"
+                      title="Edit connection"
+                      onClick={() => openEditDialog(connection)}
+                      className="absolute top-1/2 right-1 -translate-y-1/2 opacity-0 transition-opacity group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden focus-visible:opacity-100"
+                    >
+                      <AppIcon icon={Edit02Icon} />
+                    </Button>
+                  ) : null}
                 </SidebarMenuItem>
               ))}
               {connections.length === 0 ? (

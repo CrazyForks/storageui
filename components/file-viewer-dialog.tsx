@@ -180,11 +180,11 @@ export function FileViewerDialog({
           <DialogTitle className="sr-only">{fileName}</DialogTitle>
           {isFramed ? (
             <div className="flex h-full min-h-0 flex-col">
-              {/* The text viewer has no toolbar of its own, so this bar shows
-                  the filename and download. PDF/DOCX/XLSX render those in their
-                  own toolbars, so here the bar only carries the close control. */}
+              {/* Text and PDF viewers don't show the filename themselves, so
+                  this bar provides the title (and download for text). DOCX/XLSX
+                  render their own titled toolbars, so the bar is close-only. */}
               <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b px-3">
-                {kind === "text" ? (
+                {kind === "text" || kind === "pdf" ? (
                   <span className="min-w-0 truncate text-sm font-medium">
                     {fileName}
                   </span>
