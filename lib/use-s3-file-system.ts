@@ -1,64 +1,38 @@
 "use client"
 
 import * as React from "react"
-import { FilesError, type Files } from "files-sdk"
 
+import { toConnectionRef, type ConnectionRef } from "@/lib/connection-ref"
 import type { Connection } from "@/lib/connections"
-import { createFiles, type FilesClient } from "@/lib/files-client"
 import type {
   FileSystemFileItem,
   FileSystemItem,
   FileSystemLoadChildrenResult,
 } from "@/components/ui/file-system"
+import {
+  createFolderAction,
+  deleteEntryAction,
+  listFolderAction,
+  moveEntryAction,
+  renameEntryAction,
+  signFileUrlAction,
+  signUploadUrlAction,
+  type EntryRef,
+  type SignedUpload,
+} from "@/app/actions/files"
 
-const PAGE_LIMIT = 1000
-const URL_EXPIRES_IN = 3600
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? ""
 
 function errorMessage(error: unknown): string {
-  if (error instanceof FilesError) {
-    return `${error.message} (${error.code})`
-  }
   if (error instanceof Error) return error.message
   return String(error)
 }
 
-/** One page of a folder, mapped to the FileSystem manifest shape. */
-async function listFolder(
-  files: Files,
-  prefix: string,
-  cursor: string | null
-): Promise<FileSystemLoadChildrenResult> {
-  const result = await files.list({
-    prefix: prefix || undefined,
-    delimiter: "/",
-    limit: PAGE_LIMIT,
-    cursor: cursor ?? undefined,
-  })
-
-  const folders: FileSystemItem[] = (result.prefixes ?? []).map((path) => ({
-    kind: "folder",
-    path,
-    hasChildren: true,
-  }))
-
-  const fileItems: FileSystemItem[] = result.items
-    // Skip the zero-byte "folder marker" objects some tools create.
-    .filter((file) => !file.key.endsWith("/"))
-    .map((file) => ({
-      kind: "file",
-      path: file.key,
-      key: file.key,
-      size: file.size,
-      contentType: file.type || undefined,
-      updatedAt: file.lastModified
-        ? new Date(file.lastModified).toISOString()
-        : undefined,
-      etag: file.etag,
-    }))
-
+function toEntryRef(item: FileSystemItem): EntryRef {
   return {
-    items: [...folders, ...fileItems],
-    nextCursor: result.cursor ?? null,
+    kind: item.kind,
+    path: item.path,
+    key: item.kind === "file" ? item.key : undefined,
   }
 }
 
@@ -106,52 +80,70 @@ function saveDownload(url: string, name: string, revoke = false) {
   if (revoke) setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-async function listKeys(files: FilesClient, prefix: string) {
-  const keys: string[] = []
+/** Direct browser upload to a presigned URL, with byte progress. */
+function uploadToSignedUrl(
+  signed: SignedUpload,
+  file: File,
+  onProgress?: (progress: UploadProgress) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
 
-  for await (const item of files.listAll({ prefix })) {
-    keys.push(item.key)
-  }
+    xhr.upload.onprogress = (event) => {
+      onProgress?.({
+        loaded: event.loaded,
+        total: event.lengthComputable ? event.total : undefined,
+      })
+    }
+    xhr.onload = () =>
+      xhr.status >= 200 && xhr.status < 300
+        ? resolve()
+        : reject(new Error(`Upload failed (${xhr.status}).`))
+    xhr.onerror = () => reject(new Error("Upload failed."))
 
-  return keys
+    if (signed.method === "PUT") {
+      xhr.open("PUT", signed.url)
+      const headers = signed.headers ?? {}
+      for (const [name, value] of Object.entries(headers)) {
+        xhr.setRequestHeader(name, value)
+      }
+      const hasContentType = Object.keys(headers).some(
+        (name) => name.toLowerCase() === "content-type"
+      )
+      if (!hasContentType && file.type) {
+        xhr.setRequestHeader("Content-Type", file.type)
+      }
+      xhr.send(file)
+    } else {
+      const form = new FormData()
+      for (const [name, value] of Object.entries(signed.fields)) {
+        form.append(name, value)
+      }
+      form.append("file", file)
+      xhr.open("POST", signed.url)
+      xhr.send(form)
+    }
+  })
 }
 
-function parentPath(path: string) {
-  const normalized = path.endsWith("/") ? path.slice(0, -1) : path
-  const separatorIndex = normalized.lastIndexOf("/")
-
-  return separatorIndex < 0 ? "" : normalized.slice(0, separatorIndex + 1)
-}
-
-async function prefixExists(files: FilesClient, prefix: string) {
-  for await (const _item of files.listAll({ prefix })) return true
-  return false
-}
-
-async function keyExists(files: FilesClient, key: string) {
-  for await (const item of files.listAll({ prefix: key })) {
-    if (item.key === key) return true
-  }
-  return false
-}
-
-/** Adapts a connection's `files-sdk` client to the FileSystem component props. */
+/** Adapts a connection's server-side `files-sdk` client to the FileSystem props. */
 export function useS3FileSystem(connection: Connection | null): S3FileSystem {
   const [items, setItems] = React.useState<FileSystemItem[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
-  const [loadedFiles, setLoadedFiles] = React.useState<Files | null>(null)
+  const [loadedConnection, setLoadedConnection] =
+    React.useState<Connection | null>(null)
   const [error, setError] = React.useState<string | null>(null)
 
-  const files = React.useMemo(
-    () => (connection ? createFiles(connection) : null),
+  const ref = React.useMemo<ConnectionRef | null>(
+    () => (connection ? toConnectionRef(connection) : null),
     [connection]
   )
 
   // Load the bucket root whenever the active connection changes.
   React.useEffect(() => {
-    if (!files) {
+    if (!ref) {
       setItems([])
-      setLoadedFiles(null)
+      setLoadedConnection(null)
       setError(null)
       return
     }
@@ -160,7 +152,7 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     setIsLoading(true)
     setError(null)
 
-    listFolder(files, "", null)
+    listFolderAction(ref, "", null)
       .then((result) => {
         if (!cancelled) setItems(result.items)
       })
@@ -172,7 +164,7 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
       })
       .finally(() => {
         if (!cancelled) {
-          setLoadedFiles(files)
+          setLoadedConnection(connection)
           setIsLoading(false)
         }
       })
@@ -180,33 +172,33 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     return () => {
       cancelled = true
     }
-  }, [files])
+  }, [ref, connection])
 
   // Re-fetch the root listing on demand (after uploads/deletes). Runs silently
   // — it deliberately doesn't toggle `isLoading`, so re-listing after a
   // mutation swaps the items in without flashing the full-content loading
   // state. The FileSystem's own `reloadToken` handles the visible folder.
   const refresh = React.useCallback(() => {
-    if (!files) return
-    listFolder(files, "", null)
+    if (!ref) return
+    listFolderAction(ref, "", null)
       .then((result) => setItems(result.items))
       .catch((err) => setError(errorMessage(err)))
-  }, [files])
+  }, [ref])
 
   const loadChildren = React.useCallback(
     async ({ path, cursor }: { path: string; cursor: string | null }) => {
-      if (!files) return { items: [], nextCursor: null }
-      return listFolder(files, path, cursor)
+      if (!ref) return { items: [], nextCursor: null }
+      return listFolderAction(ref, path, cursor)
     },
-    [files]
+    [ref]
   )
 
   const getFileUrl = React.useCallback(
     async (file: FileSystemFileItem) => {
-      if (!files) return ""
-      return files.url(file.key ?? file.path, { expiresIn: URL_EXPIRES_IN })
+      if (!ref) return ""
+      return signFileUrlAction(ref, file.key ?? file.path)
     },
-    [files]
+    [ref]
   )
 
   const uploadFile = React.useCallback(
@@ -215,230 +207,102 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
       file: File,
       onProgress?: (progress: UploadProgress) => void
     ) => {
-      if (!files) throw new Error("No active connection")
+      if (!ref) throw new Error("No active connection")
       try {
-        await files.upload(key, file, {
-          contentType: file.type || undefined,
-          onProgress,
-        })
+        const signed = await signUploadUrlAction(
+          ref,
+          key,
+          file.type || undefined
+        )
+        await uploadToSignedUrl(signed, file, onProgress)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [files]
+    [ref]
   )
 
   const createFolder = React.useCallback(
     async (path: string) => {
-      if (!files) throw new Error("No active connection")
-
-      const key = path.endsWith("/") ? path : `${path}/`
-
+      if (!ref) throw new Error("No active connection")
       try {
-        await files.upload(key, new Uint8Array(), {
-          contentType: "application/x-directory",
-        })
+        await createFolderAction(ref, path)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [files]
+    [ref]
   )
 
   const downloadEntry = React.useCallback(
     async (item: FileSystemItem) => {
-      if (!files) throw new Error("No active connection")
+      if (!ref) throw new Error("No active connection")
 
       try {
         if (item.kind === "file") {
           const key = item.key ?? item.path
-          const url = await files.url(key, { expiresIn: URL_EXPIRES_IN })
+          const url = await signFileUrlAction(ref, key)
           const name = item.name ?? key.split("/").pop() ?? "download"
-
           saveDownload(url, name)
           return
         }
 
-        const prefix = item.path.endsWith("/") ? item.path : `${item.path}/`
-        const keys = (await listKeys(files, prefix)).filter(
-          (key) => key !== prefix && !key.endsWith("/")
-        )
-
-        if (keys.length === 0) {
-          throw new Error("This folder has no files to download.")
+        const response = await fetch(`${BASE_PATH}/api/zip`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ref, path: item.path }),
+        })
+        if (!response.ok) {
+          throw new Error(
+            (await response.text()) || "Could not download folder."
+          )
         }
 
-        const stream = files.zip(keys, {
-          name: (key) => key.slice(prefix.length),
-        })
-        const blob = await new Response(stream, {
-          headers: { "Content-Type": "application/zip" },
-        }).blob()
+        const blob = await response.blob()
         const folderName =
-          item.name ?? prefix.slice(0, -1).split("/").pop() ?? "folder"
-
+          item.name ?? item.path.replace(/\/$/, "").split("/").pop() ?? "folder"
         saveDownload(URL.createObjectURL(blob), `${folderName}.zip`, true)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [files]
+    [ref]
   )
 
   const deleteEntry = React.useCallback(
     async (item: FileSystemItem) => {
-      if (!files) throw new Error("No active connection")
-
+      if (!ref) throw new Error("No active connection")
       try {
-        if (item.kind === "file") {
-          await files.delete(item.key ?? item.path)
-          return
-        }
-
-        const prefix = item.path.endsWith("/") ? item.path : `${item.path}/`
-        const keys = await listKeys(files, prefix)
-
-        if (keys.length === 0) return
-
-        const result = await files.delete(keys)
-        if (result.errors?.length) {
-          throw new Error(
-            `Could not delete ${result.errors.length} object${result.errors.length === 1 ? "" : "s"}.`
-          )
-        }
+        await deleteEntryAction(ref, toEntryRef(item))
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [files]
+    [ref]
   )
 
   const renameEntry = React.useCallback(
     async (item: FileSystemItem, name: string) => {
-      if (!files) throw new Error("No active connection")
-
-      const nextName = name.trim()
-      if (!nextName) throw new Error("Enter a name.")
-
+      if (!ref) throw new Error("No active connection")
       try {
-        if (item.kind === "file") {
-          const sourceKey = item.key ?? item.path
-          const destinationKey = `${parentPath(sourceKey)}${nextName}`
-
-          if (destinationKey === sourceKey) return
-          if (
-            (await keyExists(files, destinationKey)) ||
-            (await prefixExists(files, `${destinationKey}/`))
-          ) {
-            throw new Error("An item with this name already exists.")
-          }
-
-          await files.move(sourceKey, destinationKey)
-          return
-        }
-
-        const sourcePrefix = item.path.endsWith("/")
-          ? item.path
-          : `${item.path}/`
-        const destinationPrefix = `${parentPath(sourcePrefix)}${nextName}/`
-
-        if (destinationPrefix === sourcePrefix) return
-        if (
-          (await keyExists(files, destinationPrefix.slice(0, -1))) ||
-          (await prefixExists(files, destinationPrefix))
-        ) {
-          throw new Error("An item with this name already exists.")
-        }
-
-        const keys = await listKeys(files, sourcePrefix)
-        if (keys.length === 0) throw new Error("This folder no longer exists.")
-
-        for (let index = 0; index < keys.length; index += 8) {
-          await Promise.all(
-            keys
-              .slice(index, index + 8)
-              .map((sourceKey) =>
-                files.move(
-                  sourceKey,
-                  `${destinationPrefix}${sourceKey.slice(sourcePrefix.length)}`
-                )
-              )
-          )
-        }
+        await renameEntryAction(ref, toEntryRef(item), name)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [files]
+    [ref]
   )
 
   const moveEntry = React.useCallback(
     async (item: FileSystemItem, destinationFolder: string) => {
-      if (!files) throw new Error("No active connection")
-
-      // Normalize the destination to "" (root) or a "prefix/" form.
-      const destination =
-        !destinationFolder || destinationFolder.endsWith("/")
-          ? destinationFolder
-          : `${destinationFolder}/`
-
+      if (!ref) throw new Error("No active connection")
       try {
-        if (item.kind === "file") {
-          const sourceKey = item.key ?? item.path
-          const name = sourceKey.slice(parentPath(sourceKey).length)
-          const destinationKey = `${destination}${name}`
-
-          if (destinationKey === sourceKey) return
-          if (
-            (await keyExists(files, destinationKey)) ||
-            (await prefixExists(files, `${destinationKey}/`))
-          ) {
-            throw new Error("An item with this name already exists there.")
-          }
-
-          await files.move(sourceKey, destinationKey)
-          return
-        }
-
-        const sourcePrefix = item.path.endsWith("/")
-          ? item.path
-          : `${item.path}/`
-        const folderName = sourcePrefix
-          .slice(parentPath(sourcePrefix).length)
-          .replace(/\/$/, "")
-        const destinationPrefix = `${destination}${folderName}/`
-
-        if (destinationPrefix === sourcePrefix) return
-        if (destinationPrefix.startsWith(sourcePrefix)) {
-          throw new Error("Can’t move a folder into itself.")
-        }
-        if (
-          (await keyExists(files, destinationPrefix.slice(0, -1))) ||
-          (await prefixExists(files, destinationPrefix))
-        ) {
-          throw new Error("An item with this name already exists there.")
-        }
-
-        const keys = await listKeys(files, sourcePrefix)
-        if (keys.length === 0) throw new Error("This folder no longer exists.")
-
-        for (let index = 0; index < keys.length; index += 8) {
-          await Promise.all(
-            keys
-              .slice(index, index + 8)
-              .map((sourceKey) =>
-                files.move(
-                  sourceKey,
-                  `${destinationPrefix}${sourceKey.slice(sourcePrefix.length)}`
-                )
-              )
-          )
-        }
+        await moveEntryAction(ref, toEntryRef(item), destinationFolder)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [files]
+    [ref]
   )
 
   return {
@@ -452,7 +316,9 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     renameEntry,
     moveEntry,
     refresh,
-    isLoading: Boolean(files && (isLoading || loadedFiles !== files)),
+    isLoading: Boolean(
+      connection && (isLoading || loadedConnection !== connection)
+    ),
     error,
   }
 }

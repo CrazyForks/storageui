@@ -1,11 +1,16 @@
 /**
- * S3 / R2 connection model. This app has no backend, so a connection's
- * credentials live entirely client-side: either baked in at build time from
- * `NEXT_PUBLIC_*` env vars, or added in the UI and persisted by Zustand.
+ * S3 / R2 connection model.
  *
- * Secrets are therefore exposed to the browser — an accepted trade-off for a
- * no-backend, bring-your-own-bucket client. The target bucket must have CORS
- * enabled for direct browser access.
+ * Credentials never reach the browser as part of the build: env-configured
+ * buckets live in server-only env vars (see `connections-server.ts`) and are
+ * exercised through server actions + presigned URLs. Connections the user adds
+ * in the UI keep their credentials in that user's own browser (localStorage)
+ * and are sent to the server per call to sign requests.
+ *
+ * For an `env` connection the client only ever holds the public fields below
+ * (its `accessKeyId` / `secretAccessKey` are blanked); for a `local`
+ * connection they are populated. The target bucket must allow CORS for the
+ * browser's direct presigned GET/PUT requests.
  */
 
 export type ConnectionProvider = "s3" | "r2" | "s3-compatible"
@@ -30,38 +35,10 @@ export type Connection = {
   source: "env" | "local"
 }
 
+/** Stable id of the legacy single-bucket env connection. */
 export const ENV_CONNECTION_ID = "env"
-
-/**
- * Build a connection from `NEXT_PUBLIC_*` env vars, if present. Each var is
- * referenced as a literal member access so Next.js inlines it at build time.
- */
-export function loadEnvConnection(): Connection | null {
-  const bucket = process.env.NEXT_PUBLIC_S3_BUCKET
-  const accessKeyId = process.env.NEXT_PUBLIC_S3_ACCESS_KEY_ID
-  const secretAccessKey = process.env.NEXT_PUBLIC_S3_SECRET_ACCESS_KEY
-
-  if (!bucket || !accessKeyId || !secretAccessKey) return null
-
-  const provider =
-    (process.env.NEXT_PUBLIC_S3_PROVIDER as ConnectionProvider | undefined) ??
-    "s3"
-
-  return {
-    id: ENV_CONNECTION_ID,
-    name: process.env.NEXT_PUBLIC_S3_NAME || bucket,
-    provider,
-    bucket,
-    region: process.env.NEXT_PUBLIC_S3_REGION || undefined,
-    endpoint: process.env.NEXT_PUBLIC_S3_ENDPOINT || undefined,
-    forcePathStyle: process.env.NEXT_PUBLIC_S3_FORCE_PATH_STYLE === "true",
-    accountId: process.env.NEXT_PUBLIC_R2_ACCOUNT_ID || undefined,
-    accessKeyId,
-    secretAccessKey,
-    publicBaseUrl: process.env.NEXT_PUBLIC_S3_PUBLIC_BASE_URL || undefined,
-    source: "env",
-  }
-}
+/** Prefix for indexed env connections, e.g. `env-1`, `env-2`. */
+export const ENV_CONNECTION_ID_PREFIX = "env-"
 
 export function createConnectionId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {

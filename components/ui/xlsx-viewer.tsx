@@ -1239,6 +1239,7 @@ const WorkbookSheetTabsInner = React.memo(function WorkbookSheetTabsInner({
       onMouseLeave={handleContainerLeave}
     >
       <Tabs
+        size="sm"
         value={String(activeSheetIndex)}
         onValueChange={(value) => onActiveSheetIndexChange(Number(value))}
         className="gap-0"

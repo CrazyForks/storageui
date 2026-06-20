@@ -1,14 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { FilesError } from "files-sdk"
 
+import { toConnectionRef } from "@/lib/connection-ref"
 import {
   createConnectionId,
   type Connection,
   type ConnectionProvider,
 } from "@/lib/connections"
-import { createFiles } from "@/lib/files-client"
 import { AppIcon, Delete02Icon } from "@/lib/icons"
 import { useConnections } from "@/lib/store/connection-store"
 import { Button } from "@/components/ui/button"
@@ -29,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { testConnectionAction } from "@/app/actions/files"
 
 const PROVIDER_OPTIONS: { value: ConnectionProvider; label: string }[] = [
   { value: "s3", label: "AWS S3" },
@@ -36,31 +36,21 @@ const PROVIDER_OPTIONS: { value: ConnectionProvider; label: string }[] = [
   { value: "s3-compatible", label: "S3-compatible (custom endpoint)" },
 ]
 
-// A browser request that never gets a response (blocked by CORS, or the
-// endpoint is unreachable) throws "Failed to fetch" / "Load failed", which the
-// SDK surfaces as a generic `Provider` error. That bare message is unhelpful,
-// so point at the usual culprits — CORS and bucket permissions — instead.
-const NETWORK_ERROR_PATTERN = /failed to fetch|load failed|networkerror/i
-
-const CORS_HINT =
-  "Couldn’t reach the bucket. This is usually the bucket’s CORS policy not allowing this site, or the credentials lacking permission to list it. Check the bucket’s CORS configuration and the key’s permissions, then try again."
-
+// The connection test runs server-side (no browser CORS in play), so failures
+// are about credentials or the bucket/region/endpoint. The server formats SDK
+// errors as "<message> (<Code>)", so map the common codes to clearer guidance.
 function describeConnectionError(err: unknown): string {
-  if (err instanceof FilesError) {
-    if (NETWORK_ERROR_PATTERN.test(err.message)) return CORS_HINT
-    if (err.code === "Unauthorized") {
-      return "Access denied. Check the access key and secret, and that the credentials have permission to list this bucket."
-    }
-    if (err.code === "NotFound") {
-      return "Bucket not found. Check the bucket name, and the region or endpoint."
-    }
-    return `${err.message} (${err.code})`
+  const message = err instanceof Error ? err.message : String(err)
+  if (/\(Unauthorized\)/.test(message)) {
+    return "Access denied. Check the access key and secret, and that the credentials have permission to list this bucket."
   }
-  if (err instanceof Error) {
-    if (NETWORK_ERROR_PATTERN.test(err.message)) return CORS_HINT
-    return err.message
+  if (/\(NotFound\)/.test(message)) {
+    return "Bucket not found. Check the bucket name, and the region or endpoint."
   }
-  return "Could not connect. Check the bucket, credentials, and CORS."
+  return (
+    message ||
+    "Could not connect. Check the bucket, credentials, and region/endpoint."
+  )
 }
 
 type FormState = {
@@ -130,15 +120,20 @@ function buildConnection(
 function Field({
   label,
   hint,
+  required,
   children,
 }: {
   label: string
   hint?: string
+  required?: boolean
   children: React.ReactNode
 }) {
   return (
     <label className="grid gap-1.5 text-sm">
-      <span className="font-medium">{label}</span>
+      <span className="font-medium">
+        {label}
+        {required ? <span className="text-destructive"> *</span> : null}
+      </span>
       {children}
       {hint ? (
         <span className="text-xs text-muted-foreground">{hint}</span>
@@ -192,8 +187,8 @@ export function AddConnectionDialog() {
     setStatus("testing")
     setError(null)
     try {
-      // Validate credentials + CORS with a tiny list before saving.
-      await createFiles(connection).list({ limit: 1 })
+      // Validate credentials + bucket with a tiny server-side list before saving.
+      await testConnectionAction(toConnectionRef(connection))
       if (editingConnection) updateConnection(connection)
       else addConnection(connection)
       setAddDialogOpen(false)
@@ -271,7 +266,7 @@ export function AddConnectionDialog() {
                 />
               </Field>
 
-              <Field label="Bucket">
+              <Field label="Bucket" required>
                 <Input
                   value={form.bucket}
                   onChange={(e) => update("bucket", e.target.value)}
@@ -281,7 +276,11 @@ export function AddConnectionDialog() {
               </Field>
 
               {provider === "r2" ? (
-                <Field label="Account ID" hint="Cloudflare account id.">
+                <Field
+                  label="Account ID"
+                  hint="Cloudflare account id."
+                  required
+                >
                   <Input
                     value={form.accountId}
                     onChange={(e) => update("accountId", e.target.value)}
@@ -305,6 +304,7 @@ export function AddConnectionDialog() {
                   <Field
                     label="Endpoint"
                     hint="e.g. https://s3.us-west-1.wasabisys.com"
+                    required
                   >
                     <Input
                       value={form.endpoint}
@@ -334,7 +334,7 @@ export function AddConnectionDialog() {
                 </>
               ) : null}
 
-              <Field label="Access key ID">
+              <Field label="Access key ID" required>
                 <Input
                   value={form.accessKeyId}
                   onChange={(e) => update("accessKeyId", e.target.value)}
@@ -343,7 +343,7 @@ export function AddConnectionDialog() {
                 />
               </Field>
 
-              <Field label="Secret access key">
+              <Field label="Secret access key" required>
                 <Input
                   type="password"
                   value={form.secretAccessKey}

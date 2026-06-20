@@ -5,14 +5,12 @@ import * as React from "react"
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 
-import { loadEnvConnection, type Connection } from "@/lib/connections"
+import { type Connection } from "@/lib/connections"
 
 const STORE_NAME = "filesystem.connection-store"
 const STORE_VERSION = 1
 const LEGACY_CONNECTIONS_KEY = "filesystem.connections"
 const LEGACY_ACTIVE_CONNECTION_KEY = "filesystem.activeConnectionId"
-
-const envConnection = loadEnvConnection()
 
 type PersistedConnectionState = {
   connections: Connection[]
@@ -27,28 +25,24 @@ type ConnectionStore = PersistedConnectionState & {
   addConnection: (connection: Connection) => void
   updateConnection: (connection: Connection) => void
   removeConnection: (id: string) => void
+  /** Inject the server-resolved (credential-free) env connections. */
+  setEnvConnections: (envConnections: Connection[]) => void
   openAddDialog: () => void
   openEditDialog: (connection: Connection) => void
   setAddDialogOpen: (open: boolean) => void
   finishHydration: () => void
 }
 
-function withEnvConnection(localConnections: Connection[]): Connection[] {
-  const normalized = localConnections
-    .filter((connection) => connection.id !== envConnection?.id)
-    .map((connection) => ({ ...connection, source: "local" as const }))
-
-  return envConnection ? [envConnection, ...normalized] : normalized
-}
-
 function localConnections(connections: Connection[]): Connection[] {
-  return connections.filter((connection) => connection.source === "local")
+  return connections
+    .filter((connection) => connection.source === "local")
+    .map((connection) => ({ ...connection, source: "local" as const }))
 }
 
 export const useConnectionStore = create<ConnectionStore>()(
   persist(
     (set) => ({
-      connections: withEnvConnection([]),
+      connections: [],
       activeConnectionId: null,
       hasHydrated: false,
       isAddDialogOpen: false,
@@ -104,6 +98,22 @@ export const useConnectionStore = create<ConnectionStore>()(
           }
         }),
 
+      setEnvConnections: (envConnections) =>
+        set((state) => {
+          const connections = [
+            ...envConnections,
+            ...localConnections(state.connections),
+          ]
+          return {
+            connections,
+            activeConnectionId: connections.some(
+              (connection) => connection.id === state.activeConnectionId
+            )
+              ? state.activeConnectionId
+              : (connections[0]?.id ?? null),
+          }
+        }),
+
       openAddDialog: () =>
         set({ editingConnection: null, isAddDialogOpen: true }),
 
@@ -144,7 +154,7 @@ export const useConnectionStore = create<ConnectionStore>()(
           | undefined
         return {
           ...currentState,
-          connections: withEnvConnection(
+          connections: localConnections(
             Array.isArray(persisted?.connections) ? persisted.connections : []
           ),
           activeConnectionId:

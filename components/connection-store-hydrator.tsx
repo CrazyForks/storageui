@@ -9,6 +9,7 @@ import {
 } from "@/lib/store/connection-store"
 import { useFileMarksStore } from "@/lib/store/file-marks-store"
 import { usePreferencesStore } from "@/lib/store/preferences-store"
+import { listEnvConnectionsAction } from "@/app/actions/files"
 
 export function ConnectionStoreHydrator({
   children,
@@ -17,7 +18,20 @@ export function ConnectionStoreHydrator({
 }) {
   React.useEffect(() => {
     migrateLegacyConnectionStorage()
-    void useConnectionStore.persist.rehydrate()
+
+    // Rehydrate local connections first, then merge in the env connections the
+    // server resolves (their credentials never reach the browser).
+    void Promise.resolve(useConnectionStore.persist.rehydrate()).then(() => {
+      listEnvConnectionsAction()
+        .then((envConnections) => {
+          useConnectionStore.getState().setEnvConnections(envConnections)
+        })
+        .catch(() => {
+          // No env connections (or the action failed) — local connections and
+          // the "Add connection" flow still work.
+        })
+    })
+
     void usePreferencesStore.persist.rehydrate()
     void useBucketBrowserStore.persist.rehydrate()
     void useFileMarksStore.persist.rehydrate()
