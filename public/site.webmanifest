@@ -1,0 +1,22 @@
+{
+  "name": "Extend UI",
+  "short_name": "Extend UI",
+  "icons": [
+    {
+      "src": "/ui/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/ui/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/ui/extend.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "display": "standalone"
+}
