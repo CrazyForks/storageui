@@ -140,7 +140,7 @@ export function FileSystemGalleryStage({
               "h-full min-h-0",
               isDialog && "overflow-hidden rounded-2xl"
             )}
-            onIsDarkChange={setIsDark}
+            onIsDarkChangeAction={setIsDark}
             showToolbar={isDialog}
             showThumbnailSidebar={isDialog}
             showUpload={false}
@@ -162,7 +162,7 @@ export function FileSystemGalleryStage({
               "h-full min-h-0",
               isDialog && "overflow-hidden rounded-2xl"
             )}
-            onIsDarkChange={setIsDark}
+            onIsDarkChangeAction={setIsDark}
             showToolbar={isDialog}
             showUpload={false}
             toolbarActions={toolbarActions}
@@ -424,7 +424,7 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
                 <FileSystemFolderGlyph className="h-8 w-auto shrink-0" />
               )}
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 text-sm font-semibold break-words">
+                <div className="flex items-center gap-1.5 text-sm font-semibold wrap-break-word">
                   <InlineRenameName
                     entry={activeEntry}
                     className="w-full text-sm font-semibold"

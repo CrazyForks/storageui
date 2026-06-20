@@ -536,7 +536,7 @@ function WorkbookFileActionsMenu({
   )
 }
 
-export function renderXlsxScroller({
+function renderXlsxScroller({
   children,
   viewportProps,
 }: XlsxScrollerRenderProps) {
@@ -550,7 +550,7 @@ export function renderXlsxScroller({
   )
 }
 
-export function WorkbookTableHeaderMenu({
+function WorkbookTableHeaderMenu({
   direction,
   sortAscending,
   sortDescending,
@@ -1018,11 +1018,7 @@ type WorkbookSheetTabsInnerProps = {
   workbookIdentity: string
 }
 
-export function WorkbookSheetTabs({
-  workbookIdentity,
-}: {
-  workbookIdentity: string
-}) {
+function WorkbookSheetTabs({ workbookIdentity }: { workbookIdentity: string }) {
   const { activeSheetIndex, setActiveSheetIndex, sheets } = useXlsxViewer()
 
   const handleActiveSheetIndexChange = React.useCallback(
@@ -1284,7 +1280,6 @@ const WorkbookSheetTabsInner = React.memo(function WorkbookSheetTabsInner({
               }}
             >
               <div className="relative aspect-[11/7] w-full overflow-hidden bg-muted/60">
-                {/* eslint-disable-next-line @next/next/no-img-element -- Workbook sheet previews are generated runtime image URLs. */}
                 <img
                   key={`${workbookIdentity}-${visiblePreviewIndex}-${previewUrl}`}
                   src={previewUrl}
@@ -1300,7 +1295,7 @@ const WorkbookSheetTabsInner = React.memo(function WorkbookSheetTabsInner({
   )
 })
 
-export function XlsxWorkbookSurface({
+function XlsxWorkbookSurface({
   className,
   isDark,
   onDownload,
@@ -1408,7 +1403,7 @@ export function XlsxViewerPreview({
   className,
   fileName,
   isDark,
-  onIsDarkChange,
+  onIsDarkChangeAction,
   showDownload = true,
   showToolbar = true,
   showUpload = true,
@@ -1418,7 +1413,7 @@ export function XlsxViewerPreview({
   className?: string
   fileName?: string
   isDark: boolean
-  onIsDarkChange: (isDark: boolean) => void
+  onIsDarkChangeAction: (isDark: boolean) => void
   showDownload?: boolean
   showToolbar?: boolean
   showUpload?: boolean
@@ -1430,7 +1425,7 @@ export function XlsxViewerPreview({
       className={className}
       effectiveIsDark={isDark}
       fileName={fileName}
-      setNightRenderEnabled={onIsDarkChange}
+      setNightRenderEnabled={onIsDarkChangeAction}
       shouldRenderNightMode
       showDownload={showDownload}
       showToolbar={showToolbar}
@@ -1553,7 +1548,7 @@ function XlsxViewerContent({
     return (
       <div
         className={cn(
-          "flex h-[640px] min-h-0 flex-col overflow-hidden bg-background",
+          "flex h-160 min-h-0 flex-col overflow-hidden bg-background",
           className
         )}
       >
@@ -1595,7 +1590,7 @@ function XlsxViewerContent({
     return (
       <div
         className={cn(
-          "flex h-[640px] min-h-0 flex-col overflow-hidden bg-background",
+          "flex h-160 min-h-0 flex-col overflow-hidden bg-background",
           className
         )}
       >

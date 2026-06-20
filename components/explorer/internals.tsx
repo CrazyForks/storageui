@@ -173,7 +173,10 @@ export function InlineRenameName({
         onFocus={(event) => selectBaseName(event.currentTarget)}
         onKeyDown={handleKeyDown}
         onBlur={() => rename.commit()}
-        className={cn("resize-none overflow-hidden break-words", baseClassName)}
+        className={cn(
+          "resize-none overflow-hidden wrap-break-word",
+          baseClassName
+        )}
       />
     )
   }

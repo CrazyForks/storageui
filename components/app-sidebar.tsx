@@ -190,7 +190,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
 
         <SidebarRail />
       </Sidebar>
-      <SettingsDialog open={isSettingsOpen} onOpenChange={setSettingsOpen} />
+      <SettingsDialog
+        open={isSettingsOpen}
+        onOpenChangeAction={setSettingsOpen}
+      />
     </>
   )
 }

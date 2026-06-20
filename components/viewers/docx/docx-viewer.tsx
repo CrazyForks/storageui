@@ -605,7 +605,7 @@ function DocxToolbar({
             >
               <SelectTrigger
                 size="sm"
-                className="w-[84px] min-w-[84px]"
+                className="w-21 min-w-21"
                 aria-label="Zoom level"
               >
                 <SelectValue>{Math.round(zoomScale)}%</SelectValue>
@@ -699,13 +699,13 @@ function DocxSidebarThumbnail({
           ref={canvasRef}
           width={pixelWidthPx}
           height={pixelHeightPx}
-          className="!size-full bg-white object-cover object-top"
+          className="size-full! bg-white object-cover object-top"
         />
       }
       isLoading={isLoading}
       hasError={hasError}
       className={cn(
-        "w-[92px] rounded-md border-0 shadow-xs ring-0 transition-shadow duration-150",
+        "w-23 rounded-md border-0 shadow-xs ring-0 transition-shadow duration-150",
         isActive && "shadow-sm"
       )}
     />
@@ -1033,7 +1033,7 @@ export function DocxViewerPreview({
   defaultZoom = DEFAULT_ZOOM,
   fileName,
   isDark,
-  onIsDarkChange,
+  onIsDarkChangeAction,
   showDownload = true,
   showToolbar = true,
   showUpload = true,
@@ -1045,7 +1045,7 @@ export function DocxViewerPreview({
   defaultZoom?: number
   fileName?: string
   isDark: boolean
-  onIsDarkChange: (isDark: boolean) => void
+  onIsDarkChangeAction: (isDark: boolean) => void
   showDownload?: boolean
   showToolbar?: boolean
   showUpload?: boolean
@@ -1060,7 +1060,7 @@ export function DocxViewerPreview({
       defaultZoom={defaultZoom}
       effectiveIsDark={isDark}
       fileName={fileName}
-      setNightRenderEnabled={onIsDarkChange}
+      setNightRenderEnabled={onIsDarkChangeAction}
       shouldRenderNightMode
       showDownload={showDownload}
       showToolbar={showToolbar}
@@ -1107,7 +1107,7 @@ function DocxViewerContent({
   const [uploadedDocxFile, setUploadedDocxFile] =
     React.useState<UploadedDocxFile | null>(null)
   const [sidebarOpen, setSidebarOpen] = React.useState(true)
-  const activePageStore = React.useMemo(createDocxActivePageStore, [])
+  const activePageStore = React.useMemo(() => createDocxActivePageStore(), [])
   const resolvedDefaultZoomScale = normalizeDocxZoomScale(defaultZoom)
   const activeUploadedDocxFile =
     uploadedDocxFile?.sourceUrl === url ? uploadedDocxFile : null

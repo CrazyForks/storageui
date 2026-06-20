@@ -30,10 +30,13 @@ const THEME_OPTIONS = [
 
 type SettingsDialogProps = {
   open: boolean
-  onOpenChange: (open: boolean) => void
+  onOpenChangeAction: (open: boolean) => void
 }
 
-export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+export function SettingsDialog({
+  open,
+  onOpenChangeAction,
+}: SettingsDialogProps) {
   const { theme, setTheme } = useTheme()
   const showFileExtensions = usePreferencesStore(
     (state) => state.showFileExtensions
@@ -42,7 +45,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     (state) => state.setShowFileExtensions
   )
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       {open ? (
         <DialogContent className="max-w-2xl">
           <DialogHeader>

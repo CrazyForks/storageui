@@ -256,7 +256,7 @@ export function FileSystemColumnsView(props: FileSystemViewProps) {
                 />
               </div>
               <div className="text-center">
-                <div className="text-sm font-semibold break-words">
+                <div className="text-sm font-semibold wrap-break-word">
                   {formatName(selectedFile)}
                 </div>
                 <div className="text-xs text-muted-foreground">

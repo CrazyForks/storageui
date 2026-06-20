@@ -299,7 +299,7 @@ export function FileBrowser() {
 
       {isDragging ? (
         <div className="pointer-events-none absolute inset-0 z-40 p-2.5">
-          <div className="flex h-full w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/[0.04] backdrop-blur-[1px]">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/4 backdrop-blur-[1px]">
             <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <AppIcon icon={Upload01Icon} className="size-6" />
             </div>
@@ -346,8 +346,8 @@ export function FileBrowser() {
       <UploadProgressPanel
         tasks={tasks}
         activeCount={activeCount}
-        onDismiss={dismiss}
-        onClear={clearFinished}
+        onDismissAction={dismiss}
+        onClearAction={clearFinished}
       />
     </div>
   )

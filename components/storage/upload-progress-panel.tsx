@@ -15,13 +15,13 @@ import { cn } from "@/lib/utils"
 export function UploadProgressPanel({
   tasks,
   activeCount,
-  onDismiss,
-  onClear,
+  onDismissAction,
+  onClearAction,
 }: {
   tasks: UploadTask[]
   activeCount: number
-  onDismiss: (id: string) => void
-  onClear: () => void
+  onDismissAction: (id: string) => void
+  onClearAction: () => void
 }) {
   if (tasks.length === 0) return null
 
@@ -37,7 +37,7 @@ export function UploadProgressPanel({
         <span className="truncate text-sm font-medium">{title}</span>
         <button
           type="button"
-          onClick={onClear}
+          onClick={onClearAction}
           disabled={!allDone}
           className={cn(
             "rounded-sm text-muted-foreground transition-colors hover:text-foreground",
@@ -85,7 +85,7 @@ export function UploadProgressPanel({
                 ) : (
                   <button
                     type="button"
-                    onClick={() => onDismiss(task.id)}
+                    onClick={() => onDismissAction(task.id)}
                     className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
                     aria-label="Dismiss"
                   >

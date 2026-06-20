@@ -125,7 +125,7 @@ function ViewerBody({
             fileName={fileName}
             className="h-full"
             isDark={isDark}
-            onIsDarkChange={setIsDark}
+            onIsDarkChangeAction={setIsDark}
           />
         </React.Suspense>
       )
@@ -137,7 +137,7 @@ function ViewerBody({
             fileName={fileName}
             className="h-full"
             isDark={isDark}
-            onIsDarkChange={setIsDark}
+            onIsDarkChangeAction={setIsDark}
           />
         </React.Suspense>
       )

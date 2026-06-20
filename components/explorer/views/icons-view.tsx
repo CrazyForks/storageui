@@ -268,7 +268,7 @@ export function FileSystemIconsView({
                 {glyph}
                 <span
                   className={cn(
-                    "max-w-full rounded-sm px-1.5 py-px text-center text-xs leading-tight break-words",
+                    "max-w-full rounded-sm px-1.5 py-px text-center text-xs leading-tight wrap-break-word",
                     isSelected
                       ? "bg-primary text-primary-foreground"
                       : "text-foreground"
