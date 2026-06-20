@@ -8,5 +8,6 @@ export {
   TabsPrimitive,
   TabsTab,
   TabsTrigger,
+  type TabsSize,
   type TabsVariant,
 } from "@/registry/new-york-v4/ui/tabs"

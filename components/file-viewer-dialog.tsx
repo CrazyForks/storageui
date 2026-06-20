@@ -4,7 +4,13 @@ import * as React from "react"
 import { useTheme } from "next-themes"
 
 import { getFileKind, type FileKind } from "@/lib/file-kind"
-import { AppIcon, Cancel01Icon, Download01Icon, File01Icon } from "@/lib/icons"
+import {
+  AppIcon,
+  Cancel01Icon,
+  Download01Icon,
+  File01Icon,
+  Search01Icon,
+} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,7 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { type FileSystemFileItem } from "@/components/ui/file-system"
 import { Spinner } from "@/components/ui/spinner"
-import { CodeViewer } from "@/components/code-viewer"
+import { CodeViewer, type CodeViewerHandle } from "@/components/code-viewer"
 
 const LazyPDFViewer = React.lazy(() =>
   import("@/components/ui/pdf-viewer").then((mod) => ({
@@ -83,10 +89,12 @@ function ViewerBody({
   kind,
   fileName,
   url,
+  codeViewerRef,
 }: {
   kind: FileKind
   fileName: string
   url: string
+  codeViewerRef: React.RefObject<CodeViewerHandle | null>
 }) {
   const { resolvedTheme } = useTheme()
   const [isDark, setIsDark] = React.useState(resolvedTheme === "dark")
@@ -96,7 +104,7 @@ function ViewerBody({
 
   switch (kind) {
     case "text":
-      return <CodeViewer url={url} fileName={fileName} />
+      return <CodeViewer ref={codeViewerRef} url={url} fileName={fileName} />
     case "pdf":
       return (
         <React.Suspense fallback={<ViewerFallback />}>
@@ -155,6 +163,7 @@ export function FileViewerDialog({
   const fileName = file
     ? (file.name ?? file.path.split("/").pop() ?? file.path)
     : ""
+  const codeViewerRef = React.useRef<CodeViewerHandle>(null)
 
   // These viewers render their own top toolbars, which would collide with the
   // dialog's default top-right close button. Give them a dedicated title bar
@@ -163,7 +172,12 @@ export function FileViewerDialog({
     kind === "text" || kind === "pdf" || kind === "docx" || kind === "xlsx"
 
   const body = url ? (
-    <ViewerBody kind={kind} fileName={fileName} url={url} />
+    <ViewerBody
+      kind={kind}
+      fileName={fileName}
+      url={url}
+      codeViewerRef={codeViewerRef}
+    />
   ) : (
     <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
       Couldn’t resolve a URL for this file.
@@ -192,6 +206,17 @@ export function FileViewerDialog({
                   <span />
                 )}
                 <div className="flex shrink-0 items-center gap-1">
+                  {kind === "text" ? (
+                    <Button
+                      aria-label="Search"
+                      title="Search"
+                      size="icon-sm"
+                      variant="ghost"
+                      onClick={() => codeViewerRef.current?.toggleSearch()}
+                    >
+                      <AppIcon icon={Search01Icon} />
+                    </Button>
+                  ) : null}
                   {kind === "text" && url ? (
                     <Button
                       size="sm"

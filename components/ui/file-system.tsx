@@ -1859,8 +1859,8 @@ export function FileSystem({
     kind: FileSystemViewerKind
     url: string
   } | null>(null)
-  const [contextMenuFile, setContextMenuFile] =
-    React.useState<FileEntry | null>(null)
+  const [contextMenuEntry, setContextMenuEntry] =
+    React.useState<FileSystemEntry | null>(null)
   const [isNewFolderOpen, setNewFolderOpen] = React.useState(false)
   const [newFolderName, setNewFolderName] = React.useState("")
   const [newFolderError, setNewFolderError] = React.useState<string | null>(
@@ -2211,17 +2211,10 @@ export function FileSystem({
         if (entry) break
       }
 
-      if (entry?.kind === "folder") {
-        // Folder actions are intentionally not part of this menu yet.
-        event.stopPropagation()
-        setContextMenuFile(null)
-        return
-      }
-
       selectAndPrefetchEntry(entry)
-      setContextMenuFile(entry)
+      setContextMenuEntry(entry)
     },
-    [currentPath, selectAndPrefetchEntry, sortedIndex.files]
+    [currentPath, selectAndPrefetchEntry, sortedIndex]
   )
 
   const viewProps: FileSystemViewProps = {
@@ -2339,18 +2332,19 @@ export function FileSystem({
             </Select>
           ) : (
             <Tabs
+              size="sm"
               value={view}
               onValueChange={(value) => setView(value as FileSystemView)}
               className="gap-0"
             >
-              <TabsList className="h-8 p-0.5">
+              <TabsList>
                 {VIEW_OPTIONS.map((option) => (
                   <TabsTrigger
                     key={option.value}
                     value={option.value}
                     aria-label={`${option.label} view`}
                     title={option.label}
-                    className="h-7 grow-0 px-2.5 sm:h-7"
+                    className="grow-0"
                   >
                     <AppIcon icon={option.icon} className="size-4" />
                   </TabsTrigger>
@@ -2442,7 +2436,7 @@ export function FileSystem({
         ) : null}
         <ContextMenu
           onOpenChange={(open) => {
-            if (!open) setContextMenuFile(null)
+            if (!open) setContextMenuEntry(null)
           }}
         >
           <ContextMenuTrigger
@@ -2475,17 +2469,29 @@ export function FileSystem({
             )}
           </ContextMenuTrigger>
           <ContextMenuPopup align="start" side="bottom">
-            {contextMenuFile ? (
+            {contextMenuEntry ? (
               <>
-                <ContextMenuItem onClick={() => openFile(contextMenuFile)}>
-                  <AppIcon icon={File01Icon} />
+                <ContextMenuItem onClick={() => openEntry(contextMenuEntry)}>
+                  <AppIcon
+                    icon={
+                      contextMenuEntry.kind === "folder"
+                        ? Folder01Icon
+                        : File01Icon
+                    }
+                  />
                   Open
                 </ContextMenuItem>
-                <ContextMenuSeparator />
-                <ContextMenuItem onClick={() => downloadFile(contextMenuFile)}>
-                  <AppIcon icon={Download01Icon} />
-                  Download
-                </ContextMenuItem>
+                {contextMenuEntry.kind === "file" ? (
+                  <>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      onClick={() => downloadFile(contextMenuEntry)}
+                    >
+                      <AppIcon icon={Download01Icon} />
+                      Download
+                    </ContextMenuItem>
+                  </>
+                ) : null}
               </>
             ) : (
               <>

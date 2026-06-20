@@ -3,7 +3,14 @@
 import * as React from "react"
 import { LanguageDescription } from "@codemirror/language"
 import { languages } from "@codemirror/language-data"
+import {
+  closeSearchPanel,
+  openSearchPanel,
+  search,
+  searchPanelOpen,
+} from "@codemirror/search"
 import { EditorState, type Extension } from "@codemirror/state"
+import { githubDark, githubLight } from "@uiw/codemirror-theme-github"
 import { basicSetup, EditorView } from "codemirror"
 import { useTheme } from "next-themes"
 
@@ -11,27 +18,155 @@ import { Spinner } from "@/components/ui/spinner"
 
 const MAX_BYTES = 5_000_000 // Don't try to render absurdly large blobs.
 
-const baseTheme = EditorView.theme({
-  "&": { height: "100%", backgroundColor: "transparent" },
+const layoutTheme = EditorView.theme({
+  "&": { height: "100%" },
   ".cm-scroller": {
     fontFamily: "var(--font-mono, ui-monospace, SFMono-Regular, monospace)",
     fontSize: "13px",
   },
-  ".cm-gutters": { backgroundColor: "transparent", border: "none" },
-})
-
-const darkTheme = EditorView.theme(
-  {
-    "&": { color: "#e6e6e6" },
-    ".cm-gutters": { color: "#6b7280" },
-    ".cm-activeLine": { backgroundColor: "rgba(255,255,255,0.04)" },
-    ".cm-activeLineGutter": { backgroundColor: "rgba(255,255,255,0.04)" },
-    ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection":
-      { backgroundColor: "rgba(120,170,255,0.18)" },
-    ".cm-cursor": { borderLeftColor: "#e6e6e6" },
+  ".cm-content, .cm-content *": {
+    WebkitTextFillColor: "currentColor",
   },
-  { dark: true }
-)
+  ".cm-content::selection, .cm-content *::selection": {
+    color: "currentColor !important",
+    WebkitTextFillColor: "currentColor !important",
+  },
+  ".cm-panels-top": {
+    borderBottom: "1px solid var(--color-border)",
+  },
+  ".cm-panel.cm-search": {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: "6px",
+    padding: "8px 44px 8px 10px",
+    backgroundColor: "var(--color-background)",
+    color: "var(--color-foreground)",
+    fontFamily: "var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
+  },
+  ".cm-panel.cm-search input, .cm-panel.cm-search button, .cm-panel.cm-search label":
+    {
+      margin: "0",
+    },
+  ".cm-panel.cm-search .cm-textfield": {
+    boxSizing: "border-box",
+    width: "min(260px, 45vw)",
+    height: "30px",
+    padding: "0 9px",
+    border: "1px solid var(--color-input)",
+    borderRadius: "var(--radius-md)",
+    outline: "none",
+    backgroundColor: "var(--color-background)",
+    color: "var(--color-foreground)",
+    font: "inherit",
+    fontSize: "13px",
+  },
+  ".cm-panel.cm-search .cm-textfield:focus": {
+    borderColor: "var(--color-ring)",
+    boxShadow:
+      "0 0 0 2px color-mix(in srgb, var(--color-ring) 22%, transparent)",
+  },
+  ".cm-panel.cm-search .cm-button": {
+    boxSizing: "border-box",
+    height: "30px",
+    padding: "0 9px",
+    border: "1px solid var(--color-border)",
+    borderRadius: "var(--radius-md)",
+    background: "var(--color-background)",
+    color: "var(--color-foreground)",
+    font: "inherit",
+    fontSize: "12px",
+    textTransform: "capitalize",
+    cursor: "pointer",
+  },
+  ".cm-panel.cm-search .cm-button:hover": {
+    backgroundColor: "var(--color-accent)",
+  },
+  ".cm-panel.cm-search label": {
+    display: "inline-flex",
+    height: "30px",
+    alignItems: "center",
+    gap: "4px",
+    padding: "0 4px",
+    color: "var(--color-muted-foreground)",
+    fontSize: "12px",
+    whiteSpace: "nowrap",
+    cursor: "pointer",
+  },
+  ".cm-panel.cm-search input[type=checkbox]": {
+    appearance: "none",
+    display: "inline-grid",
+    width: "14px",
+    height: "14px",
+    flexShrink: "0",
+    placeContent: "center",
+    margin: "0",
+    border: "1px solid var(--color-input)",
+    borderRadius: "4px",
+    outline: "none",
+    backgroundColor: "var(--color-background)",
+    color: "var(--color-primary-foreground)",
+    cursor: "pointer",
+  },
+  ".cm-panel.cm-search input[type=checkbox]::before": {
+    content: '""',
+    width: "7px",
+    height: "4px",
+    borderBottom: "2px solid currentColor",
+    borderLeft: "2px solid currentColor",
+    transform: "translateY(-1px) rotate(-45deg) scale(0)",
+    transition: "transform 100ms ease",
+  },
+  ".cm-panel.cm-search input[type=checkbox]:checked": {
+    borderColor: "var(--color-primary)",
+    backgroundColor: "var(--color-primary)",
+  },
+  ".cm-panel.cm-search input[type=checkbox]:checked::before": {
+    transform: "translateY(-1px) rotate(-45deg) scale(1)",
+  },
+  ".cm-panel.cm-search input[type=checkbox]:hover": {
+    borderColor: "var(--color-ring)",
+  },
+  ".cm-panel.cm-search input[type=checkbox]:focus-visible": {
+    borderColor: "var(--color-ring)",
+    boxShadow:
+      "0 0 0 2px color-mix(in srgb, var(--color-ring) 22%, transparent)",
+  },
+  ".cm-panel.cm-search [name=close]": {
+    position: "absolute",
+    top: "50%",
+    right: "9px",
+    display: "flex",
+    width: "28px",
+    height: "28px",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0",
+    border: "0",
+    borderRadius: "var(--radius-md)",
+    transform: "translateY(-50%)",
+    backgroundColor: "transparent",
+    color: "var(--color-muted-foreground)",
+    font: "inherit",
+    fontSize: "20px",
+    lineHeight: "1",
+    cursor: "pointer",
+  },
+  ".cm-panel.cm-search [name=close]:hover": {
+    backgroundColor: "var(--color-accent)",
+    color: "var(--color-foreground)",
+  },
+  ".cm-searchMatch": {
+    backgroundColor:
+      "color-mix(in srgb, var(--color-warning) 28%, transparent)",
+    outline:
+      "1px solid color-mix(in srgb, var(--color-warning) 48%, transparent)",
+  },
+  ".cm-searchMatch-selected": {
+    backgroundColor: "color-mix(in srgb, var(--color-info) 32%, transparent)",
+    outline: "1px solid color-mix(in srgb, var(--color-info) 58%, transparent)",
+  },
+})
 
 async function languageExtension(fileName: string): Promise<Extension[]> {
   const description = LanguageDescription.matchFilename(languages, fileName)
@@ -44,13 +179,17 @@ async function languageExtension(fileName: string): Promise<Extension[]> {
   }
 }
 
-export function CodeViewer({
-  url,
-  fileName,
-}: {
-  url: string
-  fileName: string
-}) {
+export type CodeViewerHandle = {
+  toggleSearch: () => void
+}
+
+export const CodeViewer = React.forwardRef<
+  CodeViewerHandle,
+  {
+    url: string
+    fileName: string
+  }
+>(function CodeViewer({ url, fileName }, ref) {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
@@ -59,6 +198,17 @@ export function CodeViewer({
 
   const hostRef = React.useRef<HTMLDivElement>(null)
   const viewRef = React.useRef<EditorView | null>(null)
+
+  React.useImperativeHandle(ref, () => ({
+    toggleSearch: () => {
+      const view = viewRef.current
+
+      if (!view) return
+
+      if (searchPanelOpen(view.state)) closeSearchPanel(view)
+      else openSearchPanel(view)
+    },
+  }))
 
   // Fetch the file's contents once per url.
   React.useEffect(() => {
@@ -109,11 +259,11 @@ export function CodeViewer({
           doc: text,
           extensions: [
             basicSetup,
-            EditorView.editable.of(false),
+            search({ top: true }),
+            isDark ? githubDark : githubLight,
+            layoutTheme,
             EditorState.readOnly.of(true),
             EditorView.lineWrapping,
-            baseTheme,
-            ...(isDark ? [darkTheme] : []),
             ...langExt,
           ],
         }),
@@ -142,4 +292,4 @@ export function CodeViewer({
       )}
     </div>
   )
-}
+})
