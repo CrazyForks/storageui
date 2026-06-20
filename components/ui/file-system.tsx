@@ -5053,6 +5053,18 @@ function FileSystemPierreTree({
       button[data-type='item'][data-item-selected] [data-item-section]::before {
         color: var(--color-primary-foreground) !important;
       }
+      /* The inline rename field is transparent and inherits color, so on a
+         selected row the rule above paints its text the (light) selected
+         foreground over the field's normal background — invisible. Give it an
+         explicit surface and text color. The selected-row rule above is
+         specificity (0,4,1); the :not(#x) here adds an id's worth of
+         specificity so this wins cleanly regardless of DOM nesting. */
+      [data-item-rename-input]:not(#x) {
+        color: var(--color-foreground) !important;
+        background: var(--color-background) !important;
+        border-radius: 4px;
+        box-shadow: inset 0 0 0 1px var(--color-primary);
+      }
       [data-item-section='decoration'] > span {
         display: grid;
         grid-template-columns: 11rem 5rem;
@@ -5353,6 +5365,21 @@ function FileSystemPierreTree({
       // open the focused file. Printable keys run the shared type-ahead
       // over the visible rows.
       onKeyDown={(event) => {
+        // While the inline rename input is focused, let the tree's native
+        // rename handle the keys (typing, Enter to commit, Escape to cancel)
+        // instead of opening the row or running type-ahead.
+        if (
+          event.nativeEvent
+            .composedPath()
+            .some(
+              (target) =>
+                target instanceof HTMLElement &&
+                target.hasAttribute("data-item-rename-input")
+            )
+        ) {
+          return
+        }
+
         if (event.key === "Enter") {
           const entry = entryFromEvent(event)
 
