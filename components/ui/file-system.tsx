@@ -33,6 +33,7 @@ import {
   GridViewIcon,
   LayoutThreeColumnIcon,
   LeftToRightListBulletIcon,
+  MoveIcon,
   RotateClockwiseIcon,
   Search01Icon,
   Tick02Icon,
@@ -3004,7 +3005,7 @@ export function FileSystem({
                         setMoveEntryError(null)
                       }}
                     >
-                      <AppIcon icon={Folder01Icon} />
+                      <AppIcon icon={MoveIcon} />
                       Move
                     </ContextMenuItem>
                   ) : null}

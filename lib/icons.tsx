@@ -43,6 +43,7 @@ export {
   IconFilter as FilterIcon,
   IconFolder as Folder01Icon,
   IconFolders as FolderLibraryIcon,
+  IconFolderSymlink as MoveIcon,
   IconPhoto as GalleryThumbnailsIcon,
   IconLayoutGrid as GridViewIcon,
   IconServer as HardDriveIcon,
