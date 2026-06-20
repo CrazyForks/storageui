@@ -208,6 +208,11 @@ export type FileSystemProps = {
   onDeleteEntry?: (item: FileSystemItem) => void | Promise<void>
   /** Rename a file or folder within its current parent folder. */
   onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
+  /** Move a file or folder into another folder (`""` is the root). */
+  onMoveEntry?: (
+    item: FileSystemItem,
+    destinationFolder: string
+  ) => void | Promise<void>
   /** Whether a file is starred — drives the context menu's star label/icon. */
   isStarred?: (item: FileSystemFileItem) => boolean
   /** Toggle a file's starred state from the context menu. Files only. */
@@ -1418,6 +1423,7 @@ export function FileSystem({
   onDownloadEntry,
   onDeleteEntry,
   onRenameEntry,
+  onMoveEntry,
   isStarred,
   onToggleStar,
   onFileOpen,
@@ -1834,6 +1840,51 @@ export function FileSystem({
     [index, loadChildren]
   )
 
+  // Re-fetch a folder's children in the background and swap them in atomically,
+  // so the existing listing stays on screen (no empty "Loading…" flash) until
+  // the fresh entries arrive. Used by `reloadToken` after external mutations.
+  const refetchFolder = React.useCallback(
+    async (folderPath: string) => {
+      // The root listing comes from `items`, not `loadChildren`; the consumer
+      // refreshes it directly.
+      if (!loadChildren || !folderPath) return
+
+      setLoadingFolders((previous) => new Set(previous).add(folderPath))
+      try {
+        const collected: FileSystemItem[] = []
+        let cursor: string | null = null
+
+        do {
+          const result = await loadChildren({ cursor, path: folderPath })
+
+          collected.push(...result.items)
+          cursor = result.nextCursor ?? null
+        } while (cursor)
+
+        requestedFoldersRef.current.add(folderPath)
+        setLoadedItems((previous) => {
+          // Replace this folder's children (and any deeper, now-stale ones)
+          // with the fresh listing in a single update.
+          const kept = previous.filter(
+            (item) =>
+              !(item.path !== folderPath && item.path.startsWith(folderPath))
+          )
+          return [...kept, ...collected]
+        })
+      } catch {
+        // Keep the stale listing on failure.
+      } finally {
+        setLoadingFolders((previous) => {
+          const next = new Set(previous)
+
+          next.delete(folderPath)
+          return next
+        })
+      }
+    },
+    [loadChildren]
+  )
+
   const navigateTo = React.useCallback(
     (folderPath: string) => {
       const path = normalizeFolderPath(folderPath)
@@ -1856,6 +1907,18 @@ export function FileSystem({
   React.useEffect(() => {
     ensureChildren(currentPath)
   }, [currentPath, ensureChildren])
+
+  // A change in `reloadToken` re-lists the current folder after an external
+  // mutation. The refetch runs in the background and swaps the entries in
+  // atomically, so there's no remount (Back / Forward survive) and no empty
+  // "Loading…" flash — the old listing stays until the fresh one lands. The
+  // root folder re-lists from `items`, which the consumer refreshes too.
+  const reloadTokenRef = React.useRef(reloadToken)
+  React.useEffect(() => {
+    if (reloadTokenRef.current === reloadToken) return
+    reloadTokenRef.current = reloadToken
+    void refetchFolder(currentPath)
+  }, [reloadToken, currentPath, refetchFolder])
 
   // Notify the parent of the visible folder (mount + every navigation), so it
   // can target uploads/drops at the current prefix without owning navigation.
@@ -1902,6 +1965,13 @@ export function FileSystem({
     null
   )
   const [isRenamingEntry, setRenamingEntry] = React.useState(false)
+  const [moveEntryTarget, setMoveEntryTarget] =
+    React.useState<FileSystemEntry | null>(null)
+  const [moveDestination, setMoveDestination] = React.useState("")
+  const [moveEntryError, setMoveEntryError] = React.useState<string | null>(
+    null
+  )
+  const [isMovingEntry, setMovingEntry] = React.useState(false)
   const [isNewFolderOpen, setNewFolderOpen] = React.useState(false)
   const [newFolderName, setNewFolderName] = React.useState("")
   const [newFolderError, setNewFolderError] = React.useState<string | null>(
@@ -2209,6 +2279,75 @@ export function FileSystem({
     onRenameEntry,
     renameEntryName,
     renameEntryTarget,
+    selectEntry,
+    sortedIndex.files,
+    sortedIndex.folders,
+  ])
+
+  // Folders the move target can go to: the root plus every known folder, minus
+  // the target folder itself and its descendants (a folder can't move into
+  // itself). Only loaded folders appear — deeper ones surface once visited.
+  const moveDestinations = React.useMemo(() => {
+    const folders = [...sortedIndex.folders.values()]
+      .filter((folder) => {
+        if (moveEntryTarget?.kind !== "folder") return true
+        return !folder.path.startsWith(moveEntryTarget.path)
+      })
+      .sort((a, b) => a.path.localeCompare(b.path))
+
+    return [
+      { label: title, value: "" },
+      ...folders.map((folder) => ({
+        label: folder.path.replace(/\/$/, ""),
+        value: folder.path,
+      })),
+    ]
+  }, [moveEntryTarget, sortedIndex.folders, title])
+
+  const confirmMoveEntry = React.useCallback(async () => {
+    if (!moveEntryTarget || !onMoveEntry || isMovingEntry) return
+
+    const destination = moveDestination
+    if (destination === moveEntryTarget.parentPath) {
+      setMoveEntryError("The item is already in this folder.")
+      return
+    }
+    if (
+      moveEntryTarget.kind === "folder" &&
+      destination.startsWith(moveEntryTarget.path)
+    ) {
+      setMoveEntryError("Can’t move a folder into itself.")
+      return
+    }
+
+    const destFilePath = `${destination}${moveEntryTarget.name}`
+    const hasCollision =
+      sortedIndex.files.has(destFilePath) ||
+      sortedIndex.folders.has(normalizeFolderPath(destFilePath))
+    if (hasCollision) {
+      setMoveEntryError("An item with this name already exists there.")
+      return
+    }
+
+    setMovingEntry(true)
+    setMoveEntryError(null)
+
+    try {
+      await onMoveEntry(moveEntryTarget, destination)
+      setMoveEntryTarget(null)
+      selectEntry(null)
+    } catch (error) {
+      setMoveEntryError(
+        error instanceof Error ? error.message : "Could not move item."
+      )
+    } finally {
+      setMovingEntry(false)
+    }
+  }, [
+    isMovingEntry,
+    moveDestination,
+    moveEntryTarget,
+    onMoveEntry,
     selectEntry,
     sortedIndex.files,
     sortedIndex.folders,
@@ -2629,6 +2768,7 @@ export function FileSystem({
                 ) : null}
                 {onDownloadEntry ||
                 onRenameEntry ||
+                onMoveEntry ||
                 contextMenuEntry.kind === "file" ? (
                   <ContextMenuSeparator />
                 ) : null}
@@ -2650,6 +2790,18 @@ export function FileSystem({
                   >
                     <AppIcon icon={Edit02Icon} />
                     Rename
+                  </ContextMenuItem>
+                ) : null}
+                {onMoveEntry ? (
+                  <ContextMenuItem
+                    onClick={() => {
+                      setMoveEntryTarget(contextMenuEntry)
+                      setMoveDestination(contextMenuEntry.parentPath)
+                      setMoveEntryError(null)
+                    }}
+                  >
+                    <AppIcon icon={Folder01Icon} />
+                    Move
                   </ContextMenuItem>
                 ) : null}
                 {onDeleteEntry ? (
@@ -2855,6 +3007,82 @@ export function FileSystem({
                   }
                 >
                   Rename
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          ) : null}
+        </Dialog>
+        <Dialog
+          open={moveEntryTarget !== null}
+          onOpenChange={(open) => {
+            if (isMovingEntry) return
+            if (!open) {
+              setMoveEntryTarget(null)
+              setMoveEntryError(null)
+            }
+          }}
+        >
+          {moveEntryTarget ? (
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>
+                  Move {moveEntryTarget.kind === "folder" ? "Folder" : "File"}
+                </DialogTitle>
+                <DialogDescription>
+                  Choose a destination folder for “{moveEntryTarget.name}”.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogPanel>
+                <form
+                  id="move-entry-form"
+                  className="grid gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void confirmMoveEntry()
+                  }}
+                >
+                  <Select
+                    value={moveDestination}
+                    onValueChange={(value) => {
+                      setMoveDestination(String(value))
+                      setMoveEntryError(null)
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {moveDestinations.map((destination) => (
+                        <SelectItem
+                          key={destination.value}
+                          value={destination.value}
+                        >
+                          {destination.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {moveEntryError ? (
+                    <p className="text-sm text-destructive">{moveEntryError}</p>
+                  ) : null}
+                </form>
+              </DialogPanel>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isMovingEntry}
+                  onClick={() => setMoveEntryTarget(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  form="move-entry-form"
+                  loading={isMovingEntry}
+                  disabled={moveDestination === moveEntryTarget.parentPath}
+                >
+                  Move
                 </Button>
               </DialogFooter>
             </DialogContent>

@@ -85,6 +85,8 @@ export type S3FileSystem = {
   deleteEntry: (item: FileSystemItem) => Promise<void>
   /** Rename a file or recursively move every object under a folder. */
   renameEntry: (item: FileSystemItem, name: string) => Promise<void>
+  /** Move a file or folder into another folder (`""` is the bucket root). */
+  moveEntry: (item: FileSystemItem, destinationFolder: string) => Promise<void>
   /** Re-fetch the bucket root listing (e.g. after an upload). */
   refresh: () => void
   isLoading: boolean
@@ -180,14 +182,15 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     }
   }, [files])
 
-  // Re-fetch the root listing on demand (after uploads/deletes).
+  // Re-fetch the root listing on demand (after uploads/deletes). Runs silently
+  // — it deliberately doesn't toggle `isLoading`, so re-listing after a
+  // mutation swaps the items in without flashing the full-content loading
+  // state. The FileSystem's own `reloadToken` handles the visible folder.
   const refresh = React.useCallback(() => {
     if (!files) return
-    setIsLoading(true)
     listFolder(files, "", null)
       .then((result) => setItems(result.items))
       .catch((err) => setError(errorMessage(err)))
-      .finally(() => setIsLoading(false))
   }, [files])
 
   const loadChildren = React.useCallback(
@@ -369,6 +372,75 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     [files]
   )
 
+  const moveEntry = React.useCallback(
+    async (item: FileSystemItem, destinationFolder: string) => {
+      if (!files) throw new Error("No active connection")
+
+      // Normalize the destination to "" (root) or a "prefix/" form.
+      const destination =
+        !destinationFolder || destinationFolder.endsWith("/")
+          ? destinationFolder
+          : `${destinationFolder}/`
+
+      try {
+        if (item.kind === "file") {
+          const sourceKey = item.key ?? item.path
+          const name = sourceKey.slice(parentPath(sourceKey).length)
+          const destinationKey = `${destination}${name}`
+
+          if (destinationKey === sourceKey) return
+          if (
+            (await keyExists(files, destinationKey)) ||
+            (await prefixExists(files, `${destinationKey}/`))
+          ) {
+            throw new Error("An item with this name already exists there.")
+          }
+
+          await files.move(sourceKey, destinationKey)
+          return
+        }
+
+        const sourcePrefix = item.path.endsWith("/")
+          ? item.path
+          : `${item.path}/`
+        const folderName = sourcePrefix
+          .slice(parentPath(sourcePrefix).length)
+          .replace(/\/$/, "")
+        const destinationPrefix = `${destination}${folderName}/`
+
+        if (destinationPrefix === sourcePrefix) return
+        if (destinationPrefix.startsWith(sourcePrefix)) {
+          throw new Error("Can’t move a folder into itself.")
+        }
+        if (
+          (await keyExists(files, destinationPrefix.slice(0, -1))) ||
+          (await prefixExists(files, destinationPrefix))
+        ) {
+          throw new Error("An item with this name already exists there.")
+        }
+
+        const keys = await listKeys(files, sourcePrefix)
+        if (keys.length === 0) throw new Error("This folder no longer exists.")
+
+        for (let index = 0; index < keys.length; index += 8) {
+          await Promise.all(
+            keys
+              .slice(index, index + 8)
+              .map((sourceKey) =>
+                files.move(
+                  sourceKey,
+                  `${destinationPrefix}${sourceKey.slice(sourcePrefix.length)}`
+                )
+              )
+          )
+        }
+      } catch (err) {
+        throw new Error(errorMessage(err))
+      }
+    },
+    [files]
+  )
+
   return {
     items,
     loadChildren,
@@ -378,6 +450,7 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     downloadEntry,
     deleteEntry,
     renameEntry,
+    moveEntry,
     refresh,
     isLoading: Boolean(files && (isLoading || loadedFiles !== files)),
     error,

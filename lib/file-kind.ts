@@ -1,8 +1,16 @@
 import type { FileSystemFileItem } from "@/components/ui/file-system"
 
-export type FileKind = "text" | "pdf" | "docx" | "xlsx" | "image" | "other"
+export type FileKind =
+  | "text"
+  | "pdf"
+  | "docx"
+  | "xlsx"
+  | "image"
+  | "video"
+  | "other"
 
 const IMAGE_EXT = /\.(avif|gif|jpe?g|png|svg|webp|bmp|ico)$/
+const VIDEO_EXT = /\.(mp4|webm|ogv|mov|m4v|mkv|avi)$/
 
 // Extensions we render as plain text/code in CodeMirror.
 const TEXT_EXTENSIONS = new Set([
@@ -168,12 +176,14 @@ export function getFileKind(file: FileSystemFileItem): FileKind {
   if (contentType.startsWith("image/") && contentType !== "image/svg+xml") {
     return "image"
   }
+  if (contentType.startsWith("video/")) return "video"
   if (contentType === "application/pdf" || name.endsWith(".pdf")) return "pdf"
   if (name.endsWith(".docx")) return "docx"
   if (name.endsWith(".xlsx")) return "xlsx"
 
   if (isTextFile(file)) return "text"
   if (IMAGE_EXT.test(name)) return "image"
+  if (VIDEO_EXT.test(name)) return "video"
 
   return "other"
 }

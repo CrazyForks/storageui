@@ -39,6 +39,7 @@ const LazyXlsxViewerPreview = React.lazy(() =>
     default: mod.XlsxViewerPreview,
   }))
 )
+const LazyVideoPlayer = React.lazy(() => import("react-player"))
 
 const DIALOG_CLASSNAMES: Record<FileKind, string> = {
   text: "h-[85vh] w-[min(96vw,80rem)] max-w-none p-0",
@@ -46,6 +47,7 @@ const DIALOG_CLASSNAMES: Record<FileKind, string> = {
   docx: "h-[88vh] w-[min(96vw,68rem)] max-w-none p-0",
   xlsx: "h-[85vh] w-[min(96vw,100rem)] max-w-none p-0",
   image: "max-h-[88vh] w-fit max-w-[min(96vw,64rem)] p-2",
+  video: "w-[min(96vw,72rem)] max-w-none p-2",
   other: "max-w-md",
 }
 
@@ -109,7 +111,7 @@ function ViewerBody({
     case "pdf":
       return (
         <React.Suspense fallback={<ViewerFallback />}>
-          <LazyPDFViewer src={url} className="h-full" />
+          <LazyPDFViewer src={url} showUpload={false} className="h-full" />
         </React.Suspense>
       )
     case "docx":
@@ -143,6 +145,14 @@ function ViewerBody({
           alt={fileName}
           className="max-h-[84vh] w-auto max-w-full rounded-lg object-contain"
         />
+      )
+    case "video":
+      return (
+        <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
+          <React.Suspense fallback={<ViewerFallback />}>
+            <LazyVideoPlayer src={url} controls width="100%" height="100%" />
+          </React.Suspense>
+        </div>
       )
     default:
       return <UnsupportedFile fileName={fileName} url={url} />
@@ -274,7 +284,7 @@ export function FileViewerDialog({
             </div>
           ) : (
             <>
-              {onToggleStar ? (
+              {onToggleStar && kind !== "other" ? (
                 <div className="absolute end-11 top-2 z-10">
                   <StarButton
                     isStarred={isStarred}

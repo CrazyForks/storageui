@@ -114,6 +114,7 @@ export function FileBrowser() {
     downloadEntry,
     deleteEntry,
     renameEntry,
+    moveEntry,
     refresh,
     isLoading,
     error,
@@ -143,14 +144,16 @@ export function FileBrowser() {
   const currentPath = folder.connId === activeConnection?.id ? folder.path : ""
   const [isDragging, setIsDragging] = React.useState(false)
   const dragDepth = React.useRef(0)
-  // Bumped after a successful upload to remount FileSystem and re-list the bucket.
+  // Bumped after a mutation (upload/delete/rename) and passed to FileSystem as
+  // `reloadToken`, which re-lists the current folder in place — no remount, so
+  // navigation history and the current location survive.
   const [refreshNonce, setRefreshNonce] = React.useState(0)
 
   const { tasks, enqueue, dismiss, clearFinished, activeCount } = useUploads({
     uploadFile,
     onBatchComplete: () => {
-      // Re-fetch root, then remount FileSystem so the current folder re-lists
-      // (its children are cached inside the component) while staying put.
+      // Re-fetch the root listing and bump the reload token so the current
+      // folder re-lists while staying put.
       refresh()
       setRefreshNonce((n) => n + 1)
     },
@@ -229,9 +232,10 @@ export function FileBrowser() {
     >
       {section === "all" ? (
         <FileSystem
-          key={`${activeConnection.id}:${refreshNonce}`}
+          key={activeConnection.id}
           items={items}
           isLoading={isLoading}
+          reloadToken={refreshNonce}
           title={activeConnection.name}
           view={browserSettings.view}
           onViewChange={(view) => setBucketView(bucketKey, view)}
@@ -257,6 +261,11 @@ export function FileBrowser() {
           }}
           onRenameEntry={async (item, name) => {
             await renameEntry(item, name)
+            refresh()
+            setRefreshNonce((nonce) => nonce + 1)
+          }}
+          onMoveEntry={async (item, destinationFolder) => {
+            await moveEntry(item, destinationFolder)
             refresh()
             setRefreshNonce((nonce) => nonce + 1)
           }}
