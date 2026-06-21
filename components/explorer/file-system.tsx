@@ -256,6 +256,7 @@ export function FileSystem({
   isLoading = false,
   className,
   title = "Files",
+  headerLeading,
   defaultView = "icons",
   view: viewProp,
   onViewChange,
@@ -1788,6 +1789,7 @@ export function FileSystem({
           <FileSystemIconSpriteSheet />
           <div className="relative grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b bg-muted/40 px-2">
             <div className="flex min-w-0 items-center gap-0.5">
+              {headerLeading}
               <button
                 type="button"
                 aria-label="Back"

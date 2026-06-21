@@ -1439,7 +1439,7 @@ function DocxViewerContent({
   return (
     <div
       className={cn(
-        "flex h-[640px] min-h-0 flex-col overflow-hidden bg-background",
+        "flex h-160 min-h-0 flex-col overflow-hidden bg-background",
         className
       )}
     >

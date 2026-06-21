@@ -24,11 +24,12 @@ const SECTION_LABELS = {
 type MarkedFilesViewProps = {
   section: "recents" | "starred"
   connectionName: string
+  headerLeading?: React.ReactNode
   files: MarkedFile[]
-  isStarred: (key: string) => boolean
-  onOpen: (file: MarkedFile) => void
-  onToggleStar: (file: MarkedFile) => void
-  onClearRecents?: () => void
+  isStarredAction: (key: string) => boolean
+  onOpenAction: (file: MarkedFile) => void
+  onToggleStarAction: (file: MarkedFile) => void
+  onClearRecentsAction?: () => void
   showFileExtensions: boolean
 }
 
@@ -78,11 +79,12 @@ function metaLine(file: MarkedFile) {
 export function MarkedFilesView({
   section,
   connectionName,
+  headerLeading,
   files,
-  isStarred,
-  onOpen,
-  onToggleStar,
-  onClearRecents,
+  isStarredAction,
+  onOpenAction,
+  onToggleStarAction,
+  onClearRecentsAction,
   showFileExtensions,
 }: MarkedFilesViewProps) {
   return (
@@ -90,13 +92,14 @@ export function MarkedFilesView({
       <FileSystemIconSpriteSheet />
       <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b px-3">
         <div className="flex min-w-0 items-center gap-2">
+          {headerLeading}
           <span className="text-sm font-medium">{SECTION_LABELS[section]}</span>
           <Badge variant="secondary" className="truncate text-sm">
             {connectionName}
           </Badge>
         </div>
         {section === "recents" && files.length > 0 ? (
-          <Button size="sm" variant="ghost" onClick={onClearRecents}>
+          <Button size="sm" variant="ghost" onClick={onClearRecentsAction}>
             Clear
           </Button>
         ) : null}
@@ -125,17 +128,17 @@ export function MarkedFilesView({
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="divide-y">
             {files.map((file) => {
-              const starred = isStarred(file.key)
+              const starred = isStarredAction(file.key)
               return (
                 <div
                   key={file.key}
                   role="button"
                   tabIndex={0}
-                  onClick={() => onOpen(file)}
+                  onClick={() => onOpenAction(file)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault()
-                      onOpen(file)
+                      onOpenAction(file)
                     }
                   }}
                   className="group flex cursor-pointer items-center gap-3 px-3 py-2.5 outline-none hover:bg-accent/50 focus-visible:bg-accent/50"
@@ -159,7 +162,7 @@ export function MarkedFilesView({
                     title={starred ? "Remove star" : "Add star"}
                     onClick={(event) => {
                       event.stopPropagation()
-                      onToggleStar(file)
+                      onToggleStarAction(file)
                     }}
                     className={cn(
                       "shrink-0 transition-opacity",

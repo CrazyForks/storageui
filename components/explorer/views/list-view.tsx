@@ -141,7 +141,7 @@ export function FileSystemListView({
       {/* Paddings match the tree's row geometry: name text starts 46px in
           (16px tree padding + 30px icon lane), metadata ends 24px from the
           right (16px tree padding + 8px decoration inset). */}
-      <div className="mb-1.5 flex shrink-0 items-center border-b py-1 pr-6 pl-[46px] text-xs font-medium text-muted-foreground">
+      <div className="mb-1.5 flex shrink-0 items-center border-b py-1 pr-6 pl-11.5 text-xs font-medium text-muted-foreground">
         <FileSystemListColumnHeader
           className="flex-1 justify-start"
           label="Name"

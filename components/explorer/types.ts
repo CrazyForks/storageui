@@ -88,6 +88,7 @@ export type FileSystemProps = {
   reloadToken?: number | string
   className?: string
   title?: string
+  headerLeading?: ReactNode
   defaultView?: FileSystemView
   view?: FileSystemView
   onViewChange?: (view: FileSystemView) => void

@@ -18,6 +18,7 @@ import { useNavStore } from "@/lib/store/nav-store"
 import { usePreferencesStore } from "@/lib/store/preferences-store"
 import { useUploadUiStore } from "@/lib/store/upload-ui-store"
 import { Button } from "@/components/ui/button"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import { FileSystem } from "@/components/explorer/file-system"
 import type { FileSystemFileItem } from "@/components/explorer/types"
 import {
@@ -31,6 +32,16 @@ import { MarkedFilesView } from "@/components/storage/marked-files-view"
 import { UploadProgressPanel } from "@/components/storage/upload-progress-panel"
 
 const EMPTY_MARKS: MarkedFile[] = []
+
+function MobileSidebarTrigger() {
+  return (
+    <SidebarTrigger
+      aria-label="Open sidebar"
+      title="Open sidebar"
+      className="shrink-0 min-[800px]:hidden"
+    />
+  )
+}
 
 function toMarkedFile(file: FileSystemFileItem): MarkedFile {
   return {
@@ -235,6 +246,7 @@ export function FileBrowser() {
           isLoading={isLoading}
           reloadToken={refreshNonce}
           title={activeConnection.name}
+          headerLeading={<MobileSidebarTrigger />}
           view={browserSettings.view}
           onViewChange={(view) => setBucketView(bucketKey, view)}
           sort={browserSettings.sort}
@@ -296,11 +308,12 @@ export function FileBrowser() {
         <MarkedFilesView
           section={section}
           connectionName={activeConnection.name}
+          headerLeading={<MobileSidebarTrigger />}
           files={section === "recents" ? recents : starred}
-          isStarred={(key) => starredKeys.has(key)}
-          onOpen={openMarkedFile}
-          onToggleStar={(file) => toggleStar(bucketKey, file)}
-          onClearRecents={() => clearRecents(bucketKey)}
+          isStarredAction={(key) => starredKeys.has(key)}
+          onOpenAction={openMarkedFile}
+          onToggleStarAction={(file) => toggleStar(bucketKey, file)}
+          onClearRecentsAction={() => clearRecents(bucketKey)}
           showFileExtensions={showFileExtensions}
         />
       )}

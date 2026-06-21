@@ -1279,7 +1279,7 @@ const WorkbookSheetTabsInner = React.memo(function WorkbookSheetTabsInner({
                 width: previewWidth,
               }}
             >
-              <div className="relative aspect-[11/7] w-full overflow-hidden bg-muted/60">
+              <div className="relative aspect-11/7 w-full overflow-hidden bg-muted/60">
                 <img
                   key={`${workbookIdentity}-${visiblePreviewIndex}-${previewUrl}`}
                   src={previewUrl}
@@ -1342,7 +1342,7 @@ function XlsxWorkbookSurface({
   return (
     <div
       className={cn(
-        "flex h-[640px] min-h-0 flex-col overflow-hidden bg-background",
+        "flex h-160 min-h-0 flex-col overflow-hidden bg-background",
         className
       )}
     >
@@ -1630,7 +1630,7 @@ function XlsxViewerContent({
     return (
       <div
         className={cn(
-          "flex h-[640px] min-h-0 flex-col overflow-hidden bg-background",
+          "flex h-160 min-h-0 flex-col overflow-hidden bg-background",
           className
         )}
       >
