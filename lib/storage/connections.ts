@@ -1,5 +1,5 @@
 /**
- * S3 / R2 connection model.
+ * Object-storage connection model.
  *
  * Credentials never reach the browser as part of the build: env-configured
  * buckets live in server-only env vars (see `connections-server.ts`) and are
@@ -13,7 +13,7 @@
  * browser's direct presigned GET/PUT requests.
  */
 
-export type ConnectionProvider = "s3" | "r2" | "s3-compatible"
+export type ConnectionProvider = "s3" | "r2" | "alibaba" | "s3-compatible"
 
 export type Connection = {
   id: string
@@ -21,7 +21,7 @@ export type Connection = {
   provider: ConnectionProvider
   bucket: string
   region?: string
-  /** Custom endpoint for R2 / S3-compatible services. */
+  /** Custom endpoint for R2, Alibaba OSS, or S3-compatible services. */
   endpoint?: string
   /** Path-style addressing — required by MinIO and some S3-compatible services. */
   forcePathStyle?: boolean

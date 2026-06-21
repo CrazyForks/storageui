@@ -99,11 +99,11 @@ export const useConnectionStore = create<ConnectionStore>()(
 
       setEnvConnections: (envConnections) =>
         set((state) => {
-          // Local (localStorage) connections come first; env connections are
+          // Env connections come first; local (localStorage) connections are
           // appended after them in the sidebar.
           const connections = [
-            ...localConnections(state.connections),
             ...envConnections,
+            ...localConnections(state.connections),
           ]
           return {
             connections,

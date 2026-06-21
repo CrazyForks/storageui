@@ -10,6 +10,7 @@ import {
 } from "@/lib/storage/connections"
 import { useConnections } from "@/lib/store/connection-store"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ import { testConnectionAction } from "@/app/actions/files"
 const PROVIDER_OPTIONS: { value: ConnectionProvider; label: string }[] = [
   { value: "s3", label: "AWS S3" },
   { value: "r2", label: "Cloudflare R2" },
+  { value: "alibaba", label: "Alibaba Cloud OSS" },
   { value: "s3-compatible", label: "S3-compatible (custom endpoint)" },
 ]
 
@@ -99,6 +101,7 @@ function buildConnection(
   existing: Connection | null
 ): Connection {
   const isR2 = form.provider === "r2"
+  const isAlibaba = form.provider === "alibaba"
   const isS3Compatible = form.provider === "s3-compatible"
 
   return {
@@ -107,8 +110,11 @@ function buildConnection(
     provider: form.provider,
     bucket: form.bucket.trim(),
     region: !isR2 ? form.region.trim() || undefined : undefined,
-    endpoint: isS3Compatible ? form.endpoint.trim() || undefined : undefined,
-    forcePathStyle: isS3Compatible && form.forcePathStyle,
+    endpoint:
+      isS3Compatible || isAlibaba
+        ? form.endpoint.trim() || undefined
+        : undefined,
+    forcePathStyle: (isS3Compatible || isAlibaba) && form.forcePathStyle,
     accountId: isR2 ? form.accountId.trim() || undefined : undefined,
     accessKeyId: form.accessKeyId.trim(),
     secretAccessKey: form.secretAccessKey.trim(),
@@ -176,6 +182,7 @@ export function AddConnectionDialog() {
     form.accessKeyId.trim() &&
     form.secretAccessKey.trim() &&
     (provider !== "r2" || form.accountId.trim()) &&
+    (provider !== "alibaba" || form.region.trim()) &&
     (provider !== "s3-compatible" || form.endpoint.trim()) &&
     status !== "testing"
 
@@ -210,7 +217,7 @@ export function AddConnectionDialog() {
             <DialogDescription>
               {editingConnection
                 ? "Update this connection and test it before saving."
-                : "Connect an S3, R2, or S3-compatible bucket. Credentials are stored in your browser only; the bucket must allow CORS."}
+                : "Connect an S3, R2, Alibaba OSS, or S3-compatible bucket. Credentials are stored in your browser only; the bucket must allow CORS."}
             </DialogDescription>
           </DialogHeader>
 
@@ -299,6 +306,42 @@ export function AddConnectionDialog() {
                 </Field>
               ) : null}
 
+              {provider === "alibaba" ? (
+                <>
+                  <Field
+                    label="Region"
+                    hint="Alibaba OSS region code, without the “oss-” prefix."
+                    required
+                  >
+                    <Input
+                      value={form.region}
+                      onChange={(e) => update("region", e.target.value)}
+                      placeholder="cn-hangzhou"
+                      required
+                    />
+                  </Field>
+                  <Field
+                    label="Endpoint"
+                    hint="Optional. Defaults to https://oss-{region}.aliyuncs.com."
+                  >
+                    <Input
+                      value={form.endpoint}
+                      onChange={(e) => update("endpoint", e.target.value)}
+                      placeholder="https://oss-cn-hangzhou.aliyuncs.com"
+                    />
+                  </Field>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={form.forcePathStyle}
+                      onCheckedChange={(checked) =>
+                        update("forcePathStyle", checked)
+                      }
+                    />
+                    <span>Force path-style addressing</span>
+                  </label>
+                </>
+              ) : null}
+
               {provider === "s3-compatible" ? (
                 <>
                   <Field
@@ -321,13 +364,11 @@ export function AddConnectionDialog() {
                     />
                   </Field>
                   <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={form.forcePathStyle}
-                      onChange={(e) =>
-                        update("forcePathStyle", e.target.checked)
+                      onCheckedChange={(checked) =>
+                        update("forcePathStyle", checked)
                       }
-                      className="size-4"
                     />
                     <span>Force path-style addressing (MinIO, etc.)</span>
                   </label>
@@ -343,7 +384,14 @@ export function AddConnectionDialog() {
                 />
               </Field>
 
-              <Field label="Secret access key" required>
+              <Field
+                label={
+                  provider === "alibaba"
+                    ? "AccessKey secret"
+                    : "Secret access key"
+                }
+                required
+              >
                 <Input
                   type="password"
                   value={form.secretAccessKey}

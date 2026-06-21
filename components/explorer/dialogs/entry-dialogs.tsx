@@ -14,7 +14,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { FileSystemFolderGlyph } from "@/components/explorer/internals"
+import {
+  FileSystemFolderGlyph,
+  FileTypeIcon,
+  formatByteSize,
+  formatTimestamp,
+  MIME_TYPE_LABELS,
+  mimeTypeForFile,
+} from "@/components/explorer/internals"
 import type {
   FileSystemEntry,
   FileSystemIndex,
@@ -293,6 +300,93 @@ export function MoveEntriesDialog({
               {navPath === ""
                 ? `Move to ${rootLabel}`
                 : `Move to “${segments[segments.length - 1]?.name}”`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      ) : null}
+    </Dialog>
+  )
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[6.5rem_1fr] items-start gap-3 py-2">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 text-sm break-words">{value}</dd>
+    </div>
+  )
+}
+
+export function InfoEntryDialog({
+  entry,
+  onOpenChangeAction,
+}: {
+  entry: FileSystemEntry | null
+  onOpenChangeAction: (open: boolean) => void
+}) {
+  const open = entry !== null
+  const isFolder = entry?.kind === "folder"
+
+  // The folder this entry lives in; "" is the bucket root.
+  const location = entry?.parentPath ? entry.parentPath : "/"
+  const mime = entry && !isFolder ? mimeTypeForFile(entry) : null
+  const typeLabel = mime ? (MIME_TYPE_LABELS[mime] ?? mime) : null
+  const size = entry && !isFolder ? (formatByteSize(entry.size) ?? "—") : null
+  const created = formatTimestamp(entry?.createdAt)
+  const modified = formatTimestamp(entry?.updatedAt)
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
+      {entry ? (
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              {isFolder ? (
+                <FileSystemFolderGlyph className="h-7 w-auto shrink-0" />
+              ) : (
+                <FileTypeIcon fileName={entry.name} className="size-7" />
+              )}
+              <div className="min-w-0">
+                <DialogTitle className="truncate text-left">
+                  {entry.name}
+                </DialogTitle>
+                <DialogDescription className="text-left">
+                  {isFolder ? "Folder" : (typeLabel ?? "File")}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <DialogPanel>
+            <dl className="divide-y">
+              {!isFolder && size ? <InfoRow label="Size" value={size} /> : null}
+              {!isFolder && typeLabel ? (
+                <InfoRow label="Type" value={typeLabel} />
+              ) : null}
+              <InfoRow
+                label="Location"
+                value={<span className="break-all">{location}</span>}
+              />
+              <InfoRow
+                label="Path"
+                value={<span className="break-all">{entry.path}</span>}
+              />
+              {created ? <InfoRow label="Created" value={created} /> : null}
+              {modified ? <InfoRow label="Modified" value={modified} /> : null}
+              {!isFolder && entry.etag ? (
+                <InfoRow
+                  label="ETag"
+                  value={
+                    <span className="break-all">
+                      {entry.etag.replace(/"/g, "")}
+                    </span>
+                  }
+                />
+              ) : null}
+            </dl>
+          </DialogPanel>
+          <DialogFooter>
+            <Button type="button" onClick={() => onOpenChangeAction(false)}>
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -5,10 +5,15 @@ export type FileKind =
   | "pdf"
   | "docx"
   | "xlsx"
+  | "drawio"
   | "image"
   | "video"
   | "audio"
   | "other"
+
+// draw.io / diagrams.net files: native `.drawio`/`.dio` XML, plus the editable
+// `.drawio.svg` / `.drawio.png` exports that embed the diagram.
+const DRAWIO_EXT = /\.(drawio|dio)(\.(svg|png|xml|html))?$/
 
 const IMAGE_EXT = /\.(avif|gif|jpe?g|png|svg|webp|bmp|ico)$/
 const VIDEO_EXT = /\.(mp4|webm|ogv|mov|m4v|mkv|avi)$/
@@ -173,6 +178,10 @@ function isTextFile(file: FileSystemFileItem): boolean {
 export function getFileKind(file: FileSystemFileItem): FileKind {
   const contentType = file.contentType?.toLowerCase() ?? ""
   const name = fileName(file)
+
+  // draw.io diagrams win over the generic image/text rules so a `.drawio.svg`
+  // renders as a diagram instead of falling through to the SVG-as-text branch.
+  if (DRAWIO_EXT.test(name)) return "drawio"
 
   // SVG is matched as text below; everything else image/* is an image.
   if (contentType.startsWith("image/") && contentType !== "image/svg+xml") {

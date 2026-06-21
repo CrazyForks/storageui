@@ -129,7 +129,7 @@ export async function signFileUrlAction(
   }
 }
 
-/** Presigned direct-upload descriptor so the browser PUTs straight to S3/R2. */
+/** Presigned direct-upload descriptor for a browser-to-storage transfer. */
 export async function signUploadUrlAction(
   ref: ConnectionRef,
   key: string,

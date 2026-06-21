@@ -52,6 +52,7 @@ export {
   IconLayoutColumns as LayoutThreeColumnIcon,
   IconList as LeftToRightListBulletIcon,
   IconLoader2 as Loading03Icon,
+  IconLogout as LogoutIcon,
   IconCircleMinus as MinusSignCircleIcon,
   IconMoon as Moon02Icon,
   IconDots as MoreHorizontalIcon,

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { siteConfig } from "@/lib/config/site"
 import { useConnections } from "@/lib/store/connection-store"
 import { useNavStore, type BrowseSection } from "@/lib/store/nav-store"
 import { useUploadUiStore } from "@/lib/store/upload-ui-store"
@@ -12,6 +13,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -25,16 +27,19 @@ import {
   FavouriteIcon,
   FolderLibraryIcon,
   HardDriveIcon,
+  LogoutIcon,
   PlusSignCircleIcon,
   Settings01Icon,
   Upload01Icon,
 } from "@/components/foundations/icons"
+import { Logo } from "@/components/foundations/logo"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
+import { isAuthEnabledAction, logoutAction } from "@/app/actions/auth"
 
-// This app has no backend — it talks to S3 / R2 directly from the browser
-// using credentials from env vars or the "Add connection" dialog (stored in
-// localStorage). The sidebar only surfaces locally-feasible views; server-only
-// ideas (Shared links, Trash/restore, live object counts) are left out.
+// Storage operations run through Next.js server actions; signed transfers go
+// directly between the browser and the active object-storage provider. The
+// sidebar only surfaces locally-feasible views; server-stateful ideas (Shared
+// links, Trash/restore, live object counts) are left out.
 
 type BrowseItem = {
   title: string
@@ -50,6 +55,12 @@ const BROWSE: BrowseItem[] = [
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const [isSettingsOpen, setSettingsOpen] = React.useState(false)
+  // Whether to show "Sign out" — auth is read at runtime (the pages are static,
+  // so it can't be baked in via a layout prop).
+  const [authEnabled, setAuthEnabled] = React.useState(false)
+  React.useEffect(() => {
+    isAuthEnabledAction().then(setAuthEnabled, () => {})
+  }, [])
   const {
     connections,
     activeConnection,
@@ -65,6 +76,14 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   return (
     <>
       <Sidebar collapsible="icon" {...props}>
+        <SidebarHeader>
+          <div className="flex h-8 items-center gap-2 px-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            <Logo className="size-5 text-foreground" />
+            <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
+              {siteConfig.name}
+            </span>
+          </div>
+        </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -185,6 +204,17 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                 <span>Settings</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            {authEnabled ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  tooltip="Sign out"
+                  onClick={() => void logoutAction()}
+                >
+                  <AppIcon icon={LogoutIcon} />
+                  <span>Sign out</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : null}
           </SidebarMenu>
         </SidebarFooter>
 

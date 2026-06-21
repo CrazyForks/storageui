@@ -1,6 +1,7 @@
 import "server-only"
 
 import { createFiles as createFilesSdk, type Files } from "files-sdk"
+import { alibaba } from "files-sdk/alibaba"
 import { r2 } from "files-sdk/r2"
 import { s3 } from "files-sdk/s3"
 import { zip, type ZipApi } from "files-sdk/zip"
@@ -66,9 +67,15 @@ const LEGACY_ENV_SLOT: RawEnvSlot = {
 }
 
 function slotToConnection(raw: RawEnvSlot, id: string): Connection | null {
-  if (!raw.bucket || !raw.accessKeyId || !raw.secretAccessKey) return null
-
   const provider = (raw.provider as ConnectionProvider | undefined) ?? "s3"
+
+  if (
+    !raw.bucket ||
+    !raw.accessKeyId ||
+    !raw.secretAccessKey ||
+    (provider === "alibaba" && !raw.region)
+  )
+    return null
 
   return {
     id,
@@ -123,6 +130,25 @@ function buildFiles(connection: Connection): FilesClient {
       adapter: r2({
         bucket: connection.bucket,
         accountId: connection.accountId,
+        accessKeyId: connection.accessKeyId,
+        secretAccessKey: connection.secretAccessKey,
+        publicBaseUrl: connection.publicBaseUrl,
+      }),
+      plugins: [zip()],
+    })
+  }
+
+  if (connection.provider === "alibaba") {
+    if (!connection.region) {
+      throw new Error("Alibaba Cloud OSS requires a region.")
+    }
+
+    return createFilesSdk({
+      adapter: alibaba({
+        bucket: connection.bucket,
+        region: connection.region,
+        endpoint: connection.endpoint,
+        forcePathStyle: connection.forcePathStyle,
         accessKeyId: connection.accessKeyId,
         secretAccessKey: connection.secretAccessKey,
         publicBaseUrl: connection.publicBaseUrl,

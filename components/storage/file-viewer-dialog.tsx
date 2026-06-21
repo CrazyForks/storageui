@@ -42,6 +42,11 @@ const LazyXlsxViewerPreview = React.lazy(() =>
     default: mod.XlsxViewerPreview,
   }))
 )
+const LazyDrawioViewer = React.lazy(() =>
+  import("@/components/viewers/drawio/drawio-viewer").then((mod) => ({
+    default: mod.DrawioViewer,
+  }))
+)
 const LazyVideoPlayer = React.lazy(() => import("react-player"))
 
 const DIALOG_CLASSNAMES: Record<FileKind, string> = {
@@ -49,6 +54,7 @@ const DIALOG_CLASSNAMES: Record<FileKind, string> = {
   pdf: "h-[88vh] w-[min(96vw,68rem)] max-w-none p-0",
   docx: "h-[88vh] w-[min(96vw,68rem)] max-w-none p-0",
   xlsx: "h-[85vh] w-[min(96vw,100rem)] max-w-none p-0",
+  drawio: "h-[88vh] w-[min(96vw,84rem)] max-w-none p-0",
   image: "max-h-[88vh] w-fit min-w-[18rem] max-w-[min(96vw,64rem)] p-0",
   video: "w-[min(96vw,72rem)] max-w-none p-0",
   audio: "w-[min(96vw,36rem)] max-w-none p-0",
@@ -142,6 +148,17 @@ function ViewerBody({
             isDark={isDark}
             onIsDarkChangeAction={setIsDark}
             showUpload={false}
+          />
+        </React.Suspense>
+      )
+    case "drawio":
+      return (
+        <React.Suspense fallback={<ViewerFallback />}>
+          <LazyDrawioViewer
+            src={url}
+            fileName={fileName}
+            className="h-full"
+            isDark={isDark}
           />
         </React.Suspense>
       )

@@ -1,7 +1,8 @@
 # Drive UI
 
-A browser-based, Finder-style file explorer for S3, Cloudflare R2, and other
-S3-compatible object storage. Built with Next.js and Extend UI.
+A browser-based, Finder-style file explorer for AWS S3, Cloudflare R2, Alibaba
+Cloud OSS, and other S3-compatible object storage. Built with Next.js and
+Extend UI.
 
 ## Features
 
@@ -22,9 +23,10 @@ bun dev
 Open [http://localhost:3000](http://localhost:3000). Storage connections can be
 configured through environment variables or added directly in the app.
 
-> This project has no backend. Connection credentials are exposed to and stored
-> in the browser. Use it only in a trusted environment and configure bucket CORS
-> accordingly.
+> Connections configured through environment variables keep their credentials
+> on the server. Connections added in the app are stored in the browser and sent
+> to the Next.js server for each operation. Use local connections only in a
+> trusted environment and configure bucket CORS for direct signed transfers.
 
 ## License
 

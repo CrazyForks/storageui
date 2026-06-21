@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { DragDropProvider, DragOverlay } from "@dnd-kit/react"
+import { DragDropProvider, DragOverlay, PointerSensor } from "@dnd-kit/react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
 
@@ -54,6 +54,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FileSystemDateRangeDialog } from "@/components/explorer/dialogs/date-range-dialog"
 import {
   DeleteEntriesDialog,
+  InfoEntryDialog,
   MoveEntriesDialog,
   NewFolderDialog,
 } from "@/components/explorer/dialogs/entry-dialogs"
@@ -135,6 +136,7 @@ import {
   Folder01Icon,
   GalleryThumbnailsIcon,
   GridViewIcon,
+  InformationCircleIcon,
   LayoutThreeColumnIcon,
   LeftToRightListBulletIcon,
   MoveIcon,
@@ -953,6 +955,10 @@ export function FileSystem({
   } | null>(null)
   const [contextMenuEntry, setContextMenuEntry] =
     React.useState<FileSystemEntry | null>(null)
+  // The entry whose details are shown in the Info dialog.
+  const [infoTarget, setInfoTarget] = React.useState<FileSystemEntry | null>(
+    null
+  )
   const [deleteTargets, setDeleteTargets] = React.useState<FileSystemEntry[]>(
     []
   )
@@ -1964,6 +1970,10 @@ export function FileSystem({
               onContextMenuCapture={handleContextMenuCapture}
             >
               <DragDropProvider
+                // Pointer only — the default keyboard sensor would start a drag
+                // on Enter/Space when a tile is focused, hijacking Enter (which
+                // opens the file).
+                sensors={[PointerSensor]}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
               >
@@ -2125,6 +2135,13 @@ export function FileSystem({
                         </ContextMenuItem>
                       </>
                     ) : null}
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      onClick={() => setInfoTarget(contextMenuEntry)}
+                    >
+                      <AppIcon icon={InformationCircleIcon} />
+                      Get Info
+                    </ContextMenuItem>
                     {onDownloadEntry ||
                     onRenameEntry ||
                     onMoveEntry ||
@@ -2276,6 +2293,12 @@ export function FileSystem({
                 setMoveTargets([])
                 setMoveEntryError(null)
               }
+            }}
+          />
+          <InfoEntryDialog
+            entry={infoTarget}
+            onOpenChangeAction={(open) => {
+              if (!open) setInfoTarget(null)
             }}
           />
           <DeleteEntriesDialog
