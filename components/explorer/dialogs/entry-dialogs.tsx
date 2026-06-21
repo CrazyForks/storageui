@@ -20,6 +20,37 @@ import {
 } from "@/components/ui/select"
 import type { FileSystemEntry } from "@/components/explorer/types"
 
+type BulkProgress = { done: number; total: number }
+
+function BulkProgressBar({
+  verb,
+  progress,
+}: {
+  verb: string
+  progress: BulkProgress
+}) {
+  const percent = progress.total
+    ? Math.round((progress.done / progress.total) * 100)
+    : 0
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>
+          {verb} {progress.done} of {progress.total}…
+        </span>
+        <span className="tabular-nums">{percent}%</span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary transition-[width] duration-200"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
 export function NewFolderDialog({
   currentFolderName,
   error,
@@ -99,6 +130,7 @@ export function MoveEntriesDialog({
   destinations,
   error,
   isPending,
+  progress,
   onDestinationChange,
   onOpenChange,
   onSubmit,
@@ -108,6 +140,7 @@ export function MoveEntriesDialog({
   destinations: Array<{ label: string; value: string }>
   error: string | null
   isPending: boolean
+  progress?: BulkProgress | null
   onDestinationChange: (destination: string) => void
   onOpenChange: (open: boolean) => void
   onSubmit: () => void
@@ -158,6 +191,9 @@ export function MoveEntriesDialog({
               {error ? (
                 <p className="text-sm text-destructive">{error}</p>
               ) : null}
+              {progress ? (
+                <BulkProgressBar verb="Moving" progress={progress} />
+              ) : null}
             </form>
           </DialogPanel>
           <DialogFooter>
@@ -189,12 +225,14 @@ export function MoveEntriesDialog({
 export function DeleteEntriesDialog({
   error,
   isPending,
+  progress,
   onOpenChange,
   onSubmit,
   targets,
 }: {
   error: string | null
   isPending: boolean
+  progress?: BulkProgress | null
   onOpenChange: (open: boolean) => void
   onSubmit: () => void
   targets: FileSystemEntry[]
@@ -221,9 +259,14 @@ export function DeleteEntriesDialog({
                   }`}
             </DialogDescription>
           </DialogHeader>
-          {error ? (
-            <DialogPanel>
-              <p className="text-sm text-destructive">{error}</p>
+          {error || progress ? (
+            <DialogPanel className="space-y-2">
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
+              {progress ? (
+                <BulkProgressBar verb="Deleting" progress={progress} />
+              ) : null}
             </DialogPanel>
           ) : null}
           <DialogFooter>

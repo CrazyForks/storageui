@@ -2,17 +2,6 @@
 
 import * as React from "react"
 
-import {
-  AppIcon,
-  Clock01Icon,
-  Edit02Icon,
-  FavouriteIcon,
-  FolderLibraryIcon,
-  HardDriveIcon,
-  PlusSignCircleIcon,
-  Settings01Icon,
-  Upload01Icon,
-} from "@/lib/icons"
 import { useConnections } from "@/lib/store/connection-store"
 import { useNavStore, type BrowseSection } from "@/lib/store/nav-store"
 import { useUploadUiStore } from "@/lib/store/upload-ui-store"
@@ -29,6 +18,17 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  AppIcon,
+  Clock01Icon,
+  Edit02Icon,
+  FavouriteIcon,
+  FolderLibraryIcon,
+  HardDriveIcon,
+  PlusSignCircleIcon,
+  Settings01Icon,
+  Upload01Icon,
+} from "@/components/foundations/icons"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 
 // This app has no backend — it talks to S3 / R2 directly from the browser

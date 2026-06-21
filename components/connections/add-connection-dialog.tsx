@@ -2,7 +2,6 @@
 
 import * as React from "react"
 
-import { AppIcon, Delete02Icon } from "@/lib/icons"
 import { toConnectionRef } from "@/lib/storage/connection-ref"
 import {
   createConnectionId,
@@ -28,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { AppIcon, Delete02Icon } from "@/components/foundations/icons"
 import { testConnectionAction } from "@/app/actions/files"
 
 const PROVIDER_OPTIONS: { value: ConnectionProvider; label: string }[] = [

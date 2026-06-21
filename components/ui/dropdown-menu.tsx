@@ -3,8 +3,12 @@
 import * as React from "react"
 import { Menu as DropdownMenuPrimitive } from "@base-ui/react/menu"
 
-import { AppIcon, ArrowRight01Icon, Tick02Icon } from "@/lib/icons"
 import { cn } from "@/lib/utils"
+import {
+  AppIcon,
+  ArrowRight01Icon,
+  Tick02Icon,
+} from "@/components/foundations/icons"
 
 function childContent(
   asChild: boolean | undefined,

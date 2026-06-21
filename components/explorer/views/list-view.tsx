@@ -8,7 +8,6 @@ import {
 } from "@pierre/trees"
 import { FileTree as PierreFileTree, useFileTree } from "@pierre/trees/react"
 
-import { AppIcon, ArrowDown01Icon, ArrowUp01Icon } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import {
   compareEntriesBySort,
@@ -34,6 +33,11 @@ import {
   isTypeAheadKey,
   useEntryTypeAhead,
 } from "@/components/explorer/views/shared"
+import {
+  AppIcon,
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+} from "@/components/foundations/icons"
 
 export function FileSystemListColumnHeader({
   className,

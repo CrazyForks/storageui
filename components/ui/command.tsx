@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Command as CommandPrimitive } from "cmdk"
 
-import { AppIcon, Search01Icon } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import {
   Dialog,
@@ -12,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { AppIcon, Search01Icon } from "@/components/foundations/icons"
 
 function Command({
   className,

@@ -6,8 +6,8 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { AppIcon, ChevronDown, ChevronUp } from "@/lib/icons"
 import { cn } from "@/lib/utils"
+import { AppIcon, ChevronDown, ChevronUp } from "@/components/foundations/icons"
 
 export const Select: typeof SelectPrimitive.Root = SelectPrimitive.Root
 

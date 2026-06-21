@@ -16,18 +16,6 @@ import {
 } from "@extend-ai/react-xlsx"
 import { createPortal } from "react-dom"
 
-import {
-  AppIcon,
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  Download01Icon,
-  MinusSignCircleIcon,
-  Moon02Icon,
-  MoreHorizontalIcon,
-  PlusSignCircleIcon,
-  Search01Icon,
-  Upload01Icon,
-} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -63,6 +51,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  AppIcon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  Download01Icon,
+  MinusSignCircleIcon,
+  Moon02Icon,
+  MoreHorizontalIcon,
+  PlusSignCircleIcon,
+  Search01Icon,
+  Upload01Icon,
+} from "@/components/foundations/icons"
 
 const XLSX_LOADING_INDICATOR_DELAY_MS = 300
 const XLSX_DROPDOWN_Z_INDEX_CLASS = "z-40"

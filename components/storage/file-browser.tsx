@@ -2,14 +2,8 @@
 
 import * as React from "react"
 
-import {
-  AppIcon,
-  CloudServerIcon,
-  PlusSignCircleIcon,
-  Upload01Icon,
-} from "@/lib/icons"
-import { useS3FileSystem } from "@/lib/storage/use-file-system"
-import { useUploads } from "@/lib/storage/use-uploads"
+import { useS3FileSystem } from "@/lib/storage/hooks/use-file-system"
+import { useUploads } from "@/lib/storage/hooks/use-uploads"
 import {
   bucketBrowserKey,
   DEFAULT_BUCKET_BROWSER_SETTINGS,
@@ -26,6 +20,12 @@ import { useUploadUiStore } from "@/lib/store/upload-ui-store"
 import { Button } from "@/components/ui/button"
 import { FileSystem } from "@/components/explorer/file-system"
 import type { FileSystemFileItem } from "@/components/explorer/types"
+import {
+  AppIcon,
+  CloudServerIcon,
+  PlusSignCircleIcon,
+  Upload01Icon,
+} from "@/components/foundations/icons"
 import { FileViewerDialog } from "@/components/storage/file-viewer-dialog"
 import { MarkedFilesView } from "@/components/storage/marked-files-view"
 import { UploadProgressPanel } from "@/components/storage/upload-progress-panel"
@@ -257,8 +257,12 @@ export function FileBrowser() {
             refresh()
             setRefreshNonce((nonce) => nonce + 1)
           }}
-          onDeleteEntries={async (items) => {
-            for (const item of items) await deleteEntry(item)
+          onDeleteEntries={async (items, onProgress) => {
+            let done = 0
+            for (const item of items) {
+              await deleteEntry(item)
+              onProgress?.(++done, items.length)
+            }
             refresh()
             setRefreshNonce((nonce) => nonce + 1)
           }}
@@ -272,8 +276,12 @@ export function FileBrowser() {
             refresh()
             setRefreshNonce((nonce) => nonce + 1)
           }}
-          onMoveEntries={async (items, destinationFolder) => {
-            for (const item of items) await moveEntry(item, destinationFolder)
+          onMoveEntries={async (items, destinationFolder, onProgress) => {
+            let done = 0
+            for (const item of items) {
+              await moveEntry(item, destinationFolder)
+              onProgress?.(++done, items.length)
+            }
             refresh()
             setRefreshNonce((nonce) => nonce + 1)
           }}

@@ -2,7 +2,6 @@
 
 import * as React from "react"
 
-import { AppIcon, ArrowRight01Icon } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { ScrollArea, ScrollAreaPrimitive } from "@/components/ui/scroll-area"
 import { Spinner } from "@/components/ui/spinner"
@@ -32,6 +31,7 @@ import {
   ARROW_KEYS,
   useEntryTypeAhead,
 } from "@/components/explorer/views/shared"
+import { AppIcon, ArrowRight01Icon } from "@/components/foundations/icons"
 
 export function FileSystemColumnsView(props: FileSystemViewProps) {
   const {

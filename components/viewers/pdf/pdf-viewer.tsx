@@ -60,19 +60,6 @@ import {
 import { useZoom, ZoomPluginPackage } from "@embedpdf/plugin-zoom/react"
 import { flushSync } from "react-dom"
 
-import {
-  AppIcon,
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  Download01Icon,
-  MinusSignCircleIcon,
-  MoreHorizontalIcon,
-  PlusSignCircleIcon,
-  RotateClockwiseIcon,
-  Search01Icon,
-  SidebarLeftIcon,
-  Upload01Icon,
-} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -103,6 +90,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  AppIcon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  Download01Icon,
+  MinusSignCircleIcon,
+  MoreHorizontalIcon,
+  PlusSignCircleIcon,
+  RotateClockwiseIcon,
+  Search01Icon,
+  SidebarLeftIcon,
+  Upload01Icon,
+} from "@/components/foundations/icons"
 import { loadSharedPdfEngine } from "@/components/viewers/pdf/pdf-thumbnail-utils"
 import {
   DocumentViewerSidebarSkeleton,

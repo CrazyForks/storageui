@@ -1,7 +1,7 @@
 import type React from "react"
 
-import { AppIcon, Loading03Icon } from "@/lib/icons"
 import { cn } from "@/lib/utils"
+import { AppIcon, Loading03Icon } from "@/components/foundations/icons"
 
 export function Spinner({
   className,

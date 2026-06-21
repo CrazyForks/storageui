@@ -2,15 +2,15 @@
 
 import * as React from "react"
 
+import type { UploadTask } from "@/lib/storage/hooks/use-uploads"
+import { cn } from "@/lib/utils"
 import {
   AppIcon,
   Cancel01Icon,
   CancelCircleIcon,
   CheckmarkCircle01Icon,
   File01Icon,
-} from "@/lib/icons"
-import type { UploadTask } from "@/lib/storage/use-uploads"
-import { cn } from "@/lib/utils"
+} from "@/components/foundations/icons"
 
 export function UploadProgressPanel({
   tasks,

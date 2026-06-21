@@ -6,7 +6,6 @@ import {
   getBuiltInSpriteSheet,
 } from "@pierre/trees"
 
-import { AppIcon, ArrowLeft01Icon, ArrowRight01Icon } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { Spinner } from "@/components/ui/spinner"
 import { FileThumbnail } from "@/components/explorer/file-thumbnail"
@@ -24,6 +23,11 @@ import type {
   FileSystemViewerKind,
   FolderEntry,
 } from "@/components/explorer/types"
+import {
+  AppIcon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+} from "@/components/foundations/icons"
 
 export const LazyPDFViewer = React.lazy(() =>
   import("@/components/viewers/pdf/pdf-viewer").then((mod) => ({

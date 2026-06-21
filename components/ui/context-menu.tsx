@@ -3,8 +3,8 @@
 import type * as React from "react"
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu"
 
-import { AppIcon, ArrowRight01Icon } from "@/lib/icons"
 import { cn } from "@/lib/utils"
+import { AppIcon, ArrowRight01Icon } from "@/components/foundations/icons"
 
 export const ContextMenu: typeof ContextMenuPrimitive.Root =
   ContextMenuPrimitive.Root

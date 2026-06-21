@@ -4,30 +4,6 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
 
-import {
-  AppIcon,
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  ArrowUpDownIcon,
-  Calendar03Icon,
-  Cancel01Icon,
-  Delete02Icon,
-  Download01Icon,
-  Edit02Icon,
-  ExternalLinkIcon,
-  FavouriteIcon,
-  File01Icon,
-  FilterIcon,
-  Folder01Icon,
-  GalleryThumbnailsIcon,
-  GridViewIcon,
-  LayoutThreeColumnIcon,
-  LeftToRightListBulletIcon,
-  MoveIcon,
-  RotateClockwiseIcon,
-  Search01Icon,
-  Tick02Icon,
-} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -140,6 +116,30 @@ import {
 import { FileSystemIconsView } from "@/components/explorer/views/icons-view"
 import { FileSystemListView } from "@/components/explorer/views/list-view"
 import { FileSystemEmptyState } from "@/components/explorer/views/shared"
+import {
+  AppIcon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  ArrowUpDownIcon,
+  Calendar03Icon,
+  Cancel01Icon,
+  Delete02Icon,
+  Download01Icon,
+  Edit02Icon,
+  ExternalLinkIcon,
+  FavouriteIcon,
+  File01Icon,
+  FilterIcon,
+  Folder01Icon,
+  GalleryThumbnailsIcon,
+  GridViewIcon,
+  LayoutThreeColumnIcon,
+  LeftToRightListBulletIcon,
+  MoveIcon,
+  RotateClockwiseIcon,
+  Search01Icon,
+  Tick02Icon,
+} from "@/components/foundations/icons"
 
 export {
   FileSystemIconSpriteSheet,
@@ -847,6 +847,11 @@ export function FileSystem({
     null
   )
   const [isDeletingEntry, setDeletingEntry] = React.useState(false)
+  // Per-item progress for a bulk delete/move, shown as a bar in the dialog.
+  const [bulkProgress, setBulkProgress] = React.useState<{
+    done: number
+    total: number
+  } | null>(null)
   const [renameEntryTarget, setRenameEntryTarget] =
     React.useState<FileSystemEntry | null>(null)
   const [renameEntryName, setRenameEntryName] = React.useState("")
@@ -1132,10 +1137,16 @@ export function FileSystem({
 
     setDeletingEntry(true)
     setDeleteEntryError(null)
+    // Show a progress bar only for multi-item deletes.
+    setBulkProgress(
+      deleteTargets.length > 1 ? { done: 0, total: deleteTargets.length } : null
+    )
 
     try {
       if (onDeleteEntries) {
-        await onDeleteEntries(deleteTargets)
+        await onDeleteEntries(deleteTargets, (done, total) =>
+          setBulkProgress({ done, total })
+        )
       } else if (onDeleteEntry) {
         for (const target of deleteTargets) await onDeleteEntry(target)
       }
@@ -1147,6 +1158,7 @@ export function FileSystem({
       )
     } finally {
       setDeletingEntry(false)
+      setBulkProgress(null)
     }
   }, [
     deleteTargets,
@@ -1307,10 +1319,16 @@ export function FileSystem({
 
     setMovingEntry(true)
     setMoveEntryError(null)
+    // Show a progress bar only for multi-item moves.
+    setBulkProgress(
+      moveTargets.length > 1 ? { done: 0, total: moveTargets.length } : null
+    )
 
     try {
       if (onMoveEntries) {
-        await onMoveEntries(moveTargets, destination)
+        await onMoveEntries(moveTargets, destination, (done, total) =>
+          setBulkProgress({ done, total })
+        )
       } else if (onMoveEntry) {
         for (const target of moveTargets) {
           await onMoveEntry(target, destination)
@@ -1324,6 +1342,7 @@ export function FileSystem({
       )
     } finally {
       setMovingEntry(false)
+      setBulkProgress(null)
     }
   }, [
     isMovingEntry,
@@ -2032,6 +2051,7 @@ export function FileSystem({
             destinations={moveDestinations}
             error={moveEntryError}
             isPending={isMovingEntry}
+            progress={bulkProgress}
             targets={moveTargets}
             onDestinationChange={(destination) => {
               setMoveDestination(destination)
@@ -2049,6 +2069,7 @@ export function FileSystem({
           <DeleteEntriesDialog
             error={deleteEntryError}
             isPending={isDeletingEntry}
+            progress={bulkProgress}
             targets={deleteTargets}
             onOpenChange={(open) => {
               if (isDeletingEntry) return

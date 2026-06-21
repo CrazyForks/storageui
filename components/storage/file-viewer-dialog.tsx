@@ -4,14 +4,6 @@ import * as React from "react"
 import { useTheme } from "next-themes"
 
 import { getFileKind, type FileKind } from "@/lib/file-kind"
-import {
-  AppIcon,
-  Cancel01Icon,
-  Download01Icon,
-  FavouriteIcon,
-  File01Icon,
-  Search01Icon,
-} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -22,6 +14,14 @@ import {
 } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
 import type { FileSystemFileItem } from "@/components/explorer/types"
+import {
+  AppIcon,
+  Cancel01Icon,
+  Download01Icon,
+  FavouriteIcon,
+  File01Icon,
+  Search01Icon,
+} from "@/components/foundations/icons"
 import {
   CodeViewer,
   type CodeViewerHandle,

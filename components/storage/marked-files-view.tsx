@@ -2,7 +2,6 @@
 
 import * as React from "react"
 
-import { AppIcon, Clock01Icon, FavouriteIcon } from "@/lib/icons"
 import type { MarkedFile } from "@/lib/store/file-marks-store"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +10,11 @@ import {
   FileSystemIconSpriteSheet,
   FileTypeIcon,
 } from "@/components/explorer/file-system"
+import {
+  AppIcon,
+  Clock01Icon,
+  FavouriteIcon,
+} from "@/components/foundations/icons"
 
 const SECTION_LABELS = {
   recents: "Recents",

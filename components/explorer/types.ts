@@ -104,7 +104,11 @@ export type FileSystemProps = {
   onCreateFolder?: (path: string) => void | Promise<void>
   onDownloadEntry?: (item: FileSystemItem) => void | Promise<void>
   onDeleteEntry?: (item: FileSystemItem) => void | Promise<void>
-  onDeleteEntries?: (items: FileSystemItem[]) => void | Promise<void>
+  /** `onProgress(done, total)` is called as each item completes (for the bar). */
+  onDeleteEntries?: (
+    items: FileSystemItem[],
+    onProgress?: (done: number, total: number) => void
+  ) => void | Promise<void>
   onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
   onMoveEntry?: (
     item: FileSystemItem,
@@ -112,7 +116,8 @@ export type FileSystemProps = {
   ) => void | Promise<void>
   onMoveEntries?: (
     items: FileSystemItem[],
-    destinationFolder: string
+    destinationFolder: string,
+    onProgress?: (done: number, total: number) => void
   ) => void | Promise<void>
   isStarred?: (item: FileSystemFileItem) => boolean
   onToggleStar?: (item: FileSystemFileItem) => void

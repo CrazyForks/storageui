@@ -10,7 +10,7 @@ import {
   CheckmarkCircle01Icon,
   InformationCircleIcon,
   Loading03Icon,
-} from "@/lib/icons"
+} from "@/components/foundations/icons"
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()

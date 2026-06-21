@@ -1,8 +1,6 @@
-"use client"
-
 import * as React from "react"
 
-import type { UploadProgress } from "@/lib/storage/use-file-system"
+import type { UploadProgress } from "@/lib/storage/hooks/use-file-system"
 
 export type UploadTaskStatus = "uploading" | "done" | "error"
 
@@ -50,9 +48,15 @@ export function useUploads({
   const [tasks, setTasks] = React.useState<UploadTask[]>([])
 
   const uploadFileRef = React.useRef(uploadFile)
-  uploadFileRef.current = uploadFile
   const onBatchCompleteRef = React.useRef(onBatchComplete)
-  onBatchCompleteRef.current = onBatchComplete
+
+  React.useEffect(() => {
+    uploadFileRef.current = uploadFile
+  }, [uploadFile])
+
+  React.useEffect(() => {
+    onBatchCompleteRef.current = onBatchComplete
+  }, [onBatchComplete])
 
   const enqueue = React.useCallback((files: File[], prefix: string) => {
     if (files.length === 0) return

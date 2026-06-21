@@ -14,17 +14,6 @@ import {
 } from "@extend-ai/react-docx"
 import { useVirtualizer } from "@tanstack/react-virtual"
 
-import {
-  AppIcon,
-  Comment01Icon,
-  Download01Icon,
-  MinusSignCircleIcon,
-  Moon02Icon,
-  MoreHorizontalIcon,
-  PlusSignCircleIcon,
-  SidebarLeftIcon,
-  Upload01Icon,
-} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -53,6 +42,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { FileThumbnail } from "@/components/explorer/file-thumbnail"
+import {
+  AppIcon,
+  Comment01Icon,
+  Download01Icon,
+  MinusSignCircleIcon,
+  Moon02Icon,
+  MoreHorizontalIcon,
+  PlusSignCircleIcon,
+  SidebarLeftIcon,
+  Upload01Icon,
+} from "@/components/foundations/icons"
 import {
   renderDocxCommentCard,
   renderDocxTrackedChangeCard,
