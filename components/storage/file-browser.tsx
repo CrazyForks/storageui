@@ -17,6 +17,7 @@ import {
 import { useNavStore } from "@/lib/store/nav-store"
 import { usePreferencesStore } from "@/lib/store/preferences-store"
 import { useUploadUiStore } from "@/lib/store/upload-ui-store"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { FileSystem } from "@/components/explorer/file-system"
@@ -91,6 +92,7 @@ function EmptyState() {
 
 export function FileBrowser() {
   const { activeConnection, hasHydrated } = useConnections()
+  const isReadOnly = activeConnection?.readOnly === true
   const bucketKey = activeConnection ? bucketBrowserKey(activeConnection) : ""
   const browserSettings = useBucketBrowserStore(
     (state) => state.buckets[bucketKey] ?? DEFAULT_BUCKET_BROWSER_SETTINGS
@@ -140,9 +142,9 @@ export function FileBrowser() {
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const setPickFiles = useUploadUiStore((state) => state.setPickFiles)
   React.useEffect(() => {
-    setPickFiles(() => fileInputRef.current?.click())
+    setPickFiles(isReadOnly ? null : () => fileInputRef.current?.click())
     return () => setPickFiles(null)
-  }, [setPickFiles])
+  }, [isReadOnly, setPickFiles])
   // The folder FileSystem is currently showing, tagged with the connection it
   // belongs to. On a connection switch the path is stale, so we fall back to
   // the root — otherwise the remount opens a non-root folder with no back
@@ -173,7 +175,7 @@ export function FileBrowser() {
     e.preventDefault()
     dragDepth.current = 0
     setIsDragging(false)
-    if (section !== "all") return
+    if (section !== "all" || isReadOnly) return
     if (e.dataTransfer.files.length) {
       enqueue(Array.from(e.dataTransfer.files), currentPath)
     }
@@ -225,12 +227,13 @@ export function FileBrowser() {
     <div
       className="relative flex h-full min-h-0 flex-col"
       onDragEnter={(e) => {
-        if (section !== "all") return
+        if (section !== "all" || isReadOnly) return
         if (!Array.from(e.dataTransfer.types).includes("Files")) return
         dragDepth.current += 1
         setIsDragging(true)
       }}
       onDragOver={(e) => {
+        if (isReadOnly) return
         if (Array.from(e.dataTransfer.types).includes("Files"))
           e.preventDefault()
       }}
@@ -247,6 +250,11 @@ export function FileBrowser() {
           isLoading={isLoading}
           reloadToken={refreshNonce}
           title={activeConnection.name}
+          titleBadge={
+            isReadOnly ? (
+              <Badge variant="secondary">Read Only</Badge>
+            ) : undefined
+          }
           headerLeading={<MobileSidebarTrigger />}
           view={browserSettings.view}
           onViewChange={(view) => setBucketView(bucketKey, view)}
@@ -259,45 +267,69 @@ export function FileBrowser() {
           defaultPath={currentPath}
           loadChildren={loadChildren}
           getFileUrl={getFileUrl}
-          onCreateFolder={async (path) => {
-            await createFolder(path)
-            refresh()
-            setRefreshNonce((nonce) => nonce + 1)
-          }}
+          onCreateFolder={
+            isReadOnly
+              ? undefined
+              : async (path) => {
+                  await createFolder(path)
+                  refresh()
+                  setRefreshNonce((nonce) => nonce + 1)
+                }
+          }
           onDownloadEntry={downloadEntry}
-          onDeleteEntry={async (item) => {
-            await deleteEntry(item)
-            refresh()
-            setRefreshNonce((nonce) => nonce + 1)
-          }}
-          onDeleteEntries={async (items, onProgress) => {
-            let done = 0
-            for (const item of items) {
-              await deleteEntry(item)
-              onProgress?.(++done, items.length)
-            }
-            refresh()
-            setRefreshNonce((nonce) => nonce + 1)
-          }}
-          onRenameEntry={async (item, name) => {
-            await renameEntry(item, name)
-            refresh()
-            setRefreshNonce((nonce) => nonce + 1)
-          }}
-          onMoveEntry={async (item, destinationFolder) => {
-            await moveEntry(item, destinationFolder)
-            refresh()
-            setRefreshNonce((nonce) => nonce + 1)
-          }}
-          onMoveEntries={async (items, destinationFolder, onProgress) => {
-            let done = 0
-            for (const item of items) {
-              await moveEntry(item, destinationFolder)
-              onProgress?.(++done, items.length)
-            }
-            refresh()
-            setRefreshNonce((nonce) => nonce + 1)
-          }}
+          onDeleteEntry={
+            isReadOnly
+              ? undefined
+              : async (item) => {
+                  await deleteEntry(item)
+                  refresh()
+                  setRefreshNonce((nonce) => nonce + 1)
+                }
+          }
+          onDeleteEntries={
+            isReadOnly
+              ? undefined
+              : async (items, onProgress) => {
+                  let done = 0
+                  for (const item of items) {
+                    await deleteEntry(item)
+                    onProgress?.(++done, items.length)
+                  }
+                  refresh()
+                  setRefreshNonce((nonce) => nonce + 1)
+                }
+          }
+          onRenameEntry={
+            isReadOnly
+              ? undefined
+              : async (item, name) => {
+                  await renameEntry(item, name)
+                  refresh()
+                  setRefreshNonce((nonce) => nonce + 1)
+                }
+          }
+          onMoveEntry={
+            isReadOnly
+              ? undefined
+              : async (item, destinationFolder) => {
+                  await moveEntry(item, destinationFolder)
+                  refresh()
+                  setRefreshNonce((nonce) => nonce + 1)
+                }
+          }
+          onMoveEntries={
+            isReadOnly
+              ? undefined
+              : async (items, destinationFolder, onProgress) => {
+                  let done = 0
+                  for (const item of items) {
+                    await moveEntry(item, destinationFolder)
+                    onProgress?.(++done, items.length)
+                  }
+                  refresh()
+                  setRefreshNonce((nonce) => nonce + 1)
+                }
+          }
           isStarred={(item) => starredKeys.has(item.key ?? item.path)}
           onToggleStar={(item) => toggleStar(bucketKey, toMarkedFile(item))}
           onPathChange={(path) =>
@@ -358,7 +390,7 @@ export function FileBrowser() {
         multiple
         className="hidden"
         onChange={(e) => {
-          if (e.target.files?.length) {
+          if (!isReadOnly && e.target.files?.length) {
             enqueue(Array.from(e.target.files), currentPath)
           }
           e.target.value = ""

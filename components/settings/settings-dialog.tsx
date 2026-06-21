@@ -3,6 +3,7 @@
 import { useTheme } from "next-themes"
 
 import { usePreferencesStore } from "@/lib/store/preferences-store"
+import { useIsMobile } from "@/hooks/use-media-query"
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ export function SettingsDialog({
   onOpenChangeAction,
 }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme()
+  const isMobile = useIsMobile()
   const showFileExtensions = usePreferencesStore(
     (state) => state.showFileExtensions
   )
@@ -59,9 +61,14 @@ export function SettingsDialog({
             <Tabs
               className="h-80 w-full gap-5"
               defaultValue="general"
-              orientation="vertical"
+              orientation={isMobile ? "horizontal" : "vertical"}
+              size={isMobile ? "sm" : "default"}
             >
-              <TabsList className="w-36 shrink-0 self-start">
+              <TabsList
+                className={
+                  isMobile ? "shrink-0 self-start" : "w-36 shrink-0 self-start"
+                }
+              >
                 <TabsTab value="general">General</TabsTab>
                 <TabsTab value="about">About</TabsTab>
               </TabsList>

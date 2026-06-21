@@ -5,6 +5,7 @@ import { FilesError } from "files-sdk"
 import type { ConnectionRef } from "@/lib/storage/connection-ref"
 import type { Connection } from "@/lib/storage/connections"
 import {
+  assertConnectionWritable,
   listPublicEnvConnections,
   resolveFiles,
   type FilesClient,
@@ -136,6 +137,7 @@ export async function signUploadUrlAction(
   contentType?: string
 ): Promise<SignedUpload> {
   try {
+    assertConnectionWritable(ref)
     return (await resolveFiles(ref).signedUploadUrl(key, {
       expiresIn: URL_EXPIRES_IN,
       contentType: contentType || undefined,
@@ -152,6 +154,7 @@ export async function createFolderAction(
 ): Promise<void> {
   const key = path.endsWith("/") ? path : `${path}/`
   try {
+    assertConnectionWritable(ref)
     await resolveFiles(ref).upload(key, new Uint8Array(), {
       contentType: "application/x-directory",
     })
@@ -166,6 +169,7 @@ export async function deleteEntryAction(
   item: EntryRef
 ): Promise<void> {
   try {
+    assertConnectionWritable(ref)
     const files = resolveFiles(ref)
 
     if (item.kind === "file") {
@@ -198,6 +202,7 @@ export async function renameEntryAction(
   if (!nextName) throw new Error("Enter a name.")
 
   try {
+    assertConnectionWritable(ref)
     const files = resolveFiles(ref)
 
     if (item.kind === "file") {
@@ -260,6 +265,7 @@ export async function moveEntryAction(
       : `${destinationFolder}/`
 
   try {
+    assertConnectionWritable(ref)
     const files = resolveFiles(ref)
 
     if (item.kind === "file") {

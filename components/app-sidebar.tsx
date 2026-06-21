@@ -83,8 +83,12 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuItem>
                 <Button
                   variant="default"
-                  title="Upload files"
-                  disabled={!activeConnection}
+                  title={
+                    activeConnection?.readOnly
+                      ? "This bucket is read-only"
+                      : "Upload files"
+                  }
+                  disabled={!activeConnection || activeConnection.readOnly}
                   onClick={() => pickFiles?.()}
                   className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
                 >
@@ -143,10 +147,19 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                       >
                         <AppIcon icon={HardDriveIcon} />
                         <span className="truncate">{connection.name}</span>
-                        {connection.source === "env" ? (
-                          <span className="ms-auto rounded bg-muted px-1 text-[0.625rem] tracking-wide text-muted-foreground uppercase group-data-[collapsible=icon]:hidden">
-                            env
-                          </span>
+                        {connection.readOnly || connection.source === "env" ? (
+                          <div className="ms-auto flex shrink-0 items-center gap-1 group-data-[collapsible=icon]:hidden">
+                            {connection.readOnly ? (
+                              <span className="rounded bg-muted px-1 text-[0.625rem] tracking-wide text-muted-foreground uppercase">
+                                Read Only
+                              </span>
+                            ) : null}
+                            {connection.source === "env" ? (
+                              <span className="rounded bg-muted px-1 text-[0.625rem] tracking-wide text-muted-foreground uppercase">
+                                env
+                              </span>
+                            ) : null}
+                          </div>
                         ) : null}
                       </SidebarMenuButton>
                       {connection.source !== "env" ? (

@@ -258,6 +258,7 @@ export function FileSystem({
   isLoading = false,
   className,
   title = "Files",
+  titleBadge,
   headerLeading,
   defaultView = "icons",
   view: viewProp,
@@ -1817,9 +1818,12 @@ export function FileSystem({
                 <AppIcon icon={ArrowRight01Icon} className="size-4.5" />
               </button>
               {headerLayout !== "minimal" ? (
-                <span className="ml-1.5 truncate text-sm font-semibold">
-                  {currentFolderName}
-                </span>
+                <div className="ml-1.5 flex min-w-0 items-center gap-1.5">
+                  <span className="truncate text-sm font-semibold">
+                    {currentFolderName}
+                  </span>
+                  {currentPath === "" ? titleBadge : null}
+                </div>
               ) : null}
             </div>
             {headerLayout !== "full" || isBelowIpadWidth ? (

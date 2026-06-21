@@ -28,6 +28,7 @@ type RawEnvSlot = {
   accessKeyId?: string
   secretAccessKey?: string
   publicBaseUrl?: string
+  readOnly?: string
 }
 
 // Highest `BUCKET_<N>_*` index scanned. These are server-only env vars (no
@@ -49,6 +50,7 @@ function numberedEnvSlot(n: number): RawEnvSlot {
     accessKeyId: process.env[`${prefix}ACCESS_KEY_ID`],
     secretAccessKey: process.env[`${prefix}SECRET_ACCESS_KEY`],
     publicBaseUrl: process.env[`${prefix}PUBLIC_BASE_URL`],
+    readOnly: process.env[`${prefix}READ_ONLY`],
   }
 }
 
@@ -64,6 +66,7 @@ const LEGACY_ENV_SLOT: RawEnvSlot = {
   accessKeyId: process.env.S3_ACCESS_KEY_ID,
   secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   publicBaseUrl: process.env.S3_PUBLIC_BASE_URL,
+  readOnly: process.env.S3_READ_ONLY,
 }
 
 function slotToConnection(raw: RawEnvSlot, id: string): Connection | null {
@@ -89,6 +92,7 @@ function slotToConnection(raw: RawEnvSlot, id: string): Connection | null {
     accessKeyId: raw.accessKeyId,
     secretAccessKey: raw.secretAccessKey,
     publicBaseUrl: raw.publicBaseUrl || undefined,
+    readOnly: raw.readOnly === "true",
     source: "env",
   }
 }
@@ -180,15 +184,26 @@ function buildFiles(connection: Connection): FilesClient {
  * client. `env` refs are looked up in server-only env (the client only sent an
  * id); `local` refs carry the user's own credentials.
  */
-export function resolveFiles(ref: ConnectionRef): FilesClient {
+function resolveConnection(ref: ConnectionRef): Connection {
   if (ref.source === "env") {
     const connection = getEnvConnection(ref.id)
     if (!connection) {
       throw new Error("Unknown connection.")
     }
-    return buildFiles(connection)
+    return connection
   }
-  return buildFiles(ref.connection)
+  return ref.connection
+}
+
+export function resolveFiles(ref: ConnectionRef): FilesClient {
+  return buildFiles(resolveConnection(ref))
+}
+
+/** Enforce the per-connection read-only policy before any mutation is signed. */
+export function assertConnectionWritable(ref: ConnectionRef): void {
+  if (resolveConnection(ref).readOnly) {
+    throw new Error("This bucket is read-only.")
+  }
 }
 
 /** Build a `Files` client straight from a connection (used to test creds). */

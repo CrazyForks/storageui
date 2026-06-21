@@ -10,6 +10,7 @@ Extend UI.
 - Search, filtering, sorting, and lazy folder loading
 - PDF, DOCX, XLSX, image, text, and code previews
 - Multiple storage connections with local persistence
+- Per-bucket read-only mode for environment-configured connections
 - Responsive layout and dark mode
 
 ## Development

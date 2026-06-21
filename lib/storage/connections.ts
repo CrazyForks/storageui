@@ -31,7 +31,9 @@ export type Connection = {
   secretAccessKey: string
   /** Public/CDN origin; when set, `url()` skips signing. */
   publicBaseUrl?: string
-  /** Where the connection came from. `env` connections are read-only in the UI. */
+  /** Disallow uploads and every other mutating operation. */
+  readOnly?: boolean
+  /** Where the connection came from. `env` definitions cannot be edited in the UI. */
   source: "env" | "local"
 }
 
