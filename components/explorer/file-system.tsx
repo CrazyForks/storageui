@@ -870,7 +870,6 @@ export function FileSystem({
     ((entry: FileSystemEntry) => void) | null
   >(null)
   const [moveTargets, setMoveTargets] = React.useState<FileSystemEntry[]>([])
-  const [moveDestination, setMoveDestination] = React.useState("")
   const [moveEntryError, setMoveEntryError] = React.useState<string | null>(
     null
   )
@@ -1262,98 +1261,75 @@ export function FileSystem({
     ]
   )
 
-  // Folders the move target can go to: the root plus every known folder, minus
-  // the target folder itself and its descendants (a folder can't move into
-  // itself). Only loaded folders appear — deeper ones surface once visited.
-  const moveDestinations = React.useMemo(() => {
-    const folderTargets = moveTargets.filter(
-      (target) => target.kind === "folder"
-    )
-    const folders = [...sortedIndex.folders.values()]
-      .filter(
-        (folder) =>
-          !folderTargets.some((target) => folder.path.startsWith(target.path))
-      )
-      .sort((a, b) => a.path.localeCompare(b.path))
+  const confirmMoveEntry = React.useCallback(
+    async (destination: string) => {
+      if (moveTargets.length === 0 || isMovingEntry) return
+      if (!onMoveEntry && !onMoveEntries) return
 
-    return [
-      { label: title, value: "" },
-      ...folders.map((folder) => ({
-        label: folder.path.replace(/\/$/, ""),
-        value: folder.path,
-      })),
-    ]
-  }, [moveTargets, sortedIndex.folders, title])
-
-  const confirmMoveEntry = React.useCallback(async () => {
-    if (moveTargets.length === 0 || isMovingEntry) return
-    if (!onMoveEntry && !onMoveEntries) return
-
-    const destination = moveDestination
-
-    if (moveTargets.every((target) => target.parentPath === destination)) {
-      setMoveEntryError("The items are already in this folder.")
-      return
-    }
-    for (const target of moveTargets) {
-      if (
-        target.kind === "folder" &&
-        (destination === target.path || destination.startsWith(target.path))
-      ) {
-        setMoveEntryError("Can’t move a folder into itself.")
+      if (moveTargets.every((target) => target.parentPath === destination)) {
+        setMoveEntryError("The items are already in this folder.")
         return
       }
-      const destFilePath = `${destination}${target.name}`
-      if (
-        sortedIndex.files.has(destFilePath) ||
-        sortedIndex.folders.has(normalizeFolderPath(destFilePath))
-      ) {
-        setMoveEntryError(
-          moveTargets.length > 1
-            ? `An item named “${target.name}” already exists there.`
-            : "An item with this name already exists there."
-        )
-        return
-      }
-    }
-
-    setMovingEntry(true)
-    setMoveEntryError(null)
-    // Show a progress bar only for multi-item moves.
-    setBulkProgress(
-      moveTargets.length > 1 ? { done: 0, total: moveTargets.length } : null
-    )
-
-    try {
-      if (onMoveEntries) {
-        await onMoveEntries(moveTargets, destination, (done, total) =>
-          setBulkProgress({ done, total })
-        )
-      } else if (onMoveEntry) {
-        for (const target of moveTargets) {
-          await onMoveEntry(target, destination)
+      for (const target of moveTargets) {
+        if (
+          target.kind === "folder" &&
+          (destination === target.path || destination.startsWith(target.path))
+        ) {
+          setMoveEntryError("Can’t move a folder into itself.")
+          return
+        }
+        const destFilePath = `${destination}${target.name}`
+        if (
+          sortedIndex.files.has(destFilePath) ||
+          sortedIndex.folders.has(normalizeFolderPath(destFilePath))
+        ) {
+          setMoveEntryError(
+            moveTargets.length > 1
+              ? `An item named “${target.name}” already exists there.`
+              : "An item with this name already exists there."
+          )
+          return
         }
       }
-      setMoveTargets([])
-      selectEntry(null)
-    } catch (error) {
-      setMoveEntryError(
-        error instanceof Error ? error.message : "Could not move item."
+
+      setMovingEntry(true)
+      setMoveEntryError(null)
+      // Show a progress bar only for multi-item moves.
+      setBulkProgress(
+        moveTargets.length > 1 ? { done: 0, total: moveTargets.length } : null
       )
-    } finally {
-      setMovingEntry(false)
-      setBulkProgress(null)
-    }
-  }, [
-    isMovingEntry,
-    moveDestination,
-    moveTargets,
-    onMoveEntries,
-    onMoveEntry,
-    selectEntry,
-    sortedIndex.files,
-    sortedIndex.folders,
-  ])
+
+      try {
+        if (onMoveEntries) {
+          await onMoveEntries(moveTargets, destination, (done, total) =>
+            setBulkProgress({ done, total })
+          )
+        } else if (onMoveEntry) {
+          for (const target of moveTargets) {
+            await onMoveEntry(target, destination)
+          }
+        }
+        setMoveTargets([])
+        selectEntry(null)
+      } catch (error) {
+        setMoveEntryError(
+          error instanceof Error ? error.message : "Could not move item."
+        )
+      } finally {
+        setMovingEntry(false)
+        setBulkProgress(null)
+      }
+    },
+    [
+      isMovingEntry,
+      moveTargets,
+      onMoveEntries,
+      onMoveEntry,
+      selectEntry,
+      sortedIndex.files,
+      sortedIndex.folders,
+    ]
+  )
 
   const openEntry = React.useCallback(
     (entry: FileSystemEntry) => {
@@ -1844,9 +1820,6 @@ export function FileSystem({
                       <ContextMenuItem
                         onClick={() => {
                           setMoveTargets(contextTargets)
-                          setMoveDestination(
-                            contextTargets[0]?.parentPath ?? ""
-                          )
                           setMoveEntryError(null)
                         }}
                       >
@@ -1953,7 +1926,6 @@ export function FileSystem({
                       <ContextMenuItem
                         onClick={() => {
                           setMoveTargets([contextMenuEntry])
-                          setMoveDestination(contextMenuEntry.parentPath)
                           setMoveEntryError(null)
                         }}
                       >
@@ -2047,15 +2019,16 @@ export function FileSystem({
             onSubmit={() => void createNewFolder()}
           />
           <MoveEntriesDialog
-            destination={moveDestination}
-            destinations={moveDestinations}
             error={moveEntryError}
             isPending={isMovingEntry}
             progress={bulkProgress}
             targets={moveTargets}
-            onDestinationChange={(destination) => {
-              setMoveDestination(destination)
+            index={sortedIndex}
+            ensureChildren={ensureChildren}
+            loadingFolders={loadingFolders}
+            onMove={(destination) => {
               setMoveEntryError(null)
+              void confirmMoveEntry(destination)
             }}
             onOpenChange={(open) => {
               if (isMovingEntry) return
@@ -2064,7 +2037,6 @@ export function FileSystem({
                 setMoveEntryError(null)
               }
             }}
-            onSubmit={() => void confirmMoveEntry()}
           />
           <DeleteEntriesDialog
             error={deleteEntryError}

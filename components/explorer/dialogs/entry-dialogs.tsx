@@ -1,5 +1,8 @@
 "use client"
 
+import * as React from "react"
+
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,14 +14,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import type { FileSystemEntry } from "@/components/explorer/types"
+import { FileSystemFolderGlyph } from "@/components/explorer/internals"
+import type {
+  FileSystemEntry,
+  FileSystemIndex,
+} from "@/components/explorer/types"
+import { AppIcon, ArrowRight01Icon } from "@/components/foundations/icons"
 
 type BulkProgress = { done: number; total: number }
 
@@ -125,33 +126,80 @@ export function NewFolderDialog({
   )
 }
 
+// Trailing-slash path → display segments and per-segment absolute paths.
+function pathSegments(folderPath: string) {
+  const trimmed = folderPath.replace(/\/$/, "")
+  if (!trimmed) return [] as Array<{ name: string; path: string }>
+  const names = trimmed.split("/")
+  return names.map((name, index) => ({
+    name,
+    path: `${names.slice(0, index + 1).join("/")}/`,
+  }))
+}
+
 export function MoveEntriesDialog({
-  destination,
-  destinations,
   error,
   isPending,
   progress,
-  onDestinationChange,
+  index,
+  ensureChildren,
+  loadingFolders,
+  rootLabel = "/",
+  onMove,
   onOpenChange,
-  onSubmit,
   targets,
 }: {
-  destination: string
-  destinations: Array<{ label: string; value: string }>
   error: string | null
   isPending: boolean
   progress?: BulkProgress | null
-  onDestinationChange: (destination: string) => void
+  index: FileSystemIndex
+  ensureChildren: (folderPath: string) => void
+  loadingFolders: ReadonlySet<string>
+  rootLabel?: string
+  onMove: (destination: string) => void
   onOpenChange: (open: boolean) => void
-  onSubmit: () => void
   targets: FileSystemEntry[]
 }) {
   const open = targets.length > 0
+  // The folder currently being browsed; "" is the bucket root.
+  const [navPath, setNavPath] = React.useState("")
+
+  // Reset to root whenever the dialog opens.
+  React.useEffect(() => {
+    if (open) setNavPath("")
+  }, [open])
+
+  // Lazily list the current folder's children as the user drills in.
+  React.useEffect(() => {
+    if (open) ensureChildren(navPath)
+  }, [open, navPath, ensureChildren])
+
+  // Folders being moved (and their descendants) can't be a destination.
+  const movedFolderPaths = targets
+    .filter((target) => target.kind === "folder")
+    .map((target) => target.path)
+  const isInsideMoved = movedFolderPaths.some(
+    (path) => navPath === path || navPath.startsWith(path)
+  )
+
+  const subfolders = (index.children.get(navPath) ?? []).filter(
+    (entry) =>
+      entry.kind === "folder" &&
+      !movedFolderPaths.some(
+        (path) => entry.path === path || entry.path.startsWith(path)
+      )
+  )
+  const isLoading = loadingFolders.has(navPath)
+  const allAlreadyHere = targets.every(
+    (target) => target.parentPath === navPath
+  )
+  const canMoveHere = !isPending && !isInsideMoved && !allAlreadyHere
+  const segments = pathSegments(navPath)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open ? (
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
               {targets.length > 1
@@ -159,42 +207,71 @@ export function MoveEntriesDialog({
                 : `Move ${targets[0].kind === "folder" ? "Folder" : "File"}`}
             </DialogTitle>
             <DialogDescription>
-              {targets.length > 1
-                ? `Choose a destination folder for these ${targets.length} items.`
-                : `Choose a destination folder for “${targets[0].name}”.`}
+              Pick a destination folder, then move here.
             </DialogDescription>
           </DialogHeader>
-          <DialogPanel>
-            <form
-              id="move-entry-form"
-              className="grid gap-2"
-              onSubmit={(event) => {
-                event.preventDefault()
-                onSubmit()
-              }}
-            >
-              <Select
-                value={destination}
-                onValueChange={(value) => onDestinationChange(String(value))}
+          <DialogPanel className="space-y-2">
+            {/* Breadcrumb of the browsing path. */}
+            <div className="flex flex-wrap items-center gap-0.5 text-sm">
+              <button
+                type="button"
+                onClick={() => setNavPath("")}
+                className={cn(
+                  "rounded px-1.5 py-0.5 font-medium transition-colors hover:bg-accent",
+                  navPath === "" && "text-foreground"
+                )}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {destinations.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {error ? (
-                <p className="text-sm text-destructive">{error}</p>
-              ) : null}
-              {progress ? (
-                <BulkProgressBar verb="Moving" progress={progress} />
-              ) : null}
-            </form>
+                {rootLabel}
+              </button>
+              {segments.map((segment) => (
+                <React.Fragment key={segment.path}>
+                  <span className="text-muted-foreground">/</span>
+                  <button
+                    type="button"
+                    onClick={() => setNavPath(segment.path)}
+                    className="max-w-40 truncate rounded px-1.5 py-0.5 transition-colors hover:bg-accent"
+                  >
+                    {segment.name}
+                  </button>
+                </React.Fragment>
+              ))}
+            </div>
+
+            {/* Subfolder list for the current level. */}
+            <div className="h-56 overflow-y-auto rounded-md border p-1">
+              {isLoading && subfolders.length === 0 ? (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                  Loading…
+                </div>
+              ) : subfolders.length === 0 ? (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                  No subfolders here.
+                </div>
+              ) : (
+                subfolders.map((folder) => (
+                  <button
+                    key={folder.path}
+                    type="button"
+                    onClick={() => setNavPath(folder.path)}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent"
+                  >
+                    <FileSystemFolderGlyph className="h-3.5 w-auto shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">
+                      {folder.name}
+                    </span>
+                    <AppIcon
+                      icon={ArrowRight01Icon}
+                      className="size-3.5 shrink-0 text-muted-foreground/60"
+                    />
+                  </button>
+                ))
+              )}
+            </div>
+
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {progress ? (
+              <BulkProgressBar verb="Moving" progress={progress} />
+            ) : null}
           </DialogPanel>
           <DialogFooter>
             <Button
@@ -206,14 +283,14 @@ export function MoveEntriesDialog({
               Cancel
             </Button>
             <Button
-              type="submit"
-              form="move-entry-form"
+              type="button"
               loading={isPending}
-              disabled={targets.every(
-                (target) => target.parentPath === destination
-              )}
+              disabled={!canMoveHere}
+              onClick={() => onMove(navPath)}
             >
-              Move
+              {navPath === ""
+                ? `Move to ${rootLabel}`
+                : `Move to “${segments[segments.length - 1]?.name}”`}
             </Button>
           </DialogFooter>
         </DialogContent>
