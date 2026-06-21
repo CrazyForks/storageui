@@ -32,7 +32,7 @@ import {
   Settings01Icon,
   Upload01Icon,
 } from "@/components/foundations/icons"
-import { Logo } from "@/components/foundations/logo"
+import { Logo, LogoText } from "@/components/foundations/logo"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { isAuthEnabledAction, logoutAction } from "@/app/actions/auth"
 
@@ -71,10 +71,14 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <Sidebar collapsible="icon" {...props}>
         <SidebarHeader>
           <div className="flex h-8 items-center gap-2 px-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-            <Logo className="size-5 text-foreground" />
-            <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
-              {siteConfig.name}
-            </span>
+            <LogoText
+              title={siteConfig.name}
+              className="h-6 w-auto text-foreground group-data-[collapsible=icon]:hidden"
+            />
+            <Logo
+              title={siteConfig.name}
+              className="hidden size-5 text-foreground group-data-[collapsible=icon]:block"
+            />
           </div>
         </SidebarHeader>
         <SidebarContent>

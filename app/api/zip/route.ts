@@ -9,8 +9,6 @@ type ZipRequest = {
   path: string
 }
 
-// Streams a folder's contents as a ZIP. Credentials stay on the server; the
-// browser POSTs a connection ref + folder path and receives the archive stream.
 export async function POST(request: Request) {
   let body: ZipRequest
   try {

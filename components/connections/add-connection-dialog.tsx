@@ -38,9 +38,6 @@ const PROVIDER_OPTIONS: { value: ConnectionProvider; label: string }[] = [
   { value: "s3-compatible", label: "S3-compatible (custom endpoint)" },
 ]
 
-// The connection test runs server-side (no browser CORS in play), so failures
-// are about credentials or the bucket/region/endpoint. The server formats SDK
-// errors as "<message> (<Code>)", so map the common codes to clearer guidance.
 function describeConnectionError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err)
   if (/\(Unauthorized\)/.test(message)) {

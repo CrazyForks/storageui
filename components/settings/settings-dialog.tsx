@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs"
-import { Logo } from "@/components/logo"
+import { Logo } from "@/components/foundations/logo"
 
 const THEME_OPTIONS = [
   { label: "System", value: "system" },
