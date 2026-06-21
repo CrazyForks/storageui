@@ -203,7 +203,7 @@ export function FileSystemIconsView({
               return (
                 <div
                   key={entry.path}
-                  className="flex h-[6.375rem] flex-col items-center gap-1.5"
+                  className="flex h-25.5 flex-col items-center gap-1.5"
                 >
                   <TileGlyph
                     entry={entry}
@@ -276,7 +276,7 @@ function TileGlyph({
             "rounded-sm shadow-xs",
             // Landscape thumbnails get extra width so they fill the tile
             // instead of rendering as a short sliver.
-            (entry.previewAspectRatio ?? 0.78) > 1.2 ? "w-[4.75rem]" : "w-12"
+            (entry.previewAspectRatio ?? 0.78) > 1.2 ? "w-19" : "w-12"
           )}
           previewAspectRatio={0.78}
           renderFilePreview={renderFilePreview}
@@ -348,7 +348,7 @@ function IconTile({
         if (event.key === "Enter") onOpen(entry)
       }}
       className={cn(
-        "group flex h-[6.375rem] flex-col items-center gap-1.5 outline-none",
+        "group flex h-25.5 flex-col items-center gap-1.5 outline-none",
         isLifted && "opacity-50"
       )}
     >

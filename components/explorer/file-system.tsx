@@ -1787,7 +1787,7 @@ export function FileSystem({
             }
           }}
           className={cn(
-            "flex h-[480px] min-h-0 flex-col overflow-hidden rounded-xl border bg-background text-foreground outline-none",
+            "flex h-120 min-h-0 flex-col overflow-hidden rounded-xl border bg-background text-foreground outline-none",
             className
           )}
         >
@@ -2576,7 +2576,7 @@ function FileSystemFileTypeCommand({
     <Command
       // -m-1 spans the menu viewport's built-in padding so the search
       // field's bottom border runs edge to edge.
-      className="-m-1 w-[calc(100%+--spacing(2))] bg-transparent"
+      className="-m-1 w-[calc(100%+(--spacing(2)))] bg-transparent"
       // cmdk owns the keyboard while focus is in the list; only Escape
       // (close the menu) and Tab continue outward.
       onKeyDown={(event) => {

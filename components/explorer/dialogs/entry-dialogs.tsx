@@ -312,7 +312,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[6.5rem_1fr] items-start gap-3 py-2">
       <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 text-sm break-words">{value}</dd>
+      <dd className="min-w-0 text-sm wrap-break-word">{value}</dd>
     </div>
   )
 }

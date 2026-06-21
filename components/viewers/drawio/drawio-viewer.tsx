@@ -72,7 +72,7 @@ function DrawioImageViewer({
 
   return (
     <div className={cn("relative flex min-h-0 flex-col", className)}>
-      <div className="flex min-h-0 flex-1 overflow-auto bg-[var(--drawio-canvas)] p-4 [--drawio-canvas:#f7f8fa] dark:[--drawio-canvas:#1b1d22]">
+      <div className="flex min-h-0 flex-1 overflow-auto bg-(--drawio-canvas) p-4 [--drawio-canvas:#f7f8fa] dark:[--drawio-canvas:#1b1d22]">
         {failed ? (
           <div className="m-auto text-sm text-muted-foreground">
             Couldn’t load this diagram.
