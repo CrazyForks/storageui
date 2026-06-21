@@ -893,7 +893,7 @@ function DocxThumbnailSidebarList({
                 ref={virtualizer.measureElement}
                 data-index={virtualRow.index}
                 className={cn(
-                  "absolute top-0 right-3 left-3 pb-3 [contain:layout]",
+                  "absolute top-0 right-3 left-3 pb-3 contain-[layout]",
                   thumbnail.pageNumber === activePage && "z-10"
                 )}
                 style={{

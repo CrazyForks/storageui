@@ -60,7 +60,7 @@ export const GALLERY_STAGE_ATTACHED_COUNT = 3
 export function FileSystemGalleryStage({
   file,
   getFileUrl,
-  loadPreviewImageUrl,
+  loadPreviewImageUrlAction,
   pageUrlCache,
   renderFilePreview,
   toolbarActions,
@@ -69,7 +69,7 @@ export function FileSystemGalleryStage({
 }: {
   file: FileEntry
   getFileUrl?: (file: FileSystemFileItem) => string | Promise<string>
-  loadPreviewImageUrl?: (
+  loadPreviewImageUrlAction?: (
     file: FileSystemFileItem,
     pageIndex: number
   ) => Promise<string | null>
@@ -175,7 +175,7 @@ export function FileSystemGalleryStage({
     <FileVisual
       file={file}
       className="w-56 max-w-full"
-      loadPreviewImageUrl={loadPreviewImageUrl}
+      loadPreviewImageUrlAction={loadPreviewImageUrlAction}
       pageable
       pageUrlCache={pageUrlCache}
       previewAspectRatio={0.78}

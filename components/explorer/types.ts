@@ -128,7 +128,7 @@ export type FileSystemProps = {
     args: FileSystemLoadChildrenArgs
   ) => Promise<FileSystemLoadChildrenResult>
   renderFilePreview?: (file: FileSystemFileItem) => ReactNode
-  loadPreviewImageUrl?: (
+  loadPreviewImageUrlAction?: (
     file: FileSystemFileItem,
     pageIndex: number
   ) => Promise<string | null>
@@ -164,7 +164,7 @@ export type FileSystemViewProps = {
   fileFilter: ((file: FileEntry) => boolean) | null
   getFileUrl?: (file: FileSystemFileItem) => string | Promise<string>
   index: FileSystemIndex
-  loadPreviewImageUrl?: (
+  loadPreviewImageUrlAction?: (
     file: FileSystemFileItem,
     pageIndex: number
   ) => Promise<string | null>

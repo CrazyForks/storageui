@@ -200,16 +200,16 @@ export function FileViewerDialog({
   file,
   url,
   open,
-  onOpenChange,
+  onOpenChangeAction,
   isStarred = false,
-  onToggleStar,
+  onToggleStarAction,
 }: {
   file: FileSystemFileItem | null
   url: string | null
   open: boolean
-  onOpenChange: (open: boolean) => void
+  onOpenChangeAction: (open: boolean) => void
   isStarred?: boolean
-  onToggleStar?: () => void
+  onToggleStarAction?: () => void
 }) {
   const kind = file ? getFileKind(file) : "other"
   const fileName = file
@@ -238,7 +238,7 @@ export function FileViewerDialog({
   )
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       {open && file ? (
         <DialogContent
           showCloseButton={kind === "other"}
@@ -256,10 +256,10 @@ export function FileViewerDialog({
                   {fileName}
                 </span>
                 <div className="flex shrink-0 items-center gap-1">
-                  {onToggleStar ? (
+                  {onToggleStarAction ? (
                     <StarButton
                       isStarred={isStarred}
-                      onToggleStar={onToggleStar}
+                      onToggleStar={onToggleStarAction}
                     />
                   ) : null}
                   {kind === "text" ? (

@@ -282,7 +282,7 @@ export function FileSystem({
   onFileOpen,
   getFileUrl,
   loadChildren,
-  loadPreviewImageUrl,
+  loadPreviewImageUrlAction,
   renderFilePreview,
   reloadToken,
 }: FileSystemProps) {
@@ -1732,7 +1732,7 @@ export function FileSystem({
     fileFilter,
     getFileUrl,
     index: sortedIndex,
-    loadPreviewImageUrl,
+    loadPreviewImageUrlAction,
     loadingFolders,
     onOpen: openEntry,
     onSelect: selectAndPrefetchEntry,
@@ -2247,16 +2247,16 @@ export function FileSystem({
             isPending={isCreatingFolder}
             name={newFolderName}
             open={isNewFolderOpen}
-            onNameChange={(name) => {
+            onNameChangeAction={(name) => {
               setNewFolderName(name)
               setNewFolderError(null)
             }}
-            onOpenChange={(open) => {
+            onOpenChangeAction={(open) => {
               if (isCreatingFolder) return
               setNewFolderOpen(open)
               if (!open) setNewFolderError(null)
             }}
-            onSubmit={() => void createNewFolder()}
+            onSubmitAction={() => void createNewFolder()}
           />
           <MoveEntriesDialog
             error={moveEntryError}
@@ -2264,13 +2264,13 @@ export function FileSystem({
             progress={bulkProgress}
             targets={moveTargets}
             index={sortedIndex}
-            ensureChildren={ensureChildren}
+            ensureChildrenAction={ensureChildren}
             loadingFolders={loadingFolders}
-            onMove={(destination) => {
+            onMoveAction={(destination) => {
               setMoveEntryError(null)
               void confirmMoveEntry(destination)
             }}
-            onOpenChange={(open) => {
+            onOpenChangeAction={(open) => {
               if (isMovingEntry) return
               if (!open) {
                 setMoveTargets([])
@@ -2283,14 +2283,14 @@ export function FileSystem({
             isPending={isDeletingEntry}
             progress={bulkProgress}
             targets={deleteTargets}
-            onOpenChange={(open) => {
+            onOpenChangeAction={(open) => {
               if (isDeletingEntry) return
               if (!open) {
                 setDeleteTargets([])
                 setDeleteEntryError(null)
               }
             }}
-            onSubmit={() => void confirmDeleteEntry()}
+            onSubmitAction={() => void confirmDeleteEntry()}
           />
           <Dialog
             open={openedFile !== null}
@@ -2343,7 +2343,7 @@ export function FileSystem({
                 <FileSystemGalleryStage
                   file={file}
                   getFileUrl={getFileUrl}
-                  loadPreviewImageUrl={loadPreviewImageUrl}
+                  loadPreviewImageUrlAction={loadPreviewImageUrlAction}
                   pageUrlCache={pageUrlCache}
                   renderFilePreview={renderFilePreview}
                   toolbarActions={

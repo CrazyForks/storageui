@@ -1117,7 +1117,7 @@ export function scrollIndexIntoView({
 export function FileVisual({
   file,
   className,
-  loadPreviewImageUrl,
+  loadPreviewImageUrlAction,
   pageable = false,
   pageUrlCache,
   previewAspectRatio,
@@ -1126,7 +1126,7 @@ export function FileVisual({
 }: {
   file: FileEntry
   className?: string
-  loadPreviewImageUrl?: (
+  loadPreviewImageUrlAction?: (
     file: FileSystemFileItem,
     pageIndex: number
   ) => Promise<string | null>
@@ -1142,7 +1142,7 @@ export function FileVisual({
   renderFilePreview?: (file: FileSystemFileItem) => React.ReactNode
 }) {
   const previewUrls = filePreviewUrls(file)
-  const canLoadLazily = pageable && Boolean(loadPreviewImageUrl)
+  const canLoadLazily = pageable && Boolean(loadPreviewImageUrlAction)
   const totalPages = Math.max(
     previewUrls.length,
     canLoadLazily ? (file.previewPageCount ?? 0) : 0
@@ -1175,11 +1175,11 @@ export function FileVisual({
   // Keyed by path (not object identity) so manifest churn doesn't re-request
   // the page already being loaded.
   React.useEffect(() => {
-    if (!isLazyPagePending || !loadPreviewImageUrl) return
+    if (!isLazyPagePending || !loadPreviewImageUrlAction) return
 
     let isCurrent = true
 
-    void loadPreviewImageUrl(fileRef.current, clampedPageIndex)
+    void loadPreviewImageUrlAction(fileRef.current, clampedPageIndex)
       .then((url) => {
         // Cache even when stale (page flipped away mid-load): the fetch is
         // done, so let the next visit use it.
@@ -1200,7 +1200,7 @@ export function FileVisual({
     clampedPageIndex,
     file.path,
     isLazyPagePending,
-    loadPreviewImageUrl,
+    loadPreviewImageUrlAction,
     pageUrlCache,
   ])
 

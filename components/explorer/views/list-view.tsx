@@ -42,13 +42,13 @@ import {
 export function FileSystemListColumnHeader({
   className,
   label,
-  onClick,
+  onClickAction,
   sort,
   sortKey,
 }: {
   className?: string
   label: string
-  onClick: (key: FileSystemSortKey) => void
+  onClickAction: (key: FileSystemSortKey) => void
   sort: FileSystemSortState
   sortKey: FileSystemSortKey
 }) {
@@ -57,7 +57,7 @@ export function FileSystemListColumnHeader({
   return (
     <button
       type="button"
-      onClick={() => onClick(sortKey)}
+      onClick={() => onClickAction(sortKey)}
       className={cn(
         "flex items-center gap-0.5 rounded-sm py-0.5 transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
         isActive && "text-foreground",
@@ -145,21 +145,21 @@ export function FileSystemListView({
         <FileSystemListColumnHeader
           className="flex-1 justify-start"
           label="Name"
-          onClick={onSortColumnClick}
+          onClickAction={onSortColumnClick}
           sort={sort}
           sortKey="name"
         />
         <FileSystemListColumnHeader
           className="w-44 justify-start"
           label="Date Modified"
-          onClick={onSortColumnClick}
+          onClickAction={onSortColumnClick}
           sort={sort}
           sortKey="updatedAt"
         />
         <FileSystemListColumnHeader
           className="w-20 justify-start"
           label="Size"
-          onClick={onSortColumnClick}
+          onClickAction={onSortColumnClick}
           sort={sort}
           sortKey="size"
         />

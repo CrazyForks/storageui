@@ -338,13 +338,13 @@ export function FileBrowser() {
         file={opened?.file ?? null}
         url={opened?.url ?? null}
         open={opened !== null}
-        onOpenChange={(next) => {
+        onOpenChangeAction={(next) => {
           if (!next) setOpened(null)
         }}
         isStarred={
           opened ? starredKeys.has(opened.file.key ?? opened.file.path) : false
         }
-        onToggleStar={
+        onToggleStarAction={
           opened
             ? () => toggleStar(bucketKey, toMarkedFile(opened.file))
             : undefined

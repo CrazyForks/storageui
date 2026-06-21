@@ -297,7 +297,7 @@ export function FileSystemDateRangeDialog({
         if (!open) onCloseAction()
       }}
     >
-      <DialogContent className="w-[30rem] max-w-[calc(100vw-2rem)]">
+      <DialogContent className="w-120 max-w-[calc(100vw-2rem)]">
         <DialogHeader>
           <DialogTitle>Custom date range</DialogTitle>
         </DialogHeader>

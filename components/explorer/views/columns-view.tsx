@@ -39,7 +39,7 @@ export function FileSystemColumnsView(props: FileSystemViewProps) {
   const {
     currentPath,
     index,
-    loadPreviewImageUrl,
+    loadPreviewImageUrlAction,
     loadingFolders,
     onOpen,
     onSelect,
@@ -256,7 +256,7 @@ export function FileSystemColumnsView(props: FileSystemViewProps) {
                 <FileVisual
                   file={selectedFile}
                   className="w-full"
-                  loadPreviewImageUrl={loadPreviewImageUrl}
+                  loadPreviewImageUrlAction={loadPreviewImageUrlAction}
                   pageable
                   pageUrlCache={pageUrlCache}
                   previewAspectRatio={0.78}

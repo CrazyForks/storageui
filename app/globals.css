@@ -255,7 +255,7 @@
 }
 
 @utility container {
-  @apply mx-auto max-w-[1400px] px-4 3xl:max-w-screen-2xl lg:px-8;
+  @apply mx-auto max-w-350 px-4 3xl:max-w-screen-2xl lg:px-8;
 }
 
 @utility no-scrollbar {
@@ -287,7 +287,7 @@
   counter-increment: step;
 
   &:before {
-    @apply mr-2 inline-flex size-6 items-center justify-center rounded-full border-background bg-background text-center -indent-px font-mono text-sm font-medium md:absolute md:mt-[-4px] md:ml-[-50px] md:size-9 md:border-4;
+    @apply mr-2 inline-flex size-6 items-center justify-center rounded-full border-background bg-background text-center -indent-px font-mono text-sm font-medium md:absolute md:-mt-1 md:-ml-12.5 md:size-9 md:border-4;
     box-shadow: inset 0 0 0 9999px var(--muted);
     content: counter(step);
   }

@@ -57,22 +57,22 @@ export function NewFolderDialog({
   error,
   isPending,
   name,
-  onNameChange,
-  onOpenChange,
-  onSubmit,
+  onNameChangeAction,
+  onOpenChangeAction,
+  onSubmitAction,
   open,
 }: {
   currentFolderName: string
   error: string | null
   isPending: boolean
   name: string
-  onNameChange: (name: string) => void
-  onOpenChange: (open: boolean) => void
-  onSubmit: () => void
+  onNameChangeAction: (name: string) => void
+  onOpenChangeAction: (open: boolean) => void
+  onSubmitAction: () => void
   open: boolean
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       {open ? (
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -87,13 +87,13 @@ export function NewFolderDialog({
               className="grid gap-2"
               onSubmit={(event) => {
                 event.preventDefault()
-                onSubmit()
+                onSubmitAction()
               }}
             >
               <Input
                 autoFocus
                 value={name}
-                onChange={(event) => onNameChange(event.target.value)}
+                onChange={(event) => onNameChangeAction(event.target.value)}
                 placeholder="Untitled Folder"
                 aria-invalid={error ? true : undefined}
               />
@@ -107,7 +107,7 @@ export function NewFolderDialog({
               type="button"
               variant="outline"
               disabled={isPending}
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
             >
               Cancel
             </Button>
@@ -142,22 +142,22 @@ export function MoveEntriesDialog({
   isPending,
   progress,
   index,
-  ensureChildren,
+  ensureChildrenAction,
   loadingFolders,
   rootLabel = "/",
-  onMove,
-  onOpenChange,
+  onMoveAction,
+  onOpenChangeAction,
   targets,
 }: {
   error: string | null
   isPending: boolean
   progress?: BulkProgress | null
   index: FileSystemIndex
-  ensureChildren: (folderPath: string) => void
+  ensureChildrenAction: (folderPath: string) => void
   loadingFolders: ReadonlySet<string>
   rootLabel?: string
-  onMove: (destination: string) => void
-  onOpenChange: (open: boolean) => void
+  onMoveAction: (destination: string) => void
+  onOpenChangeAction: (open: boolean) => void
   targets: FileSystemEntry[]
 }) {
   const open = targets.length > 0
@@ -171,8 +171,8 @@ export function MoveEntriesDialog({
 
   // Lazily list the current folder's children as the user drills in.
   React.useEffect(() => {
-    if (open) ensureChildren(navPath)
-  }, [open, navPath, ensureChildren])
+    if (open) ensureChildrenAction(navPath)
+  }, [open, navPath, ensureChildrenAction])
 
   // Folders being moved (and their descendants) can't be a destination.
   const movedFolderPaths = targets
@@ -197,7 +197,7 @@ export function MoveEntriesDialog({
   const segments = pathSegments(navPath)
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       {open ? (
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -280,7 +280,7 @@ export function MoveEntriesDialog({
               type="button"
               variant="outline"
               disabled={isPending}
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
             >
               Cancel
             </Button>
@@ -288,7 +288,7 @@ export function MoveEntriesDialog({
               type="button"
               loading={isPending}
               disabled={!canMoveHere}
-              onClick={() => onMove(navPath)}
+              onClick={() => onMoveAction(navPath)}
             >
               {navPath === ""
                 ? `Move to ${rootLabel}`
@@ -305,21 +305,21 @@ export function DeleteEntriesDialog({
   error,
   isPending,
   progress,
-  onOpenChange,
-  onSubmit,
+  onOpenChangeAction,
+  onSubmitAction,
   targets,
 }: {
   error: string | null
   isPending: boolean
   progress?: BulkProgress | null
-  onOpenChange: (open: boolean) => void
-  onSubmit: () => void
+  onOpenChangeAction: (open: boolean) => void
+  onSubmitAction: () => void
   targets: FileSystemEntry[]
 }) {
   const open = targets.length > 0
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
       {open ? (
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -353,7 +353,7 @@ export function DeleteEntriesDialog({
               type="button"
               variant="outline"
               disabled={isPending}
-              onClick={() => onOpenChange(false)}
+              onClick={() => onOpenChangeAction(false)}
             >
               Cancel
             </Button>
@@ -361,7 +361,7 @@ export function DeleteEntriesDialog({
               type="button"
               variant="destructive"
               loading={isPending}
-              onClick={onSubmit}
+              onClick={onSubmitAction}
             >
               Delete
             </Button>

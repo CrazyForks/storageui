@@ -15,11 +15,8 @@ export const metadata: Metadata = {
   description,
 }
 
-// Pre-render the browse tabs so `/`, `/Recents`, and `/Starred` all resolve on
-// a hard reload or bookmark. The section itself is driven client-side by
-// SectionUrlSync, so every path renders the same FileBrowser.
 export function generateStaticParams() {
-  return [{ section: [] }, { section: ["Recents"] }, { section: ["Starred"] }]
+  return [{ section: [] }, { section: ["recents"] }, { section: ["starred"] }]
 }
 
 export default function IndexPage() {
