@@ -92,18 +92,18 @@ export type FileSystemProps = {
   headerLeading?: ReactNode
   defaultView?: FileSystemView
   view?: FileSystemView
-  onViewChange?: (view: FileSystemView) => void
+  onViewChangeAction?: (view: FileSystemView) => void
   defaultSort?: FileSystemSortState
   sort?: FileSystemSortState
-  onSortChange?: (sort: FileSystemSortState) => void
+  onSortChangeAction?: (sort: FileSystemSortState) => void
   defaultFilters?: FileSystemFilter[]
   filters?: FileSystemFilter[]
-  onFiltersChange?: (filters: FileSystemFilter[]) => void
+  onFiltersChangeAction?: (filters: FileSystemFilter[]) => void
   showFileExtensions?: boolean
   defaultPath?: string
-  onPathChange?: (path: string) => void
+  onPathChangeAction?: (path: string) => void
   onSelectionChange?: (item: FileSystemItem | null) => void
-  onCreateFolder?: (path: string) => void | Promise<void>
+  onCreateFolderAction?: (path: string) => void | Promise<void>
   onDownloadEntry?: (item: FileSystemItem) => void | Promise<void>
   onDeleteEntry?: (item: FileSystemItem) => void | Promise<void>
   /** `onProgress(done, total)` is called as each item completes (for the bar). */
@@ -111,7 +111,10 @@ export type FileSystemProps = {
     items: FileSystemItem[],
     onProgress?: (done: number, total: number) => void
   ) => void | Promise<void>
-  onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
+  onRenameEntryAction?: (
+    item: FileSystemItem,
+    name: string
+  ) => void | Promise<void>
   onMoveEntry?: (
     item: FileSystemItem,
     destinationFolder: string
@@ -190,6 +193,9 @@ export type FileSystemViewProps = {
   draggingPaths: ReadonlySet<string>
   sort: FileSystemSortState
   treeExpansionRef: RefObject<Map<string, readonly string[]>>
-  onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
+  onRenameEntryAction?: (
+    item: FileSystemItem,
+    name: string
+  ) => void | Promise<void>
   startTreeRenameRef: RefObject<((entry: FileSystemEntry) => void) | null>
 }

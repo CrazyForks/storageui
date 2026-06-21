@@ -257,17 +257,19 @@ export function FileBrowser() {
           }
           headerLeading={<MobileSidebarTrigger />}
           view={browserSettings.view}
-          onViewChange={(view) => setBucketView(bucketKey, view)}
+          onViewChangeAction={(view) => setBucketView(bucketKey, view)}
           sort={browserSettings.sort}
-          onSortChange={(sort) => setBucketSort(bucketKey, sort)}
+          onSortChangeAction={(sort) => setBucketSort(bucketKey, sort)}
           filters={browserSettings.filters}
-          onFiltersChange={(filters) => setBucketFilters(bucketKey, filters)}
+          onFiltersChangeAction={(filters) =>
+            setBucketFilters(bucketKey, filters)
+          }
           showFileExtensions={showFileExtensions}
           className="min-h-0 flex-1 rounded-none border-0"
           defaultPath={currentPath}
           loadChildren={loadChildren}
           getFileUrl={getFileUrl}
-          onCreateFolder={
+          onCreateFolderAction={
             isReadOnly
               ? undefined
               : async (path) => {
@@ -299,7 +301,7 @@ export function FileBrowser() {
                   setRefreshNonce((nonce) => nonce + 1)
                 }
           }
-          onRenameEntry={
+          onRenameEntryAction={
             isReadOnly
               ? undefined
               : async (item, name) => {
@@ -332,7 +334,7 @@ export function FileBrowser() {
           }
           isStarred={(item) => starredKeys.has(item.key ?? item.path)}
           onToggleStar={(item) => toggleStar(bucketKey, toMarkedFile(item))}
-          onPathChange={(path) =>
+          onPathChangeAction={(path) =>
             setFolder({ connId: activeConnection.id, path })
           }
           onFileOpen={openFile}

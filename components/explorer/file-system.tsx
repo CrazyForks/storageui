@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import { DragDropProvider, DragOverlay, PointerSensor } from "@dnd-kit/react"
 import { createPortal } from "react-dom"
@@ -262,22 +260,22 @@ export function FileSystem({
   headerLeading,
   defaultView = "icons",
   view: viewProp,
-  onViewChange,
+  onViewChangeAction,
   defaultSort = DEFAULT_SORT,
   sort: sortProp,
-  onSortChange,
+  onSortChangeAction,
   defaultFilters = [],
   filters: filtersProp,
-  onFiltersChange,
+  onFiltersChangeAction,
   showFileExtensions = true,
   defaultPath = "",
-  onPathChange,
+  onPathChangeAction,
   onSelectionChange,
-  onCreateFolder,
+  onCreateFolderAction,
   onDownloadEntry,
   onDeleteEntry,
   onDeleteEntries,
-  onRenameEntry,
+  onRenameEntryAction,
   onMoveEntry,
   onMoveEntries,
   isStarred,
@@ -294,9 +292,9 @@ export function FileSystem({
   const setView = React.useCallback(
     (nextView: FileSystemView) => {
       setInternalView(nextView)
-      onViewChange?.(nextView)
+      onViewChangeAction?.(nextView)
     },
-    [onViewChange]
+    [onViewChangeAction]
   )
 
   const [loadedItems, setLoadedItems] = React.useState<FileSystemItem[]>([])
@@ -376,9 +374,9 @@ export function FileSystem({
       const next = typeof update === "function" ? update(sort) : update
 
       if (sortProp === undefined) setInternalSort(next)
-      onSortChange?.(next)
+      onSortChangeAction?.(next)
     },
-    [onSortChange, sort, sortProp]
+    [onSortChangeAction, sort, sortProp]
   )
   const [internalFilters, setInternalFilters] =
     React.useState<FileSystemFilter[]>(defaultFilters)
@@ -388,9 +386,9 @@ export function FileSystem({
       const next = typeof update === "function" ? update(filters) : update
 
       if (filtersProp === undefined) setInternalFilters(next)
-      onFiltersChange?.(next)
+      onFiltersChangeAction?.(next)
     },
-    [filters, filtersProp, onFiltersChange]
+    [filters, filtersProp, onFiltersChangeAction]
   )
   const hasActiveFilters = filters.length > 0
 
@@ -924,12 +922,12 @@ export function FileSystem({
 
   // Notify the parent of the visible folder (mount + every navigation), so it
   // can target uploads/drops at the current prefix without owning navigation.
-  const onPathChangeRef = React.useRef(onPathChange)
+  const onPathChangeActionRef = React.useRef(onPathChangeAction)
   React.useEffect(() => {
-    onPathChangeRef.current = onPathChange
-  }, [onPathChange])
+    onPathChangeActionRef.current = onPathChangeAction
+  }, [onPathChangeAction])
   React.useEffect(() => {
-    onPathChangeRef.current?.(currentPath)
+    onPathChangeActionRef.current?.(currentPath)
   }, [currentPath])
 
   // Navigation unmounts the focused row, dropping focus to <body> and killing
@@ -1288,7 +1286,7 @@ export function FileSystem({
   ])
 
   const confirmRenameEntry = React.useCallback(() => {
-    if (!renameEntryTarget || !onRenameEntry) return
+    if (!renameEntryTarget || !onRenameEntryAction) return
 
     const target = renameEntryTarget
     const name = renameEntryName.trim()
@@ -1325,7 +1323,7 @@ export function FileSystem({
     setRenameEntryError(null)
     selectEntry(null)
     setRenamingPaths((previous) => new Set(previous).add(target.path))
-    void Promise.resolve(onRenameEntry(target, name))
+    void Promise.resolve(onRenameEntryAction(target, name))
       .catch((error) => {
         toast.error(
           error instanceof Error ? error.message : "Could not rename item."
@@ -1339,7 +1337,7 @@ export function FileSystem({
         })
       })
   }, [
-    onRenameEntry,
+    onRenameEntryAction,
     renameEntryName,
     renameEntryTarget,
     selectEntry,
@@ -1648,7 +1646,7 @@ export function FileSystem({
   }, [])
 
   const createNewFolder = React.useCallback(async () => {
-    if (!onCreateFolder || isCreatingFolder) return
+    if (!onCreateFolderAction || isCreatingFolder) return
 
     const name = newFolderName.trim()
 
@@ -1674,7 +1672,7 @@ export function FileSystem({
     setCreatingFolder(true)
     setNewFolderError(null)
     try {
-      await onCreateFolder(path)
+      await onCreateFolderAction(path)
       setNewFolderOpen(false)
       setNewFolderName("")
     } catch (error) {
@@ -1688,7 +1686,7 @@ export function FileSystem({
     currentPath,
     isCreatingFolder,
     newFolderName,
-    onCreateFolder,
+    onCreateFolderAction,
     sortedIndex.files,
     sortedIndex.folders,
   ])
@@ -1756,7 +1754,7 @@ export function FileSystem({
     draggingPaths,
     sort,
     treeExpansionRef,
-    onRenameEntry,
+    onRenameEntryAction,
     startTreeRenameRef,
   }
 
@@ -2147,7 +2145,7 @@ export function FileSystem({
                       Get Info
                     </ContextMenuItem>
                     {onDownloadEntry ||
-                    onRenameEntry ||
+                    onRenameEntryAction ||
                     onMoveEntry ||
                     contextMenuEntry.kind === "file" ? (
                       <ContextMenuSeparator />
@@ -2160,7 +2158,7 @@ export function FileSystem({
                         Download
                       </ContextMenuItem>
                     ) : null}
-                    {onRenameEntry ? (
+                    {onRenameEntryAction ? (
                       <ContextMenuItem
                         onClick={() => {
                           const entry = contextMenuEntry
@@ -2213,7 +2211,7 @@ export function FileSystem({
                 )
               ) : (
                 <>
-                  {onCreateFolder ? (
+                  {onCreateFolderAction ? (
                     <>
                       <ContextMenuItem onClick={openNewFolderDialog}>
                         <AppIcon icon={Folder01Icon} />

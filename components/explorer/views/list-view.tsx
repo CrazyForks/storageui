@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import {
   prepareFileTreeInput,
@@ -83,7 +81,7 @@ export function FileSystemListView({
   onSelect,
   onSelectMany,
   onSortColumnClick,
-  onRenameEntry,
+  onRenameEntryAction,
   startTreeRenameRef,
   searchQuery,
   selectedPath,
@@ -180,7 +178,7 @@ export function FileSystemListView({
         onOpen={onOpen}
         onSelect={onSelect}
         onSelectMany={onSelectMany}
-        onRenameEntry={onRenameEntry}
+        onRenameEntryAction={onRenameEntryAction}
         startTreeRenameRef={startTreeRenameRef}
         relativePaths={relativePaths}
         searchQuery={searchQuery}
@@ -204,7 +202,7 @@ export function FileSystemPierreTree({
   onOpen,
   onSelect,
   onSelectMany,
-  onRenameEntry,
+  onRenameEntryAction,
   startTreeRenameRef,
   relativePaths,
   searchQuery,
@@ -218,7 +216,10 @@ export function FileSystemPierreTree({
   onOpen: (entry: FileSystemEntry) => void
   onSelect: (entry: FileSystemEntry | null) => void
   onSelectMany: (entries: FileSystemEntry[]) => void
-  onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
+  onRenameEntryAction?: (
+    item: FileSystemItem,
+    name: string
+  ) => void | Promise<void>
   startTreeRenameRef: React.RefObject<((entry: FileSystemEntry) => void) | null>
   relativePaths: string[]
   searchQuery: string
@@ -346,13 +347,13 @@ export function FileSystemPierreTree({
     // is forwarded to the consumer's rename handler.
     renaming: {
       onRename: ({ sourcePath, destinationPath }) => {
-        if (!onRenameEntry) return
+        if (!onRenameEntryAction) return
         const source =
           index.files.get(`${currentPath}${sourcePath}`) ??
           index.folders.get(normalizeFolderPath(`${currentPath}${sourcePath}`))
         const name = destinationPath.replace(/\/$/, "").split("/").pop()
         if (!source || !name) return
-        void onRenameEntry(source, name)
+        void onRenameEntryAction(source, name)
       },
     },
     renderRowDecoration: ({ row }) => {

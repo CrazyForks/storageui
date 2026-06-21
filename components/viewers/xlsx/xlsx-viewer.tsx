@@ -1243,7 +1243,7 @@ const WorkbookSheetTabsInner = React.memo(function WorkbookSheetTabsInner({
         <ScrollArea
           orientation="horizontal"
           scrollbarGutter
-          className="h-10 w-full has-[[data-slot=scroll-area-viewport][data-has-overflow-x]]:h-[50px]"
+          className="h-10 w-full has-[[data-slot=scroll-area-viewport][data-has-overflow-x]]:h-12.5"
           viewportClassName="overflow-y-hidden"
           viewportRef={scrollRef}
         >
