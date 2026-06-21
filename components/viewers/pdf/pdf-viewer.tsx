@@ -661,7 +661,7 @@ function PDFViewerPageNumberControl({
           pattern="[0-9]*"
           size="sm"
           value={draftPage}
-          className="mx-1 w-14 min-w-14 rounded-md [&_[data-slot=input]]:text-center"
+          className="mx-1 w-14 min-w-14 rounded-md **:data-[slot=input]:text-center"
           onBlur={() => setIsEditing(false)}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
             const nextValue = event.target.value
@@ -2336,7 +2336,7 @@ function PDFViewerInner({
                   disabled={controlsDisabled}
                   modal={false}
                 >
-                  <SelectTrigger size="sm" className="w-[84px] min-w-[84px]">
+                  <SelectTrigger size="sm" className="w-21 min-w-21">
                     <SelectValue placeholder="Zoom">
                       {Math.round(currentZoomLevel * 100)}%
                     </SelectValue>

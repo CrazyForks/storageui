@@ -68,7 +68,7 @@
   [data-slot="radio"],
   [data-slot="switch"],
   [data-slot="switch-thumb"] {
-    @apply !rounded-none !shadow-none;
+    @apply rounded-none! shadow-none!;
   }
 }
 

@@ -310,11 +310,11 @@
     }
 
     > h3 {
-      @apply !mt-8;
+      @apply mt-8!;
     }
 
     > h3 + p {
-      @apply !mt-2;
+      @apply mt-2!;
     }
   }
 

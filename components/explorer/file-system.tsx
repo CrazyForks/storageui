@@ -2360,11 +2360,11 @@ export function FileSystem({
           {dateRangeDialog ? (
             <FileSystemDateRangeDialog
               initialRange={dateRangeDialog.initialRange}
-              onApply={(from, to) => {
+              onApplyAction={(from, to) => {
                 applyCustomDateRange(dateRangeDialog.type, from, to)
                 setDateRangeDialog(null)
               }}
-              onClose={() => setDateRangeDialog(null)}
+              onCloseAction={() => setDateRangeDialog(null)}
             />
           ) : null}
         </div>

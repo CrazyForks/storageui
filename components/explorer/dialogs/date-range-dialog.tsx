@@ -99,10 +99,10 @@ export function calendarDayKey(date: Date) {
 // phone widths). Clicking sets the start, then the end; clicking before the
 // start swaps the ends, and a third click restarts the range.
 export function FileSystemRangeCalendar({
-  onSelect,
+  onSelectAction,
   range,
 }: {
-  onSelect: (range: { from?: Date; to?: Date }) => void
+  onSelectAction: (range: { from?: Date; to?: Date }) => void
   range: { from?: Date; to?: Date }
 }) {
   const [viewMonth, setViewMonth] = React.useState(() => {
@@ -120,11 +120,11 @@ export function FileSystemRangeCalendar({
 
   const handleDayClick = (day: Date) => {
     if (!range.from || range.to) {
-      onSelect({ from: day })
+      onSelectAction({ from: day })
     } else if (calendarDayKey(day) < calendarDayKey(range.from)) {
-      onSelect({ from: day, to: range.from })
+      onSelectAction({ from: day, to: range.from })
     } else {
-      onSelect({ from: range.from, to: day })
+      onSelectAction({ from: range.from, to: day })
     }
   }
 
@@ -243,12 +243,12 @@ export function FileSystemRangeCalendar({
 // the start of the first day to the end of the last.
 export function FileSystemDateRangeDialog({
   initialRange,
-  onApply,
-  onClose,
+  onApplyAction,
+  onCloseAction,
 }: {
   initialRange?: { from: Date; to: Date }
-  onApply: (from: Date, to: Date) => void
-  onClose: () => void
+  onApplyAction: (from: Date, to: Date) => void
+  onCloseAction: () => void
 }) {
   const [range, setRange] = React.useState<{ from?: Date; to?: Date }>(
     () => initialRange ?? {}
@@ -294,7 +294,7 @@ export function FileSystemDateRangeDialog({
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open) onClose()
+        if (!open) onCloseAction()
       }}
     >
       <DialogContent className="w-[30rem] max-w-[calc(100vw-2rem)]">
@@ -319,7 +319,7 @@ export function FileSystemDateRangeDialog({
               if (parsed) setRange((previous) => ({ ...previous, to: parsed }))
             })}
           </div>
-          <FileSystemRangeCalendar range={range} onSelect={selectRange} />
+          <FileSystemRangeCalendar range={range} onSelectAction={selectRange} />
           <div className="grid grid-cols-3 gap-2">
             {DATE_RANGE_DIALOG_PRESETS.map((preset) => (
               <Button
@@ -335,7 +335,7 @@ export function FileSystemDateRangeDialog({
           </div>
         </DialogPanel>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onCloseAction}>
             Cancel
           </Button>
           <Button
@@ -349,7 +349,7 @@ export function FileSystemDateRangeDialog({
 
               from.setHours(0, 0, 0, 0)
               to.setHours(23, 59, 59, 999)
-              onApply(from, to)
+              onApplyAction(from, to)
             }}
           >
             Apply

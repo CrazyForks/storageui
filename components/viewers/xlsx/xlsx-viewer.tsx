@@ -902,7 +902,7 @@ function WorkbookToolbar({
             >
               <SelectTrigger
                 size="sm"
-                className="w-[84px] min-w-[84px]"
+                className="w-21 min-w-21"
                 aria-label="Zoom level"
               >
                 <SelectValue>{currentZoom}%</SelectValue>
@@ -1284,7 +1284,7 @@ const WorkbookSheetTabsInner = React.memo(function WorkbookSheetTabsInner({
                   key={`${workbookIdentity}-${visiblePreviewIndex}-${previewUrl}`}
                   src={previewUrl}
                   alt={`${previewSheet.name} preview`}
-                  className="absolute inset-0 h-full w-full object-cover object-left-top"
+                  className="absolute inset-0 h-full w-full object-cover object-top-left"
                 />
               </div>
             </div>,
