@@ -1,9 +1,9 @@
 import { type Metadata } from "next"
 
+import { siteConfig } from "@/lib/config/site"
 import { FileBrowser } from "@/components/storage/file-browser"
 import { SectionUrlSync } from "@/components/storage/section-url-sync"
 
-const title = "File System"
 const description =
   "A macOS Finder-style file browser for flat object-store manifests, with built-in PDF, DOCX, and XLSX preview."
 
@@ -11,7 +11,7 @@ export const dynamic = "force-static"
 export const revalidate = false
 
 export const metadata: Metadata = {
-  title,
+  title: { absolute: siteConfig.name },
   description,
 }
 

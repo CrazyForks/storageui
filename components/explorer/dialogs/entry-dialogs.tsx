@@ -223,9 +223,11 @@ export function MoveEntriesDialog({
               >
                 {rootLabel}
               </button>
-              {segments.map((segment) => (
+              {segments.map((segment, index) => (
                 <React.Fragment key={segment.path}>
-                  <span className="text-muted-foreground">/</span>
+                  {index > 0 || !rootLabel.endsWith("/") ? (
+                    <span className="text-muted-foreground">/</span>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setNavPath(segment.path)}

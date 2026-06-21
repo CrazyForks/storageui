@@ -56,20 +56,15 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: withUiBasePath("/extend.svg"), type: "image/svg+xml" },
+      { url: withUiBasePath("/icon.svg"), type: "image/svg+xml" },
       {
-        url: withUiBasePath("/favicon-32x32.png"),
-        sizes: "32x32",
-        type: "image/png",
-      },
-      {
-        url: withUiBasePath("/favicon-16x16.png"),
-        sizes: "16x16",
+        url: withUiBasePath("/icon.png"),
+        sizes: "256x256",
         type: "image/png",
       },
     ],
-    shortcut: withUiBasePath("/favicon.ico"),
-    apple: withUiBasePath("/apple-touch-icon.png"),
+    shortcut: withUiBasePath("/icon.png"),
+    apple: withUiBasePath("/icon.png"),
   },
   manifest: withUiBasePath("/site.webmanifest"),
 }

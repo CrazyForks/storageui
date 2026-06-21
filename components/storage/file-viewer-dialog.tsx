@@ -51,6 +51,7 @@ const DIALOG_CLASSNAMES: Record<FileKind, string> = {
   xlsx: "h-[85vh] w-[min(96vw,100rem)] max-w-none p-0",
   image: "max-h-[88vh] w-fit min-w-[18rem] max-w-[min(96vw,64rem)] p-0",
   video: "w-[min(96vw,72rem)] max-w-none p-0",
+  audio: "w-[min(96vw,36rem)] max-w-none p-0",
   other: "max-w-md",
 }
 
@@ -126,6 +127,8 @@ function ViewerBody({
             className="h-full"
             isDark={isDark}
             onIsDarkChangeAction={setIsDark}
+            showFileName={false}
+            showUpload={false}
           />
         </React.Suspense>
       )
@@ -138,6 +141,7 @@ function ViewerBody({
             className="h-full"
             isDark={isDark}
             onIsDarkChangeAction={setIsDark}
+            showUpload={false}
           />
         </React.Suspense>
       )
@@ -156,6 +160,12 @@ function ViewerBody({
             <LazyVideoPlayer src={url} controls width="100%" height="100%" />
           </React.Suspense>
         </div>
+      )
+    case "audio":
+      return (
+        <audio src={url} controls preload="metadata" className="w-full">
+          Your browser does not support audio playback.
+        </audio>
       )
     default:
       return <UnsupportedFile fileName={fileName} url={url} />
@@ -210,9 +220,9 @@ export function FileViewerDialog({
   // These viewers render their own top toolbars, which would collide with the
   // dialog's default top-right close button. Give them a dedicated title bar
   // with the close control instead, and hide the built-in one.
-  // Image and video get a header bar (title + close) like the document viewers,
-  // and their media is centered below it.
-  const isMedia = kind === "image" || kind === "video"
+  // Media gets a header bar (title + close) like the document viewers, and is
+  // centered below it.
+  const isMedia = kind === "image" || kind === "video" || kind === "audio"
 
   const body = url ? (
     <ViewerBody
@@ -239,18 +249,12 @@ export function FileViewerDialog({
             body
           ) : (
             <div className="flex h-full min-h-0 flex-col">
-              {/* The text, PDF, XLSX, image, and video viewers don't show the
-                  filename themselves, so this bar provides the title (plus
-                  search/download for text and the star toggle). DOCX renders
-                  its own titled toolbar, so its bar is close-only. */}
+              {/* This top bar owns the filename for every supported viewer,
+                  plus search/download for text and the star toggle. */}
               <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b px-3">
-                {kind !== "docx" ? (
-                  <span className="min-w-0 truncate text-sm font-medium">
-                    {fileName}
-                  </span>
-                ) : (
-                  <span />
-                )}
+                <span className="min-w-0 truncate text-sm font-medium">
+                  {fileName}
+                </span>
                 <div className="flex shrink-0 items-center gap-1">
                   {onToggleStar ? (
                     <StarButton
@@ -271,12 +275,13 @@ export function FileViewerDialog({
                   ) : null}
                   {kind === "text" && url ? (
                     <Button
-                      size="sm"
+                      aria-label="Download"
+                      title="Download"
+                      size="icon-sm"
                       variant="ghost"
                       render={<a href={url} download={fileName} />}
                     >
-                      <AppIcon icon={Download01Icon} className="size-4" />
-                      Download
+                      <AppIcon icon={Download01Icon} />
                     </Button>
                   ) : null}
                   <DialogClose

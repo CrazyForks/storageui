@@ -7,10 +7,12 @@ export type FileKind =
   | "xlsx"
   | "image"
   | "video"
+  | "audio"
   | "other"
 
 const IMAGE_EXT = /\.(avif|gif|jpe?g|png|svg|webp|bmp|ico)$/
 const VIDEO_EXT = /\.(mp4|webm|ogv|mov|m4v|mkv|avi)$/
+const AUDIO_EXT = /\.(aac|aif|aiff|flac|m4a|mp3|oga|ogg|opus|wav|weba)$/
 
 // Extensions we render as plain text/code in CodeMirror.
 const TEXT_EXTENSIONS = new Set([
@@ -177,6 +179,7 @@ export function getFileKind(file: FileSystemFileItem): FileKind {
     return "image"
   }
   if (contentType.startsWith("video/")) return "video"
+  if (contentType.startsWith("audio/")) return "audio"
   if (contentType === "application/pdf" || name.endsWith(".pdf")) return "pdf"
   if (name.endsWith(".docx")) return "docx"
   if (name.endsWith(".xlsx")) return "xlsx"
@@ -184,6 +187,7 @@ export function getFileKind(file: FileSystemFileItem): FileKind {
   if (isTextFile(file)) return "text"
   if (IMAGE_EXT.test(name)) return "image"
   if (VIDEO_EXT.test(name)) return "video"
+  if (AUDIO_EXT.test(name)) return "audio"
 
   return "other"
 }

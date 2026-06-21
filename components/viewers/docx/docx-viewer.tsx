@@ -521,6 +521,7 @@ function DocxToolbar({
   setZoomScale,
   showDocumentMarkup,
   showDownloadButton = true,
+  showFileName = true,
   showNightRenderToggle,
   showUploadButton = true,
   toolbarActions,
@@ -541,6 +542,7 @@ function DocxToolbar({
   setZoomScale: React.Dispatch<React.SetStateAction<number>>
   showDocumentMarkup: boolean
   showDownloadButton?: boolean
+  showFileName?: boolean
   showNightRenderToggle: boolean
   showUploadButton?: boolean
   toolbarActions?: React.ReactNode
@@ -553,13 +555,20 @@ function DocxToolbar({
     <div className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b bg-background px-3 py-2">
       <TooltipProvider>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span
-            className="max-w-48 truncate text-sm font-medium sm:max-w-72"
-            title={fileName}
-          >
-            {fileName}
-          </span>
-          <Separator orientation="vertical" className="mx-1 h-4 self-center" />
+          {showFileName ? (
+            <>
+              <span
+                className="max-w-48 truncate text-sm font-medium sm:max-w-72"
+                title={fileName}
+              >
+                {fileName}
+              </span>
+              <Separator
+                orientation="vertical"
+                className="mx-1 h-4 self-center"
+              />
+            </>
+          ) : null}
           <ToolbarTooltip label="Toggle thumbnails">
             <Button
               type="button"
@@ -1035,6 +1044,7 @@ export function DocxViewerPreview({
   isDark,
   onIsDarkChangeAction,
   showDownload = true,
+  showFileName = true,
   showToolbar = true,
   showUpload = true,
   showThumbnailSidebar = true,
@@ -1047,6 +1057,7 @@ export function DocxViewerPreview({
   isDark: boolean
   onIsDarkChangeAction: (isDark: boolean) => void
   showDownload?: boolean
+  showFileName?: boolean
   showToolbar?: boolean
   showUpload?: boolean
   /** Show the page-thumbnail navigation sidebar. Defaults to `true`. */
@@ -1063,6 +1074,7 @@ export function DocxViewerPreview({
       setNightRenderEnabled={onIsDarkChangeAction}
       shouldRenderNightMode
       showDownload={showDownload}
+      showFileName={showFileName}
       showToolbar={showToolbar}
       showUpload={showUpload}
       showThumbnailSidebar={showThumbnailSidebar}
@@ -1080,6 +1092,7 @@ function DocxViewerContent({
   setNightRenderEnabled,
   shouldRenderNightMode,
   showDownload,
+  showFileName,
   showToolbar = true,
   showUpload,
   showThumbnailSidebar = true,
@@ -1093,6 +1106,7 @@ function DocxViewerContent({
   setNightRenderEnabled: (checked: boolean) => void
   shouldRenderNightMode: boolean
   showDownload: boolean
+  showFileName: boolean
   showToolbar?: boolean
   showUpload: boolean
   showThumbnailSidebar?: boolean
@@ -1453,6 +1467,7 @@ function DocxViewerContent({
           setZoomScale={setZoomScale}
           showDocumentMarkup={showDocumentMarkup}
           showDownloadButton={showDownload}
+          showFileName={showFileName}
           showNightRenderToggle={shouldRenderNightMode}
           showUploadButton={showUpload}
           toolbarActions={toolbarActions}

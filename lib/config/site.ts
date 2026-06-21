@@ -1,7 +1,7 @@
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.extend.ai/ui"
 
 export const siteConfig = {
-  name: "File System",
+  name: "Drive UI",
   url: appUrl,
   ogImage: `${appUrl}/opengraph-image.png`,
   description:
