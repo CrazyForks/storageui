@@ -36,11 +36,6 @@ import { Logo } from "@/components/foundations/logo"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { isAuthEnabledAction, logoutAction } from "@/app/actions/auth"
 
-// Storage operations run through Next.js server actions; signed transfers go
-// directly between the browser and the active object-storage provider. The
-// sidebar only surfaces locally-feasible views; server-stateful ideas (Shared
-// links, Trash/restore, live object counts) are left out.
-
 type BrowseItem = {
   title: string
   icon: typeof FolderLibraryIcon
@@ -55,8 +50,6 @@ const BROWSE: BrowseItem[] = [
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const [isSettingsOpen, setSettingsOpen] = React.useState(false)
-  // Whether to show "Sign out" — auth is read at runtime (the pages are static,
-  // so it can't be baked in via a layout prop).
   const [authEnabled, setAuthEnabled] = React.useState(false)
   React.useEffect(() => {
     isAuthEnabledAction().then(setAuthEnabled, () => {})
