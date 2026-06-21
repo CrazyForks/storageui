@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useDraggable, useDroppable } from "@dnd-kit/react"
 
 import { cn } from "@/lib/utils"
 import { ScrollArea, ScrollAreaPrimitive } from "@/components/ui/scroll-area"
@@ -29,6 +30,7 @@ import type {
 } from "@/components/explorer/types"
 import {
   ARROW_KEYS,
+  folderDropCollision,
   useEntryTypeAhead,
 } from "@/components/explorer/views/shared"
 import { AppIcon, ArrowRight01Icon } from "@/components/foundations/icons"
@@ -46,6 +48,7 @@ export function FileSystemColumnsView(props: FileSystemViewProps) {
     selectedEntry,
     selectedPath,
     selectedPaths,
+    draggingPaths,
   } = props
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
   const rowRefs = React.useRef(new Map<string, HTMLButtonElement>())
@@ -211,6 +214,7 @@ export function FileSystemColumnsView(props: FileSystemViewProps) {
             onSelect={onSelect}
             rowRefs={rowRefs}
             selectedPaths={selectedPaths}
+            draggingPaths={draggingPaths}
             // Scalar per-column props so the memoized column only
             // re-renders when its own rows change — a selection deeper in
             // the trail leaves ancestor columns untouched. `selectedChildPath`
@@ -293,6 +297,7 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
   onSelect,
   rowRefs,
   selectedPaths,
+  draggingPaths,
   selectedChildPath,
   tabStopChildPath,
   trailChildPath,
@@ -307,6 +312,7 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
   ) => void
   rowRefs: React.RefObject<Map<string, HTMLButtonElement>>
   selectedPaths: ReadonlySet<string>
+  draggingPaths: ReadonlySet<string>
   selectedChildPath: string | null
   tabStopChildPath: string | null
   trailChildPath: string | null
@@ -314,6 +320,13 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const formatName = useFormatEntryName()
   const rename = React.useContext(RenameContext)
+  const registerRowRef = React.useCallback(
+    (path: string, element: HTMLButtonElement | null) => {
+      if (element) rowRefs.current.set(path, element)
+      else rowRefs.current.delete(path)
+    },
+    [rowRefs]
+  )
   const { end, start } = useVirtualWindow({
     count: entries.length,
     itemStride: COLUMN_ROW_STRIDE,
@@ -408,87 +421,22 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
               }
 
               return (
-                <button
+                <ColumnRow
                   key={entry.path}
-                  type="button"
-                  role="option"
-                  aria-selected={isSelected}
-                  // Selected rows sit on the primary surface — the opposite
-                  // of the mode's background — so the file-type icon swaps
-                  // to the opposite palette.
-                  data-file-system-path={entry.path}
-                  data-file-system-on-primary={isSelected ? "" : undefined}
-                  tabIndex={entry.path === tabStopChildPath ? 0 : -1}
-                  ref={(element) => {
-                    if (element) {
-                      rowRefs.current.set(entry.path, element)
-                    } else {
-                      rowRefs.current.delete(entry.path)
-                    }
-                  }}
-                  // Selecting on press (mouse only) starts mounting the
-                  // child column a beat before mouseup — the immediacy
-                  // @pierre/trees rows have. Touch keeps selection on the
-                  // click so scroll gestures don't select.
-                  onPointerDown={(event) => {
-                    // Immediacy: plain mouse presses select on press. Modifier
-                    // presses are left to onClick so toggle/range isn't applied
-                    // twice (press + click).
-                    if (
-                      event.pointerType === "mouse" &&
-                      event.button === 0 &&
-                      !event.metaKey &&
-                      !event.ctrlKey &&
-                      !event.shiftKey
-                    ) {
-                      onSelect(entry)
-                    }
-                  }}
-                  onClick={(event) => {
-                    if (event.metaKey || event.ctrlKey || event.shiftKey) {
-                      onSelect(entry, {
-                        toggle: event.metaKey || event.ctrlKey,
-                        range: event.shiftKey,
-                      })
-                    } else {
-                      onSelect(entry)
-                    }
-                  }}
-                  onDoubleClick={() => onOpen(entry)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") onOpen(entry)
-                  }}
-                  className={cn(
-                    "flex h-7 shrink-0 items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none",
-                    isSelected
-                      ? "bg-primary text-primary-foreground"
-                      : isOnTrail
-                        ? "bg-accent"
-                        : "hover:bg-accent/50"
-                  )}
-                >
-                  {rowIcon}
-                  <span className="min-w-0 flex-1 truncate">
-                    {formatName(entry)}
-                  </span>
-                  {isSaving ? (
-                    <Spinner
-                      className={cn(
-                        "size-3.5 shrink-0",
-                        !isSelected && "text-muted-foreground"
-                      )}
-                    />
-                  ) : entry.kind === "folder" &&
-                    folderHasChildren(index, entry) ? (
-                    <AppIcon
-                      icon={ArrowRight01Icon}
-                      className={cn(
-                        "size-3.5 shrink-0",
-                        !isSelected && "text-muted-foreground/60"
-                      )}
-                    />
-                  ) : null}
-                </button>
+                  entry={entry}
+                  rowIcon={rowIcon}
+                  isSelected={isSelected}
+                  isOnTrail={isOnTrail}
+                  isSaving={isSaving}
+                  isLifted={draggingPaths.has(entry.path)}
+                  hasChildren={
+                    entry.kind === "folder" && folderHasChildren(index, entry)
+                  }
+                  isTabStop={entry.path === tabStopChildPath}
+                  onSelect={onSelect}
+                  onOpen={onOpen}
+                  registerRowRef={registerRowRef}
+                />
               )
             })}
           </div>
@@ -497,6 +445,126 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
     </ScrollArea>
   )
 })
+
+// A draggable column row. Folders are also drop targets (drag onto one to move).
+function ColumnRow({
+  entry,
+  rowIcon,
+  isSelected,
+  isOnTrail,
+  isSaving,
+  isLifted,
+  hasChildren,
+  isTabStop,
+  onSelect,
+  onOpen,
+  registerRowRef,
+}: {
+  entry: FileSystemEntry
+  rowIcon: React.ReactNode
+  isSelected: boolean
+  isOnTrail: boolean
+  isSaving: boolean
+  isLifted: boolean
+  hasChildren: boolean
+  isTabStop: boolean
+  onSelect: FileSystemViewProps["onSelect"]
+  onOpen: FileSystemViewProps["onOpen"]
+  registerRowRef: (path: string, element: HTMLButtonElement | null) => void
+}) {
+  const formatName = useFormatEntryName()
+  const { ref: dragRef } = useDraggable({ id: entry.path })
+  const { ref: dropRef, isDropTarget } = useDroppable({
+    id: entry.path,
+    disabled: entry.kind !== "folder",
+    collisionDetector: folderDropCollision,
+  })
+  const setRef = React.useCallback(
+    (element: HTMLButtonElement | null) => {
+      registerRowRef(entry.path, element)
+      dragRef(element)
+      dropRef(element)
+    },
+    [dragRef, dropRef, entry.path, registerRowRef]
+  )
+  const showDrop = entry.kind === "folder" && isDropTarget
+
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={isSelected}
+      // Selected rows sit on the primary surface — the opposite of the mode's
+      // background — so the file-type icon swaps to the opposite palette.
+      data-file-system-path={entry.path}
+      data-file-system-on-primary={isSelected ? "" : undefined}
+      tabIndex={isTabStop ? 0 : -1}
+      ref={setRef}
+      // Selecting on press (mouse only) starts mounting the child column a beat
+      // before mouseup — the immediacy @pierre/trees rows have. Touch keeps
+      // selection on the click so scroll gestures don't select.
+      onPointerDown={(event) => {
+        // Modifier presses are left to onClick so toggle/range isn't applied
+        // twice (press + click). Pressing an already-selected row doesn't
+        // reselect it either — otherwise grabbing one of a multi-selection to
+        // drag would collapse the selection to that single row.
+        if (
+          event.pointerType === "mouse" &&
+          event.button === 0 &&
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.shiftKey &&
+          !isSelected
+        ) {
+          onSelect(entry)
+        }
+      }}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey) {
+          onSelect(entry, {
+            toggle: event.metaKey || event.ctrlKey,
+            range: event.shiftKey,
+          })
+        } else {
+          onSelect(entry)
+        }
+      }}
+      onDoubleClick={() => onOpen(entry)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") onOpen(entry)
+      }}
+      className={cn(
+        "flex h-7 shrink-0 items-center gap-2 rounded-md px-2 py-1 text-left text-sm outline-none",
+        isSelected
+          ? "bg-primary text-primary-foreground"
+          : isOnTrail
+            ? "bg-accent"
+            : "hover:bg-accent/50",
+        showDrop && "ring-2 ring-primary ring-inset",
+        isLifted && "opacity-50"
+      )}
+    >
+      {rowIcon}
+      <span className="min-w-0 flex-1 truncate">{formatName(entry)}</span>
+      {isSaving ? (
+        <Spinner
+          className={cn(
+            "size-3.5 shrink-0",
+            !isSelected && "text-muted-foreground"
+          )}
+        />
+      ) : hasChildren ? (
+        <AppIcon
+          icon={ArrowRight01Icon}
+          className={cn(
+            "size-3.5 shrink-0",
+            !isSelected && "text-muted-foreground/60"
+          )}
+        />
+      ) : null}
+    </button>
+  )
+}
 
 export function FileSystemInformation({
   entry,

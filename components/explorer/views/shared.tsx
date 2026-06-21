@@ -1,6 +1,11 @@
 "use client"
 
 import * as React from "react"
+import {
+  CollisionPriority,
+  CollisionType,
+  type CollisionDetector,
+} from "@dnd-kit/abstract"
 
 import { cn } from "@/lib/utils"
 import type {
@@ -8,6 +13,42 @@ import type {
   FileSystemEntry,
   FileSystemFileItem,
 } from "@/components/explorer/types"
+
+// Drop hit-test for folders. The default detector fires as soon as the pointer
+// enters the folder's whole box (tile or row), which makes it easy to mis-drop
+// by grazing the edge. This only counts a hit when the pointer is inside the
+// central region, shrinking the active area on every side.
+const FOLDER_DROP_INSET = 0.25
+
+export const folderDropCollision: CollisionDetector = ({
+  dragOperation,
+  droppable,
+}) => {
+  const pointer = dragOperation.position.current
+  const shape = droppable.shape
+  if (!pointer || !shape) return null
+
+  const rect = shape.boundingRectangle
+  const insetX = rect.width * FOLDER_DROP_INSET
+  const insetY = rect.height * FOLDER_DROP_INSET
+  if (
+    pointer.x < rect.left + insetX ||
+    pointer.x > rect.right - insetX ||
+    pointer.y < rect.top + insetY ||
+    pointer.y > rect.bottom - insetY
+  ) {
+    return null
+  }
+
+  const distance =
+    Math.hypot(pointer.x - shape.center.x, pointer.y - shape.center.y) || 1
+  return {
+    id: droppable.id,
+    value: 1 / distance,
+    type: CollisionType.PointerIntersection,
+    priority: CollisionPriority.High,
+  }
+}
 
 export function useResolvedFileUrl(
   file: FileEntry | null,

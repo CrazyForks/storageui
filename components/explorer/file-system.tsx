@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { DragDropProvider, DragOverlay } from "@dnd-kit/react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
 
@@ -70,6 +71,7 @@ import {
   defaultSortDirection,
   FILE_TYPE_FILTER_GROUPS,
   fileMatchesFilter,
+  FileSystemFolderGlyph,
   FileSystemIconSpriteSheet,
   fileTypeFilterGroup,
   FileTypeIcon,
@@ -175,6 +177,80 @@ const VIEW_OPTIONS: Array<{
 
 const EMPTY_SELECTION: ReadonlySet<string> = new Set()
 
+// Validate a move of `targets` into `destination` (a "prefix/" or "" root).
+// Returns an error message, or null when the move is allowed.
+function validateMove(
+  targets: FileSystemEntry[],
+  destination: string,
+  files: ReadonlyMap<string, unknown>,
+  folders: ReadonlyMap<string, unknown>
+): string | null {
+  if (targets.length === 0) return "Nothing to move."
+  if (targets.every((target) => target.parentPath === destination)) {
+    return "The items are already in this folder."
+  }
+  for (const target of targets) {
+    if (
+      target.kind === "folder" &&
+      (destination === target.path || destination.startsWith(target.path))
+    ) {
+      return "Can’t move a folder into itself."
+    }
+    const destFilePath = `${destination}${target.name}`
+    if (
+      files.has(destFilePath) ||
+      folders.has(normalizeFolderPath(destFilePath))
+    ) {
+      return targets.length > 1
+        ? `An item named “${target.name}” already exists there.`
+        : "An item with this name already exists there."
+    }
+  }
+  return null
+}
+
+// Follows the cursor during a drag. For a multi-selection it shows a stacked
+// card with a count badge, so several files visibly drag together.
+function FileSystemDragPreview({
+  entry,
+  count,
+  showFileExtensions,
+}: {
+  entry: FileSystemEntry
+  count: number
+  showFileExtensions: boolean
+}) {
+  return (
+    <div className="pointer-events-none relative w-fit">
+      {count >= 3 ? (
+        // 3+ items: a small stack behind the front card.
+        <>
+          <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-lg border bg-background shadow-xs" />
+          <div className="absolute inset-0 translate-x-1 translate-y-1 rounded-lg border bg-background shadow-xs" />
+        </>
+      ) : count === 2 ? (
+        // Exactly two items: just two cards.
+        <div className="absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-lg border bg-background shadow-xs" />
+      ) : null}
+      <div className="relative flex items-center gap-2 rounded-lg border bg-background px-3 py-2 shadow-xs">
+        {entry.kind === "folder" ? (
+          <FileSystemFolderGlyph className="h-5 w-auto shrink-0" />
+        ) : (
+          <FileTypeIcon fileName={entry.name} className="size-5 shrink-0" />
+        )}
+        <span className="max-w-56 truncate text-sm font-medium">
+          {formatEntryName(entry, showFileExtensions)}
+        </span>
+        {count > 1 ? (
+          <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground tabular-nums">
+            {count}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 export function FileSystem({
   items,
   isLoading = false,
@@ -224,7 +300,43 @@ export function FileSystem({
     () => (loadedItems.length ? [...items, ...loadedItems] : items),
     [items, loadedItems]
   )
-  const index = React.useMemo(() => buildFileSystemIndex(allItems), [allItems])
+  // Paths optimistically hidden while a move is in flight, so a drag-drop (or a
+  // dialog move) removes the entries from the source folder instantly instead
+  // of waiting seconds for the server move + re-list.
+  const [optimisticallyMovedPaths, setOptimisticallyMovedPaths] =
+    React.useState<ReadonlySet<string>>(EMPTY_SELECTION)
+  const visibleItems = React.useMemo(() => {
+    if (optimisticallyMovedPaths.size === 0) return allItems
+    return allItems.filter(
+      (item) =>
+        ![...optimisticallyMovedPaths].some(
+          (path) => item.path === path || item.path.startsWith(path)
+        )
+    )
+  }, [allItems, optimisticallyMovedPaths])
+  const index = React.useMemo(
+    () => buildFileSystemIndex(visibleItems),
+    [visibleItems]
+  )
+  // Stop hiding a moved path once the real listing no longer contains it (the
+  // server move + re-list landed) — no flicker, since hiding persists until the
+  // data catches up. Failures clear the path explicitly (see executeMove).
+  React.useEffect(() => {
+    setOptimisticallyMovedPaths((previous) => {
+      if (previous.size === 0) return previous
+      const next = new Set<string>()
+      for (const path of previous) {
+        if (
+          allItems.some(
+            (item) => item.path === path || item.path.startsWith(path)
+          )
+        ) {
+          next.add(path)
+        }
+      }
+      return next.size === previous.size ? previous : next
+    })
+  }, [allItems])
 
   const [history, setHistory] = React.useState(() => ({
     index: 0,
@@ -1261,74 +1373,177 @@ export function FileSystem({
     ]
   )
 
+  // Run the actual move, reporting per-item progress for the bar. Shared by the
+  // Move dialog and drag-and-drop.
+  const executeMove = React.useCallback(
+    async (targets: FileSystemEntry[], destination: string) => {
+      const movedPaths = targets.map((target) => target.path)
+      // Hide the moved entries from the source folder right away.
+      setOptimisticallyMovedPaths((previous) => {
+        const next = new Set(previous)
+        for (const path of movedPaths) next.add(path)
+        return next
+      })
+      setBulkProgress(
+        targets.length > 1 ? { done: 0, total: targets.length } : null
+      )
+      try {
+        if (onMoveEntries) {
+          await onMoveEntries(targets, destination, (done, total) =>
+            setBulkProgress({ done, total })
+          )
+        } else if (onMoveEntry) {
+          for (const target of targets) await onMoveEntry(target, destination)
+        }
+        selectEntry(null)
+      } catch (error) {
+        // Restore the optimistically-hidden entries on failure.
+        setOptimisticallyMovedPaths((previous) => {
+          const next = new Set(previous)
+          for (const path of movedPaths) next.delete(path)
+          return next
+        })
+        throw error
+      } finally {
+        setBulkProgress(null)
+      }
+    },
+    [onMoveEntries, onMoveEntry, selectEntry]
+  )
+
   const confirmMoveEntry = React.useCallback(
     async (destination: string) => {
       if (moveTargets.length === 0 || isMovingEntry) return
       if (!onMoveEntry && !onMoveEntries) return
 
-      if (moveTargets.every((target) => target.parentPath === destination)) {
-        setMoveEntryError("The items are already in this folder.")
+      const error = validateMove(
+        moveTargets,
+        destination,
+        sortedIndex.files,
+        sortedIndex.folders
+      )
+      if (error) {
+        setMoveEntryError(error)
         return
-      }
-      for (const target of moveTargets) {
-        if (
-          target.kind === "folder" &&
-          (destination === target.path || destination.startsWith(target.path))
-        ) {
-          setMoveEntryError("Can’t move a folder into itself.")
-          return
-        }
-        const destFilePath = `${destination}${target.name}`
-        if (
-          sortedIndex.files.has(destFilePath) ||
-          sortedIndex.folders.has(normalizeFolderPath(destFilePath))
-        ) {
-          setMoveEntryError(
-            moveTargets.length > 1
-              ? `An item named “${target.name}” already exists there.`
-              : "An item with this name already exists there."
-          )
-          return
-        }
       }
 
       setMovingEntry(true)
       setMoveEntryError(null)
-      // Show a progress bar only for multi-item moves.
-      setBulkProgress(
-        moveTargets.length > 1 ? { done: 0, total: moveTargets.length } : null
-      )
-
       try {
-        if (onMoveEntries) {
-          await onMoveEntries(moveTargets, destination, (done, total) =>
-            setBulkProgress({ done, total })
-          )
-        } else if (onMoveEntry) {
-          for (const target of moveTargets) {
-            await onMoveEntry(target, destination)
-          }
-        }
+        await executeMove(moveTargets, destination)
         setMoveTargets([])
-        selectEntry(null)
-      } catch (error) {
+      } catch (err) {
         setMoveEntryError(
-          error instanceof Error ? error.message : "Could not move item."
+          err instanceof Error ? err.message : "Could not move item."
         )
       } finally {
         setMovingEntry(false)
-        setBulkProgress(null)
       }
     },
     [
+      executeMove,
       isMovingEntry,
       moveTargets,
       onMoveEntries,
       onMoveEntry,
-      selectEntry,
       sortedIndex.files,
       sortedIndex.folders,
     ]
+  )
+
+  // The paths captured when a drag begins — the whole multi-selection when the
+  // grabbed item is part of it, otherwise just that item. Captured at drag
+  // start so the move can't be thrown off by a selection change mid-gesture.
+  const dragSelectionRef = React.useRef<readonly string[] | null>(null)
+
+  // Drop a dragged entry onto a folder. Moves the set captured at drag start.
+  // Validates inline and surfaces problems via a toast (no dialog for drag).
+  const moveByDrag = React.useCallback(
+    (sourcePath: string, destinationFolderPath: string) => {
+      const destination = normalizeFolderPath(destinationFolderPath)
+      const paths = dragSelectionRef.current ?? [sourcePath]
+      const targets = paths
+        .map(
+          (path) =>
+            sortedIndex.files.get(path) ??
+            sortedIndex.folders.get(normalizeFolderPath(path)) ??
+            null
+        )
+        .filter((entry): entry is FileSystemEntry => entry !== null)
+      if (targets.length === 0) return
+
+      // Dropping onto the folder the items already live in is a no-op.
+      if (targets.every((target) => target.parentPath === destination)) return
+
+      const error = validateMove(
+        targets,
+        destination,
+        sortedIndex.files,
+        sortedIndex.folders
+      )
+      if (error) {
+        toast.error(error)
+        return
+      }
+
+      void executeMove(targets, destination).catch((err) => {
+        toast.error(err instanceof Error ? err.message : "Could not move item.")
+      })
+    },
+    [executeMove, sortedIndex.files, sortedIndex.folders]
+  )
+
+  // The path grabbed for the current drag (null when not dragging). Drives the
+  // "lifted" styling so a multi-selection visibly drags together.
+  const [draggingSourcePath, setDraggingSourcePath] = React.useState<
+    string | null
+  >(null)
+  const draggingPaths = React.useMemo<ReadonlySet<string>>(() => {
+    if (!draggingSourcePath) return EMPTY_SELECTION
+    return selectedPaths.size > 1 && selectedPaths.has(draggingSourcePath)
+      ? selectedPaths
+      : new Set([draggingSourcePath])
+  }, [draggingSourcePath, selectedPaths])
+
+  const handleDragStart = React.useCallback(
+    (event: { operation: { source?: { id: unknown } | null } }) => {
+      const source = event.operation.source
+      const sourcePath = source ? String(source.id) : null
+      setDraggingSourcePath(sourcePath)
+      // Capture what to move now, so an interleaved click/select can't shrink it.
+      dragSelectionRef.current = sourcePath
+        ? selectedPathsRef.current.size > 1 &&
+          selectedPathsRef.current.has(sourcePath)
+          ? Array.from(selectedPathsRef.current)
+          : [sourcePath]
+        : null
+    },
+    []
+  )
+
+  const handleDragEnd = React.useCallback(
+    (event: {
+      canceled: boolean
+      operation: {
+        source?: { id: unknown } | null
+        target?: { id: unknown } | null
+      }
+    }) => {
+      setDraggingSourcePath(null)
+      if (event.canceled) return
+      const source = event.operation.source
+      const target = event.operation.target
+      if (!source || !target) return
+      const sourcePath = String(source.id)
+      const destPath = String(target.id)
+      if (sourcePath === destPath) return
+      // Run the move on the next frame so dnd-kit can finalize the drop first
+      // (clear the overlay and the grabbing cursor). Doing the optimistic
+      // re-render + re-list inside this handler keeps dnd-kit's renderer busy,
+      // which leaves the dragged preview and cursor stuck for the whole move.
+      requestAnimationFrame(() => moveByDrag(sourcePath, destPath))
+    },
+    [moveByDrag]
   )
 
   const openEntry = React.useCallback(
@@ -1530,6 +1745,7 @@ export function FileSystem({
     selectedEntry,
     selectedPath,
     selectedPaths,
+    draggingPaths,
     sort,
     treeExpansionRef,
     onRenameEntry,
@@ -1745,30 +1961,52 @@ export function FileSystem({
               className="relative min-h-0 flex-1"
               onContextMenuCapture={handleContextMenuCapture}
             >
-              {isLoading ? (
-                <FileSystemEmptyState label="Loading..." />
-              ) : isLoadingCurrentFolder && currentEntries.length === 0 ? (
-                <FileSystemEmptyState label="Loading…" isLoading />
-              ) : currentEntries.length === 0 &&
-                (view !== "columns" || isSearching || hasActiveFilters) ? (
-                <FileSystemEmptyState
-                  label={
-                    isSearching
-                      ? `No results for “${searchInput.trim()}”`
-                      : hasActiveFilters
-                        ? "No items match the active filters"
-                        : "This folder is empty"
-                  }
-                />
-              ) : view === "icons" ? (
-                <FileSystemIconsView {...viewProps} />
-              ) : view === "list" ? (
-                <FileSystemListView {...viewProps} />
-              ) : view === "columns" ? (
-                <FileSystemColumnsView {...viewProps} />
-              ) : (
-                <FileSystemGalleryView {...viewProps} />
-              )}
+              <DragDropProvider
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                {isLoading ? (
+                  <FileSystemEmptyState label="Loading..." />
+                ) : isLoadingCurrentFolder && currentEntries.length === 0 ? (
+                  <FileSystemEmptyState label="Loading…" isLoading />
+                ) : currentEntries.length === 0 &&
+                  (view !== "columns" || isSearching || hasActiveFilters) ? (
+                  <FileSystemEmptyState
+                    label={
+                      isSearching
+                        ? `No results for “${searchInput.trim()}”`
+                        : hasActiveFilters
+                          ? "No items match the active filters"
+                          : "This folder is empty"
+                    }
+                  />
+                ) : view === "icons" ? (
+                  <FileSystemIconsView {...viewProps} />
+                ) : view === "list" ? (
+                  <FileSystemListView {...viewProps} />
+                ) : view === "columns" ? (
+                  <FileSystemColumnsView {...viewProps} />
+                ) : (
+                  <FileSystemGalleryView {...viewProps} />
+                )}
+                <DragOverlay dropAnimation={null}>
+                  {(source) => {
+                    const path = source ? String(source.id) : null
+                    const entry = path
+                      ? (sortedIndex.files.get(path) ??
+                        sortedIndex.folders.get(normalizeFolderPath(path)))
+                      : null
+                    if (!entry) return null
+                    return (
+                      <FileSystemDragPreview
+                        entry={entry}
+                        count={Math.max(1, draggingPaths.size)}
+                        showFileExtensions={showFileExtensions}
+                      />
+                    )
+                  }}
+                </DragOverlay>
+              </DragDropProvider>
             </ContextMenuTrigger>
             <ContextMenuPopup align="start" side="bottom">
               {contextMenuEntry ? (

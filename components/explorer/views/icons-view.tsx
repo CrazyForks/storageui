@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useDraggable, useDroppable } from "@dnd-kit/react"
 
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -14,9 +15,13 @@ import {
   useFormatEntryName,
   useVirtualWindow,
 } from "@/components/explorer/internals"
-import type { FileSystemViewProps } from "@/components/explorer/types"
+import type {
+  FileSystemEntry,
+  FileSystemViewProps,
+} from "@/components/explorer/types"
 import {
   ARROW_KEYS,
+  folderDropCollision,
   ICON_GRID_PADDING,
   ICON_MIN_TILE_WIDTH,
   ICON_ROW_GAP,
@@ -34,8 +39,16 @@ export function FileSystemIconsView({
   renderFilePreview,
   selectedPath,
   selectedPaths,
+  draggingPaths,
 }: FileSystemViewProps) {
   const itemRefs = React.useRef(new Map<string, HTMLButtonElement>())
+  const registerRef = React.useCallback(
+    (path: string, element: HTMLButtonElement | null) => {
+      if (element) itemRefs.current.set(path, element)
+      else itemRefs.current.delete(path)
+    },
+    []
+  )
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const typeAhead = useEntryTypeAhead()
   const formatName = useFormatEntryName()
@@ -186,38 +199,6 @@ export function FileSystemIconsView({
             const isRenaming = rename?.targetPath === entry.path
             const isSaving = rename?.pendingPaths.has(entry.path) ?? false
 
-            const glyph = (
-              <span
-                className={cn(
-                  "relative flex h-16 w-20 shrink-0 items-center justify-center rounded-lg p-1 transition-colors",
-                  isSelected && "bg-accent"
-                )}
-              >
-                {entry.kind === "folder" ? (
-                  <FileSystemFolderGlyph className="h-13 w-auto drop-shadow-sm" />
-                ) : (
-                  <FileVisual
-                    file={entry}
-                    className={cn(
-                      "rounded-sm shadow-xs",
-                      // Landscape thumbnails get extra width so they fill
-                      // the tile instead of rendering as a short sliver.
-                      (entry.previewAspectRatio ?? 0.78) > 1.2
-                        ? "w-[4.75rem]"
-                        : "w-12"
-                    )}
-                    previewAspectRatio={0.78}
-                    renderFilePreview={renderFilePreview}
-                  />
-                )}
-                {isSaving ? (
-                  <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/60">
-                    <Spinner className="size-5 text-muted-foreground" />
-                  </span>
-                ) : null}
-              </span>
-            )
-
             // The tile is a <button>, which can't contain an <input>; while
             // renaming, render a plain container with the inline editor.
             if (isRenaming) {
@@ -226,7 +207,12 @@ export function FileSystemIconsView({
                   key={entry.path}
                   className="flex h-[6.375rem] flex-col items-center gap-1.5"
                 >
-                  {glyph}
+                  <TileGlyph
+                    entry={entry}
+                    isSelected={isSelected}
+                    isSaving={isSaving}
+                    renderFilePreview={renderFilePreview}
+                  />
                   <InlineRenameName
                     entry={entry}
                     multiline
@@ -239,49 +225,151 @@ export function FileSystemIconsView({
             }
 
             return (
-              <button
+              <IconTile
                 key={entry.path}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                data-file-system-path={entry.path}
-                tabIndex={entry.path === tabStopPath ? 0 : -1}
-                ref={(element) => {
-                  if (element) {
-                    itemRefs.current.set(entry.path, element)
-                  } else {
-                    itemRefs.current.delete(entry.path)
-                  }
-                }}
-                onClick={(event) =>
-                  onSelect(entry, {
-                    toggle: event.metaKey || event.ctrlKey,
-                    range: event.shiftKey,
-                  })
-                }
-                onDoubleClick={() => onOpen(entry)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") onOpen(entry)
-                }}
-                className="group flex h-[6.375rem] flex-col items-center gap-1.5 outline-none"
-              >
-                {glyph}
-                <span
-                  className={cn(
-                    "max-w-full rounded-sm px-1.5 py-px text-center text-xs leading-tight wrap-break-word",
-                    isSelected
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground"
-                  )}
-                >
-                  <span className="line-clamp-2">{formatName(entry)}</span>
-                </span>
-              </button>
+                entry={entry}
+                isSelected={isSelected}
+                isSaving={isSaving}
+                isLifted={draggingPaths.has(entry.path)}
+                isTabStop={entry.path === tabStopPath}
+                renderFilePreview={renderFilePreview}
+                onSelect={onSelect}
+                onOpen={onOpen}
+                registerRef={registerRef}
+              />
             )
           })}
         </div>
       </div>
     </ScrollArea>
+  )
+}
+
+// The glyph box (folder/file visual + saving spinner). Shared by the rename
+// placeholder and the draggable tile.
+function TileGlyph({
+  entry,
+  isSelected,
+  isSaving,
+  isDropTarget,
+  renderFilePreview,
+}: {
+  entry: FileSystemEntry
+  isSelected: boolean
+  isSaving: boolean
+  isDropTarget?: boolean
+  renderFilePreview: FileSystemViewProps["renderFilePreview"]
+}) {
+  return (
+    <span
+      className={cn(
+        "relative flex h-16 w-20 shrink-0 items-center justify-center rounded-lg p-1 transition-colors",
+        isSelected && "bg-accent",
+        isDropTarget &&
+          "ring-2 ring-primary ring-offset-1 ring-offset-background"
+      )}
+    >
+      {entry.kind === "folder" ? (
+        <FileSystemFolderGlyph className="h-13 w-auto drop-shadow-sm" />
+      ) : (
+        <FileVisual
+          file={entry}
+          className={cn(
+            "rounded-sm shadow-xs",
+            // Landscape thumbnails get extra width so they fill the tile
+            // instead of rendering as a short sliver.
+            (entry.previewAspectRatio ?? 0.78) > 1.2 ? "w-[4.75rem]" : "w-12"
+          )}
+          previewAspectRatio={0.78}
+          renderFilePreview={renderFilePreview}
+        />
+      )}
+      {isSaving ? (
+        <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/60">
+          <Spinner className="size-5 text-muted-foreground" />
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
+// A draggable tile. Folders are also drop targets (drag onto one to move).
+function IconTile({
+  entry,
+  isSelected,
+  isSaving,
+  isLifted,
+  isTabStop,
+  renderFilePreview,
+  onSelect,
+  onOpen,
+  registerRef,
+}: {
+  entry: FileSystemEntry
+  isSelected: boolean
+  isSaving: boolean
+  isLifted: boolean
+  isTabStop: boolean
+  renderFilePreview: FileSystemViewProps["renderFilePreview"]
+  onSelect: FileSystemViewProps["onSelect"]
+  onOpen: FileSystemViewProps["onOpen"]
+  registerRef: (path: string, element: HTMLButtonElement | null) => void
+}) {
+  const formatName = useFormatEntryName()
+  const { ref: dragRef } = useDraggable({ id: entry.path })
+  const { ref: dropRef, isDropTarget } = useDroppable({
+    id: entry.path,
+    disabled: entry.kind !== "folder",
+    collisionDetector: folderDropCollision,
+  })
+  const setRef = React.useCallback(
+    (element: HTMLButtonElement | null) => {
+      registerRef(entry.path, element)
+      dragRef(element)
+      dropRef(element)
+    },
+    [dragRef, dropRef, entry.path, registerRef]
+  )
+
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={isSelected}
+      data-file-system-path={entry.path}
+      tabIndex={isTabStop ? 0 : -1}
+      ref={setRef}
+      onClick={(event) =>
+        onSelect(entry, {
+          toggle: event.metaKey || event.ctrlKey,
+          range: event.shiftKey,
+        })
+      }
+      onDoubleClick={() => onOpen(entry)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") onOpen(entry)
+      }}
+      className={cn(
+        "group flex h-[6.375rem] flex-col items-center gap-1.5 outline-none",
+        isLifted && "opacity-50"
+      )}
+    >
+      <TileGlyph
+        entry={entry}
+        isSelected={isSelected}
+        isSaving={isSaving}
+        isDropTarget={entry.kind === "folder" && isDropTarget}
+        renderFilePreview={renderFilePreview}
+      />
+      <span
+        className={cn(
+          "max-w-full rounded-sm px-1.5 py-px text-center text-xs leading-tight wrap-break-word",
+          isSelected ? "bg-primary text-primary-foreground" : "text-foreground"
+        )}
+      >
+        <span className="line-clamp-2">{formatName(entry)}</span>
+      </span>
+    </button>
   )
 }
 

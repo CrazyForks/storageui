@@ -184,6 +184,8 @@ export type FileSystemViewProps = {
   selectedEntry: FileSystemEntry | null
   selectedPath: string | null
   selectedPaths: ReadonlySet<string>
+  /** Paths currently being dragged (the whole selection when multi-dragging). */
+  draggingPaths: ReadonlySet<string>
   sort: FileSystemSortState
   treeExpansionRef: RefObject<Map<string, readonly string[]>>
   onRenameEntry?: (item: FileSystemItem, name: string) => void | Promise<void>
