@@ -5,13 +5,13 @@ import { r2 } from "files-sdk/r2"
 import { s3 } from "files-sdk/s3"
 import { zip, type ZipApi } from "files-sdk/zip"
 
-import type { ConnectionRef } from "@/lib/connection-ref"
+import type { ConnectionRef } from "@/lib/storage/connection-ref"
 import {
   ENV_CONNECTION_ID,
   ENV_CONNECTION_ID_PREFIX,
   type Connection,
   type ConnectionProvider,
-} from "@/lib/connections"
+} from "@/lib/storage/connections"
 
 export type FilesClient = Files & ZipApi
 

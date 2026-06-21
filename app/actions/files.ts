@@ -2,13 +2,13 @@
 
 import { FilesError } from "files-sdk"
 
-import type { ConnectionRef } from "@/lib/connection-ref"
-import type { Connection } from "@/lib/connections"
+import type { ConnectionRef } from "@/lib/storage/connection-ref"
+import type { Connection } from "@/lib/storage/connections"
 import {
   listPublicEnvConnections,
   resolveFiles,
   type FilesClient,
-} from "@/lib/connections-server"
+} from "@/lib/storage/connections-server"
 import type {
   FileSystemItem,
   FileSystemLoadChildrenResult,

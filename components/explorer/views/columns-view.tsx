@@ -45,6 +45,7 @@ export function FileSystemColumnsView(props: FileSystemViewProps) {
     renderFilePreview,
     selectedEntry,
     selectedPath,
+    selectedPaths,
   } = props
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
   const rowRefs = React.useRef(new Map<string, HTMLButtonElement>())
@@ -209,9 +210,12 @@ export function FileSystemColumnsView(props: FileSystemViewProps) {
             onOpen={onOpen}
             onSelect={onSelect}
             rowRefs={rowRefs}
+            selectedPaths={selectedPaths}
             // Scalar per-column props so the memoized column only
             // re-renders when its own rows change — a selection deeper in
-            // the trail leaves ancestor columns untouched.
+            // the trail leaves ancestor columns untouched. `selectedChildPath`
+            // is the anchor (drives scroll-into-view); `selectedPaths` adds the
+            // full multi-selection highlight.
             selectedChildPath={
               selectedPath && pathParent(selectedPath) === columnPath
                 ? selectedPath
@@ -288,6 +292,7 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
   onOpen,
   onSelect,
   rowRefs,
+  selectedPaths,
   selectedChildPath,
   tabStopChildPath,
   trailChildPath,
@@ -296,8 +301,12 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
   index: FileSystemIndex
   isLoading: boolean
   onOpen: (entry: FileSystemEntry) => void
-  onSelect: (entry: FileSystemEntry | null) => void
+  onSelect: (
+    entry: FileSystemEntry | null,
+    modifiers?: { toggle?: boolean; range?: boolean }
+  ) => void
   rowRefs: React.RefObject<Map<string, HTMLButtonElement>>
+  selectedPaths: ReadonlySet<string>
   selectedChildPath: string | null
   tabStopChildPath: string | null
   trailChildPath: string | null
@@ -353,7 +362,7 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
             style={{ top: start * COLUMN_ROW_STRIDE }}
           >
             {entries.slice(start, end).map((entry) => {
-              const isSelected = entry.path === selectedChildPath
+              const isSelected = selectedPaths.has(entry.path)
               const isOnTrail =
                 entry.kind === "folder" && entry.path === trailChildPath
 
@@ -422,11 +431,29 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
                   // @pierre/trees rows have. Touch keeps selection on the
                   // click so scroll gestures don't select.
                   onPointerDown={(event) => {
-                    if (event.pointerType === "mouse" && event.button === 0) {
+                    // Immediacy: plain mouse presses select on press. Modifier
+                    // presses are left to onClick so toggle/range isn't applied
+                    // twice (press + click).
+                    if (
+                      event.pointerType === "mouse" &&
+                      event.button === 0 &&
+                      !event.metaKey &&
+                      !event.ctrlKey &&
+                      !event.shiftKey
+                    ) {
                       onSelect(entry)
                     }
                   }}
-                  onClick={() => onSelect(entry)}
+                  onClick={(event) => {
+                    if (event.metaKey || event.ctrlKey || event.shiftKey) {
+                      onSelect(entry, {
+                        toggle: event.metaKey || event.ctrlKey,
+                        range: event.shiftKey,
+                      })
+                    } else {
+                      onSelect(entry)
+                    }
+                  }}
                   onDoubleClick={() => onOpen(entry)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") onOpen(entry)

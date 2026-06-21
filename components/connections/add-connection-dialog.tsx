@@ -2,13 +2,13 @@
 
 import * as React from "react"
 
-import { toConnectionRef } from "@/lib/connection-ref"
+import { AppIcon, Delete02Icon } from "@/lib/icons"
+import { toConnectionRef } from "@/lib/storage/connection-ref"
 import {
   createConnectionId,
   type Connection,
   type ConnectionProvider,
-} from "@/lib/connections"
-import { AppIcon, Delete02Icon } from "@/lib/icons"
+} from "@/lib/storage/connections"
 import { useConnections } from "@/lib/store/connection-store"
 import { Button } from "@/components/ui/button"
 import {

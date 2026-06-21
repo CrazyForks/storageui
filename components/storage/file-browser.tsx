@@ -8,6 +8,8 @@ import {
   PlusSignCircleIcon,
   Upload01Icon,
 } from "@/lib/icons"
+import { useS3FileSystem } from "@/lib/storage/use-file-system"
+import { useUploads } from "@/lib/storage/use-uploads"
 import {
   bucketBrowserKey,
   DEFAULT_BUCKET_BROWSER_SETTINGS,
@@ -21,8 +23,6 @@ import {
 import { useNavStore } from "@/lib/store/nav-store"
 import { usePreferencesStore } from "@/lib/store/preferences-store"
 import { useUploadUiStore } from "@/lib/store/upload-ui-store"
-import { useS3FileSystem } from "@/lib/use-s3-file-system"
-import { useUploads } from "@/lib/use-uploads"
 import { Button } from "@/components/ui/button"
 import { FileSystem } from "@/components/explorer/file-system"
 import type { FileSystemFileItem } from "@/components/explorer/types"

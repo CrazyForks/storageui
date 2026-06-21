@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import type { UploadProgress } from "@/lib/use-s3-file-system"
+import type { UploadProgress } from "@/lib/storage/use-file-system"
 
 export type UploadTaskStatus = "uploading" | "done" | "error"
 

@@ -196,6 +196,7 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
     renderFilePreview,
     selectedEntry,
     selectedPath,
+    selectedPaths,
   } = props
   const stripRefs = React.useRef(new Map<string, HTMLButtonElement>())
   const stripViewportRef = React.useRef<HTMLDivElement | null>(null)
@@ -322,15 +323,18 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
             style={{ left: stripStart * GALLERY_TILE_STRIDE }}
           >
             {entries.slice(stripStart, stripEnd).map((entry) => {
+              // The anchor (`isActive`) drives the preview pane and tab stop;
+              // every selected tile is highlighted.
               const isActive =
                 entry.path === (activeEntry?.path ?? selectedPath)
+              const isSelected = selectedPaths.has(entry.path) || isActive
 
               return (
                 <button
                   key={entry.path}
                   type="button"
                   role="option"
-                  aria-selected={isActive}
+                  aria-selected={isSelected}
                   data-file-system-path={entry.path}
                   tabIndex={isActive ? 0 : -1}
                   ref={(element) => {
@@ -340,7 +344,12 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
                       stripRefs.current.delete(entry.path)
                     }
                   }}
-                  onClick={() => onSelect(entry)}
+                  onClick={(event) =>
+                    onSelect(entry, {
+                      toggle: event.metaKey || event.ctrlKey,
+                      range: event.shiftKey,
+                    })
+                  }
                   onDoubleClick={() => onOpen(entry)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") onOpen(entry)
@@ -348,7 +357,8 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
                   title={entry.name}
                   className={cn(
                     "flex size-14 shrink-0 items-center justify-center rounded-md border border-transparent p-1 outline-none",
-                    isActive && "bg-accent"
+                    isSelected && "bg-accent",
+                    isActive && "ring-2 ring-primary ring-inset"
                   )}
                 >
                   {entry.kind === "folder" ? (

@@ -1,5 +1,5 @@
-import type { ConnectionRef } from "@/lib/connection-ref"
-import { resolveFiles } from "@/lib/connections-server"
+import type { ConnectionRef } from "@/lib/storage/connection-ref"
+import { resolveFiles } from "@/lib/storage/connections-server"
 
 export const dynamic = "force-dynamic"
 

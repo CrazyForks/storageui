@@ -5,7 +5,7 @@ import * as React from "react"
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 
-import { type Connection } from "@/lib/connections"
+import { type Connection } from "@/lib/storage/connections"
 
 const STORE_NAME = "filesystem.connection-store"
 const STORE_VERSION = 1
@@ -30,7 +30,6 @@ type ConnectionStore = PersistedConnectionState & {
   openAddDialog: () => void
   openEditDialog: (connection: Connection) => void
   setAddDialogOpen: (open: boolean) => void
-  finishHydration: () => void
 }
 
 function localConnections(connections: Connection[]): Connection[] {
@@ -100,9 +99,11 @@ export const useConnectionStore = create<ConnectionStore>()(
 
       setEnvConnections: (envConnections) =>
         set((state) => {
+          // Local (localStorage) connections come first; env connections are
+          // appended after them in the sidebar.
           const connections = [
-            ...envConnections,
             ...localConnections(state.connections),
+            ...envConnections,
           ]
           return {
             connections,
@@ -111,6 +112,10 @@ export const useConnectionStore = create<ConnectionStore>()(
             )
               ? state.activeConnectionId
               : (connections[0]?.id ?? null),
+            // Hydration only completes once the env connections have merged in,
+            // so the sidebar reveals local + env connections together (no
+            // staggered pop-in of the env ones a beat later).
+            hasHydrated: true,
           }
         }),
 
@@ -128,16 +133,6 @@ export const useConnectionStore = create<ConnectionStore>()(
             ? { isAddDialogOpen: true }
             : { editingConnection: null, isAddDialogOpen: false }
         ),
-
-      finishHydration: () =>
-        set((state) => ({
-          hasHydrated: true,
-          activeConnectionId: state.connections.some(
-            (connection) => connection.id === state.activeConnectionId
-          )
-            ? state.activeConnectionId
-            : (state.connections[0]?.id ?? null),
-        })),
     }),
     {
       name: STORE_NAME,
@@ -162,11 +157,6 @@ export const useConnectionStore = create<ConnectionStore>()(
               ? persisted.activeConnectionId
               : null,
         }
-      },
-      onRehydrateStorage: () => (state) => {
-        // Always resolve hydration (even on error) so the UI never sticks on
-        // its pre-hydration loading state.
-        state?.finishHydration()
       },
     }
   )

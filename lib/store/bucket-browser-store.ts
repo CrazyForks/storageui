@@ -3,7 +3,7 @@
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 
-import type { Connection } from "@/lib/connections"
+import type { Connection } from "@/lib/storage/connections"
 import type {
   FileSystemFilter,
   FileSystemSortState,

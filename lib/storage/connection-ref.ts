@@ -1,4 +1,4 @@
-import type { Connection } from "@/lib/connections"
+import type { Connection } from "@/lib/storage/connections"
 
 /**
  * What the browser sends to a server action to identify the bucket to act on,

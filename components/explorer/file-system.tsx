@@ -364,10 +364,14 @@ export function FileSystem({
   // The refs mirror the state so re-selecting the same entry (e.g. the
   // pointerdown + click pair the columns view emits per press) stays a
   // no-op without widening the callbacks' dependencies. `currentEntriesRef`
-  // gives the ordered current folder for Shift range selection.
+  // gives the ordered current folder, and `sortedChildrenRef` the ordered
+  // siblings at any depth, for Shift range selection.
   const selectedPathRef = React.useRef<string | null>(null)
   const selectedPathsRef = React.useRef<ReadonlySet<string>>(EMPTY_SELECTION)
   const currentEntriesRef = React.useRef<FileSystemEntry[]>([])
+  const sortedChildrenRef = React.useRef<Map<string, FileSystemEntry[]>>(
+    new Map()
+  )
 
   const applySelection = React.useCallback(
     (
@@ -405,9 +409,13 @@ export function FileSystem({
         return
       }
 
-      // Shift-click: select the range from the anchor to this entry.
+      // Shift-click: select the range from the anchor to this entry. Use the
+      // clicked entry's ordered siblings (works at any depth, e.g. a deep
+      // column), falling back to the current folder.
       if (entry && modifiers?.range && selectedPathRef.current) {
-        const entries = currentEntriesRef.current
+        const entries =
+          sortedChildrenRef.current.get(entry.parentPath) ??
+          currentEntriesRef.current
         const from = entries.findIndex(
           (candidate) => candidate.path === selectedPathRef.current
         )
@@ -1375,7 +1383,8 @@ export function FileSystem({
   // render-time ref write.
   React.useEffect(() => {
     currentEntriesRef.current = currentEntries
-  }, [currentEntries])
+    sortedChildrenRef.current = sortedIndex.children
+  }, [currentEntries, sortedIndex])
 
   // What a context-menu action operates on: the whole multi-selection when the
   // right-clicked entry is part of it, otherwise just that entry.
@@ -1992,7 +2001,9 @@ export function FileSystem({
                   ? "item"
                   : "items"}
             </span>
-            {selectedEntry ? (
+            {selectedPaths.size > 1 ? (
+              <span>· {selectedPaths.size} selected</span>
+            ) : selectedEntry ? (
               <span>
                 · “{formatEntryName(selectedEntry, showFileExtensions)}”
                 selected

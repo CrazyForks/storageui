@@ -2,8 +2,11 @@
 
 import * as React from "react"
 
-import { toConnectionRef, type ConnectionRef } from "@/lib/connection-ref"
-import type { Connection } from "@/lib/connections"
+import {
+  toConnectionRef,
+  type ConnectionRef,
+} from "@/lib/storage/connection-ref"
+import type { Connection } from "@/lib/storage/connections"
 import type {
   FileSystemFileItem,
   FileSystemItem,

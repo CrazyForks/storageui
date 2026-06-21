@@ -9,7 +9,7 @@ import {
   CheckmarkCircle01Icon,
   File01Icon,
 } from "@/lib/icons"
-import type { UploadTask } from "@/lib/use-uploads"
+import type { UploadTask } from "@/lib/storage/use-uploads"
 import { cn } from "@/lib/utils"
 
 export function UploadProgressPanel({
