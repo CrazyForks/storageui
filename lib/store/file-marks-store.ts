@@ -1,8 +1,5 @@
 "use client"
 
-// Per-bucket "Recents" (auto-tracked on open) and "Starred" (toggled by the
-// user) lists, persisted in the browser. Keyed by the same bucket key as the
-// browser settings store so each connection has its own lists.
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 
@@ -10,8 +7,6 @@ const STORE_NAME = "filesystem.file-marks-store"
 const STORE_VERSION = 1
 const RECENTS_LIMIT = 50
 
-// The subset of a file we persist so the lists can re-render and re-open
-// without a fresh listing. The live URL is always re-resolved from `key`.
 export type MarkedFile = {
   /** Real S3/R2 object key — used to resolve URLs and to dedupe. */
   key: string
