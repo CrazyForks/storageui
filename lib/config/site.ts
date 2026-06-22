@@ -5,7 +5,7 @@ export const siteConfig = {
   url: appUrl,
   ogImage: `${appUrl}/opengraph-image.png`,
   description:
-    "A Finder-style file browser for S3, R2, Alibaba OSS, and compatible object stores, with built-in document preview.",
+    "A Finder-style file browser for S3, R2, Alibaba OSS, Backblaze B2, and compatible object stores, with built-in document preview.",
 }
 
 export const META_THEME_COLORS = {

@@ -77,9 +77,9 @@ function EmptyState() {
       <div className="space-y-1">
         <h2 className="text-base font-semibold">No bucket connected</h2>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Connect an S3, R2, Alibaba OSS, or S3-compatible bucket to browse its
-          objects. Local credentials stay in your browser; the bucket must allow
-          CORS.
+          Connect an S3, R2, Alibaba OSS, Backblaze B2, or S3-compatible bucket
+          to browse its objects. Local credentials stay in your browser; the
+          bucket must allow CORS.
         </p>
       </div>
       <Button onClick={openAddDialog}>

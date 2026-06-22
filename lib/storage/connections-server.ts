@@ -2,6 +2,7 @@ import "server-only"
 
 import { createFiles as createFilesSdk, type Files } from "files-sdk"
 import { alibaba } from "files-sdk/alibaba"
+import { backblazeB2 } from "files-sdk/backblaze-b2"
 import { r2 } from "files-sdk/r2"
 import { s3 } from "files-sdk/s3"
 import { zip, type ZipApi } from "files-sdk/zip"
@@ -76,7 +77,7 @@ function slotToConnection(raw: RawEnvSlot, id: string): Connection | null {
     !raw.bucket ||
     !raw.accessKeyId ||
     !raw.secretAccessKey ||
-    (provider === "alibaba" && !raw.region)
+    ((provider === "alibaba" || provider === "backblaze-b2") && !raw.region)
   )
     return null
 
@@ -149,6 +150,25 @@ function buildFiles(connection: Connection): FilesClient {
 
     return createFilesSdk({
       adapter: alibaba({
+        bucket: connection.bucket,
+        region: connection.region,
+        endpoint: connection.endpoint,
+        forcePathStyle: connection.forcePathStyle,
+        accessKeyId: connection.accessKeyId,
+        secretAccessKey: connection.secretAccessKey,
+        publicBaseUrl: connection.publicBaseUrl,
+      }),
+      plugins: [zip()],
+    })
+  }
+
+  if (connection.provider === "backblaze-b2") {
+    if (!connection.region) {
+      throw new Error("Backblaze B2 requires a cluster region.")
+    }
+
+    return createFilesSdk({
+      adapter: backblazeB2({
         bucket: connection.bucket,
         region: connection.region,
         endpoint: connection.endpoint,

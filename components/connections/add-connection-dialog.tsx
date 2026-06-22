@@ -9,6 +9,7 @@ import {
   type ConnectionProvider,
 } from "@/lib/storage/connections"
 import { useConnections } from "@/lib/store/connection-store"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -28,15 +29,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { AppIcon, Delete02Icon } from "@/components/foundations/icons"
+import {
+  AlibabaCloudIcon,
+  AwsIcon,
+  BackblazeIcon,
+  CloudflareIcon,
+} from "@/components/foundations/cloud-provider-icons"
+import {
+  AppIcon,
+  CloudServerIcon,
+  Delete02Icon,
+} from "@/components/foundations/icons"
 import { testConnectionAction } from "@/app/actions/files"
 
 const PROVIDER_OPTIONS: { value: ConnectionProvider; label: string }[] = [
   { value: "s3", label: "AWS S3" },
   { value: "r2", label: "Cloudflare R2" },
   { value: "alibaba", label: "Alibaba Cloud OSS" },
+  { value: "backblaze-b2", label: "Backblaze B2" },
   { value: "s3-compatible", label: "S3-compatible (custom endpoint)" },
 ]
+
+function ConnectionProviderIcon({
+  provider,
+  className,
+}: {
+  provider: ConnectionProvider
+  className?: string
+}) {
+  switch (provider) {
+    case "s3":
+      return <AwsIcon className={className} />
+    case "r2":
+      return <CloudflareIcon className={className} />
+    case "alibaba":
+      return <AlibabaCloudIcon className={className} />
+    case "backblaze-b2":
+      return <BackblazeIcon className={cn(className, "w-auto")} />
+    case "s3-compatible":
+      return <AppIcon icon={CloudServerIcon} className={className} />
+  }
+}
 
 function describeConnectionError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err)
@@ -99,7 +132,9 @@ function buildConnection(
 ): Connection {
   const isR2 = form.provider === "r2"
   const isAlibaba = form.provider === "alibaba"
+  const isBackblaze = form.provider === "backblaze-b2"
   const isS3Compatible = form.provider === "s3-compatible"
+  const supportsEndpointOverride = isS3Compatible || isAlibaba || isBackblaze
 
   return {
     id: existing?.id ?? createConnectionId(),
@@ -107,11 +142,10 @@ function buildConnection(
     provider: form.provider,
     bucket: form.bucket.trim(),
     region: !isR2 ? form.region.trim() || undefined : undefined,
-    endpoint:
-      isS3Compatible || isAlibaba
-        ? form.endpoint.trim() || undefined
-        : undefined,
-    forcePathStyle: (isS3Compatible || isAlibaba) && form.forcePathStyle,
+    endpoint: supportsEndpointOverride
+      ? form.endpoint.trim() || undefined
+      : undefined,
+    forcePathStyle: supportsEndpointOverride && form.forcePathStyle,
     accountId: isR2 ? form.accountId.trim() || undefined : undefined,
     accessKeyId: form.accessKeyId.trim(),
     secretAccessKey: form.secretAccessKey.trim(),
@@ -174,12 +208,16 @@ export function AddConnectionDialog() {
   }, [editingConnection, isAddDialogOpen])
 
   const { provider } = form
+  const selectedProvider = PROVIDER_OPTIONS.find(
+    (option) => option.value === provider
+  )
   const canSubmit =
     form.bucket.trim() &&
     form.accessKeyId.trim() &&
     form.secretAccessKey.trim() &&
     (provider !== "r2" || form.accountId.trim()) &&
     (provider !== "alibaba" || form.region.trim()) &&
+    (provider !== "backblaze-b2" || form.region.trim()) &&
     (provider !== "s3-compatible" || form.endpoint.trim()) &&
     status !== "testing"
 
@@ -214,7 +252,7 @@ export function AddConnectionDialog() {
             <DialogDescription>
               {editingConnection
                 ? "Update this connection and test it before saving."
-                : "Connect an S3, R2, Alibaba OSS, or S3-compatible bucket. Credentials are stored in your browser only; the bucket must allow CORS."}
+                : "Connect an S3, R2, Alibaba OSS, Backblaze B2, or S3-compatible bucket. Credentials are stored in your browser only; the bucket must allow CORS."}
             </DialogDescription>
           </DialogHeader>
 
@@ -243,16 +281,29 @@ export function AddConnectionDialog() {
                 >
                   <SelectTrigger>
                     <SelectValue>
-                      {
-                        PROVIDER_OPTIONS.find((o) => o.value === form.provider)
-                          ?.label
-                      }
+                      {selectedProvider ? (
+                        <span className="flex min-w-0 items-center gap-2">
+                          <ConnectionProviderIcon
+                            provider={selectedProvider.value}
+                            className="h-4 w-4 shrink-0"
+                          />
+                          <span className="truncate">
+                            {selectedProvider.label}
+                          </span>
+                        </span>
+                      ) : null}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {PROVIDER_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        <span className="flex min-w-0 items-center gap-2">
+                          <ConnectionProviderIcon
+                            provider={option.value}
+                            className="h-4 w-4 shrink-0"
+                          />
+                          <span className="truncate">{option.label}</span>
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -339,6 +390,42 @@ export function AddConnectionDialog() {
                 </>
               ) : null}
 
+              {provider === "backblaze-b2" ? (
+                <>
+                  <Field
+                    label="Region"
+                    hint="B2 cluster code shown next to the bucket endpoint."
+                    required
+                  >
+                    <Input
+                      value={form.region}
+                      onChange={(e) => update("region", e.target.value)}
+                      placeholder="us-west-002"
+                      required
+                    />
+                  </Field>
+                  <Field
+                    label="Endpoint"
+                    hint="Optional. Defaults to https://s3.{region}.backblazeb2.com."
+                  >
+                    <Input
+                      value={form.endpoint}
+                      onChange={(e) => update("endpoint", e.target.value)}
+                      placeholder="https://s3.us-west-002.backblazeb2.com"
+                    />
+                  </Field>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={form.forcePathStyle}
+                      onCheckedChange={(checked) =>
+                        update("forcePathStyle", checked)
+                      }
+                    />
+                    <span>Force path-style addressing</span>
+                  </label>
+                </>
+              ) : null}
+
               {provider === "s3-compatible" ? (
                 <>
                   <Field
@@ -372,7 +459,14 @@ export function AddConnectionDialog() {
                 </>
               ) : null}
 
-              <Field label="Access key ID" required>
+              <Field
+                label={
+                  provider === "backblaze-b2"
+                    ? "Application key ID"
+                    : "Access key ID"
+                }
+                required
+              >
                 <Input
                   value={form.accessKeyId}
                   onChange={(e) => update("accessKeyId", e.target.value)}
@@ -385,7 +479,9 @@ export function AddConnectionDialog() {
                 label={
                   provider === "alibaba"
                     ? "AccessKey secret"
-                    : "Secret access key"
+                    : provider === "backblaze-b2"
+                      ? "Application key"
+                      : "Secret access key"
                 }
                 required
               >

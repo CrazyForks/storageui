@@ -2254,7 +2254,10 @@ export function FileSystem({
             {selectedPaths.size > 1 ? (
               <span>· {selectedPaths.size} selected</span>
             ) : selectedEntry ? (
-              <span>
+              <span
+                className="min-w-0 max-[800px]:max-w-40 max-[800px]:truncate"
+                title={`${formatEntryName(selectedEntry, showFileExtensions)} selected`}
+              >
                 · “{formatEntryName(selectedEntry, showFileExtensions)}”
                 selected
               </span>

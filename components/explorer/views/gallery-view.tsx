@@ -432,15 +432,23 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
                 <FileSystemFolderGlyph className="h-8 w-auto shrink-0" />
               )}
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 text-sm font-semibold wrap-break-word">
-                  <InlineRenameName
-                    entry={activeEntry}
-                    className="w-full text-sm font-semibold"
+                <div className="flex items-start gap-1.5 text-sm font-semibold">
+                  <div
+                    className={cn(
+                      "min-w-0 flex-1 wrap-break-word",
+                      rename?.targetPath !== activeEntry.path && "line-clamp-2"
+                    )}
+                    title={formatName(activeEntry)}
                   >
-                    {formatName(activeEntry)}
-                  </InlineRenameName>
+                    <InlineRenameName
+                      entry={activeEntry}
+                      className="w-full text-sm font-semibold"
+                    >
+                      {formatName(activeEntry)}
+                    </InlineRenameName>
+                  </div>
                   {rename?.pendingPaths.has(activeEntry.path) ? (
-                    <Spinner className="size-3.5 shrink-0 text-muted-foreground" />
+                    <Spinner className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
                   ) : null}
                 </div>
                 <div className="text-xs text-muted-foreground">

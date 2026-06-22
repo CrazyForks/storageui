@@ -13,7 +13,12 @@
  * browser's direct presigned GET/PUT requests.
  */
 
-export type ConnectionProvider = "s3" | "r2" | "alibaba" | "s3-compatible"
+export type ConnectionProvider =
+  | "s3"
+  | "r2"
+  | "alibaba"
+  | "backblaze-b2"
+  | "s3-compatible"
 
 export type Connection = {
   id: string
@@ -21,7 +26,7 @@ export type Connection = {
   provider: ConnectionProvider
   bucket: string
   region?: string
-  /** Custom endpoint for R2, Alibaba OSS, or S3-compatible services. */
+  /** Custom endpoint for R2, Alibaba OSS, Backblaze B2, or S3-compatible services. */
   endpoint?: string
   /** Path-style addressing — required by MinIO and some S3-compatible services. */
   forcePathStyle?: boolean

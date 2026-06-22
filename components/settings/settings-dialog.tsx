@@ -135,8 +135,8 @@ export function SettingsDialog({
                   <div className="min-w-0">
                     <p className="text-base font-semibold">Drive UI</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      A Finder-style browser for S3, R2, Alibaba OSS, and
-                      compatible object storage.
+                      A Finder-style browser for S3, R2, Alibaba OSS, Backblaze
+                      B2, and compatible object storage.
                     </p>
                   </div>
                 </div>
