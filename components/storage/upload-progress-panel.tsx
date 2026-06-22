@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 
 import type { UploadTask } from "@/lib/storage/hooks/use-uploads"
 import { cn } from "@/lib/utils"
@@ -23,13 +24,12 @@ export function UploadProgressPanel({
   onDismissAction: (id: string) => void
   onClearAction: () => void
 }) {
+  const t = useTranslations("Upload")
   if (tasks.length === 0) return null
 
   const allDone = activeCount === 0
   const title =
-    activeCount > 0
-      ? `Uploading ${activeCount} file${activeCount === 1 ? "" : "s"}…`
-      : "Uploads complete"
+    activeCount > 0 ? t("uploading", { count: activeCount }) : t("complete")
 
   return (
     <div className="fixed right-4 bottom-4 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
@@ -43,7 +43,7 @@ export function UploadProgressPanel({
             "rounded-sm text-muted-foreground transition-colors hover:text-foreground",
             !allDone && "pointer-events-none opacity-40"
           )}
-          aria-label="Dismiss completed uploads"
+          aria-label={t("dismissCompleted")}
         >
           <AppIcon icon={Cancel01Icon} className="size-4" />
         </button>
@@ -87,7 +87,7 @@ export function UploadProgressPanel({
                     type="button"
                     onClick={() => onDismissAction(task.id)}
                     className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label="Dismiss"
+                    aria-label={t("dismiss")}
                   >
                     <AppIcon icon={Cancel01Icon} className="size-3.5" />
                   </button>

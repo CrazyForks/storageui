@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -196,6 +197,7 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
     selectedPath,
     selectedPaths,
   } = props
+  const t = useTranslations("Explorer")
   const stripRefs = React.useRef(new Map<string, HTMLButtonElement>())
   const stripViewportRef = React.useRef<HTMLDivElement | null>(null)
   const typeAhead = useEntryTypeAhead()
@@ -316,7 +318,7 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
         >
           <div
             role="listbox"
-            aria-label="Files"
+            aria-label={t("files")}
             className="absolute inset-y-0 flex items-center gap-1.5"
             style={{ left: stripStart * GALLERY_TILE_STRIDE }}
           >

@@ -12,9 +12,32 @@ import {
 import { EditorState, type Extension } from "@codemirror/state"
 import { githubDark, githubLight } from "@uiw/codemirror-theme-github"
 import { basicSetup, EditorView } from "codemirror"
+import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 
 import { Spinner } from "@/components/ui/spinner"
+
+// CodeMirror's search/go-to-line panels are English by default; map the visible
+// phrases per locale via the `phrases` facet (keyed by the original English).
+const CODEMIRROR_PHRASES: Record<string, Record<string, string>> = {
+  zh: {
+    Find: "查找",
+    Replace: "替换",
+    next: "下一个",
+    previous: "上一个",
+    all: "全部",
+    "match case": "区分大小写",
+    "by word": "全字匹配",
+    regexp: "正则表达式",
+    replace: "替换",
+    "replace all": "全部替换",
+    close: "关闭",
+    "current match": "当前匹配",
+    "on line": "在行",
+    "Go to line": "跳转到行",
+    go: "跳转",
+  },
+}
 
 const MAX_BYTES = 5_000_000 // Don't try to render absurdly large blobs.
 
@@ -190,6 +213,8 @@ export const CodeViewer = React.forwardRef<
     fileName: string
   }
 >(function CodeViewer({ url, fileName }, ref) {
+  const t = useTranslations("Viewer")
+  const locale = useLocale()
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
@@ -225,13 +250,13 @@ export const CodeViewer = React.forwardRef<
         }
         const size = Number(response.headers.get("content-length") ?? "0")
         if (size > MAX_BYTES) {
-          throw new Error("File is too large to preview. Download it instead.")
+          throw new Error(t("codeTooLarge"))
         }
         const body = await response.text()
         if (!cancelled) setText(body)
       } catch (err) {
         if (cancelled || controller.signal.aborted) return
-        setError(err instanceof Error ? err.message : "Failed to load file")
+        setError(err instanceof Error ? err.message : t("codeLoadFailed"))
       }
     })()
 
@@ -239,7 +264,7 @@ export const CodeViewer = React.forwardRef<
       cancelled = true
       controller.abort()
     }
-  }, [url])
+  }, [url, t])
 
   // (Re)build the editor when the text or theme changes.
   React.useEffect(() => {
@@ -260,6 +285,9 @@ export const CodeViewer = React.forwardRef<
           extensions: [
             basicSetup,
             search({ top: true }),
+            ...(CODEMIRROR_PHRASES[locale]
+              ? [EditorState.phrases.of(CODEMIRROR_PHRASES[locale])]
+              : []),
             isDark ? githubDark : githubLight,
             layoutTheme,
             EditorState.readOnly.of(true),
@@ -275,7 +303,7 @@ export const CodeViewer = React.forwardRef<
       viewRef.current?.destroy()
       viewRef.current = null
     }
-  }, [text, isDark, fileName])
+  }, [text, isDark, fileName, locale])
 
   return (
     <div className="relative h-full min-h-0">

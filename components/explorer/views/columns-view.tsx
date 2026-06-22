@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useDraggable, useDroppable } from "@dnd-kit/react"
+import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { ScrollArea, ScrollAreaPrimitive } from "@/components/ui/scroll-area"
@@ -315,6 +316,7 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
   tabStopChildPath: string | null
   trailChildPath: string | null
 }) {
+  const t = useTranslations("Explorer")
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const formatName = useFormatEntryName()
   const rename = React.useContext(RenameContext)
@@ -353,11 +355,11 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
       className="w-60 shrink-0 border-r"
       viewportRef={viewportRef}
       viewportClassName="p-1.5"
-      viewportProps={{ "aria-label": "Files", role: "listbox" }}
+      viewportProps={{ "aria-label": t("files"), role: "listbox" }}
     >
       {isLoading && entries.length === 0 ? (
         <div className="animate-pulse px-2 py-1.5 text-xs text-muted-foreground motion-reduce:animate-none">
-          Loading…
+          {t("loading")}
         </div>
       ) : (
         <div
@@ -571,21 +573,22 @@ export function FileSystemInformation({
   entry: FileSystemEntry
   index: FileSystemIndex
 }) {
+  const t = useTranslations("Dialogs")
   const rows: Array<[string, string]> = []
   const created = formatTimestamp(entry.createdAt)
   const updated = formatTimestamp(entry.updatedAt)
 
-  if (created) rows.push(["Created", created])
-  if (updated) rows.push(["Modified", updated])
+  if (created) rows.push([t("infoCreated"), created])
+  if (updated) rows.push([t("infoModified"), updated])
   if (entry.kind === "file") {
     const size = formatByteSize(entry.size)
 
-    if (size) rows.push(["Size", size])
+    if (size) rows.push([t("infoSize"), size])
   } else {
     const childCount = index.children.get(entry.path)?.length
 
     if (childCount !== undefined) {
-      rows.push(["Items", `${childCount}`])
+      rows.push([t("infoItems"), `${childCount}`])
     }
   }
 
@@ -593,7 +596,7 @@ export function FileSystemInformation({
 
   return (
     <div className="border-t pt-3">
-      <div className="mb-1.5 text-xs font-semibold">Information</div>
+      <div className="mb-1.5 text-xs font-semibold">{t("infoTitle")}</div>
       <dl className="space-y-1">
         {rows.map(([label, value]) => (
           <div

@@ -5,6 +5,7 @@ import {
   type FileTreeSortEntry,
 } from "@pierre/trees"
 import { FileTree as PierreFileTree, useFileTree } from "@pierre/trees/react"
+import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import {
@@ -88,6 +89,7 @@ export function FileSystemListView({
   sort,
   treeExpansionRef,
 }: FileSystemViewProps) {
+  const t = useTranslations("Explorer")
   // Filters narrow the path list handed to the tree; the search query stays
   // out of it so the tree's own search session (with match highlighting)
   // keeps handling it without remounts per keystroke.
@@ -125,11 +127,7 @@ export function FileSystemListView({
   if (relativePaths.length === 0) {
     return (
       <FileSystemEmptyState
-        label={
-          fileFilter
-            ? "No items match the active filters"
-            : "This folder is empty"
-        }
+        label={fileFilter ? t("emptyFiltered") : t("emptyFolder")}
       />
     )
   }
@@ -142,21 +140,21 @@ export function FileSystemListView({
       <div className="mb-1.5 flex shrink-0 items-center border-b py-1 pr-6 pl-11.5 text-xs font-medium text-muted-foreground">
         <FileSystemListColumnHeader
           className="flex-1 justify-start"
-          label="Name"
+          label={t("sortName")}
           onClickAction={onSortColumnClick}
           sort={sort}
           sortKey="name"
         />
         <FileSystemListColumnHeader
           className="w-44 justify-start"
-          label="Date Modified"
+          label={t("sortUpdated")}
           onClickAction={onSortColumnClick}
           sort={sort}
           sortKey="updatedAt"
         />
         <FileSystemListColumnHeader
           className="w-20 justify-start"
-          label="Size"
+          label={t("sortSize")}
           onClickAction={onSortColumnClick}
           sort={sort}
           sortKey="size"

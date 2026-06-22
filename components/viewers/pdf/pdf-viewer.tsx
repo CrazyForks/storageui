@@ -58,6 +58,7 @@ import {
   ViewportPluginPackage,
 } from "@embedpdf/plugin-viewport/react"
 import { useZoom, ZoomPluginPackage } from "@embedpdf/plugin-zoom/react"
+import { useTranslations } from "next-intl"
 import { flushSync } from "react-dom"
 
 import { cn } from "@/lib/utils"
@@ -555,6 +556,7 @@ function PDFViewerFileActionsMenu({
   showDownload?: boolean
   showUpload?: boolean
 }) {
+  const t = useTranslations("Viewer")
   const inputRef = React.useRef<HTMLInputElement>(null)
 
   if (!showDownload && !showUpload) return null
@@ -584,7 +586,7 @@ function PDFViewerFileActionsMenu({
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Open PDF actions"
+            aria-label={t("pdfActions")}
           >
             <AppIcon icon={MoreHorizontalIcon} className="size-4" />
           </Button>
@@ -597,13 +599,13 @@ function PDFViewerFileActionsMenu({
               ) : (
                 <AppIcon icon={Download01Icon} className="size-4" />
               )}
-              Download
+              {t("download")}
             </DropdownMenuItem>
           ) : null}
           {showUpload && onUploadFile ? (
             <DropdownMenuItem onClick={() => inputRef.current?.click()}>
               <AppIcon icon={Upload01Icon} className="size-4" />
-              Upload
+              {t("upload")}
             </DropdownMenuItem>
           ) : null}
         </DropdownMenuContent>
@@ -623,6 +625,7 @@ function PDFViewerPageNumberControl({
   numPages: number
   onPageChange: (pageNumber: number) => void
 }) {
+  const t = useTranslations("Viewer")
   const inputRef = React.useRef<HTMLInputElement>(null)
   const displayPage = numPages ? activePage : 1
   const [isEditing, setIsEditing] = React.useState(false)
@@ -652,11 +655,11 @@ function PDFViewerPageNumberControl({
 
   return (
     <div className="flex items-center text-sm whitespace-nowrap text-primary">
-      <span>Page</span>
+      <span>{t("page")}</span>
       {isEditing ? (
         <Input
           ref={inputRef}
-          aria-label="Page number"
+          aria-label={t("pageNumber")}
           inputMode="numeric"
           pattern="[0-9]*"
           size="sm"
@@ -681,7 +684,7 @@ function PDFViewerPageNumberControl({
           variant="ghost"
           size="sm"
           className="font-normal"
-          aria-label={`Current page ${displayPage}. Edit page number`}
+          aria-label={t("currentPage", { page: displayPage })}
           disabled={controlsDisabled || !numPages}
           onClick={() => {
             setDraftPage(String(displayPage))
@@ -691,7 +694,7 @@ function PDFViewerPageNumberControl({
           {displayPage}
         </Button>
       )}
-      <span>of {numPages || "–"}</span>
+      <span>{t("pageOf", { count: numPages || "–" })}</span>
     </div>
   )
 }
@@ -703,6 +706,7 @@ function PDFViewerSearchControl({
   documentId: string
   controlsDisabled: boolean
 }) {
+  const t = useTranslations("Viewer")
   const { state, provides } = useSearch(documentId)
   const { provides: scroll } = useScroll(documentId)
   const [searchDraft, setSearchDraft] = React.useState("")
@@ -713,12 +717,12 @@ function PDFViewerSearchControl({
   const searchRequestIdRef = React.useRef(0)
   const hasActiveQuery = Boolean(searchQuery.trim())
   const resultLabel = isSearching
-    ? "Searching"
+    ? t("searching")
     : !hasActiveQuery
-      ? "No search"
+      ? t("noSearch")
       : state.total
         ? `${state.activeResultIndex + 1} / ${state.total}`
-        : "No results"
+        : t("noResults")
 
   const scrollToResult = React.useCallback(
     (index: number) => {
@@ -856,13 +860,13 @@ function PDFViewerSearchControl({
 
   return (
     <Popover>
-      <ToolbarTooltip label="Search text">
+      <ToolbarTooltip label={t("searchText")}>
         <PopoverTrigger asChild>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Search text"
+            aria-label={t("searchText")}
             disabled={controlsDisabled}
           >
             <AppIcon icon={Search01Icon} className="size-4" />
@@ -872,7 +876,7 @@ function PDFViewerSearchControl({
       <PopoverContent align="end" className="w-72">
         <div className="space-y-3">
           <Input
-            placeholder="Search text"
+            placeholder={t("searchText")}
             value={searchDraft}
             onChange={handleSearchDraftChange}
             onKeyDown={(event) => {
@@ -908,7 +912,7 @@ function PDFViewerSearchControl({
                 type="button"
                 variant="outline"
                 size="icon-sm"
-                aria-label="Previous result"
+                aria-label={t("prevResult")}
                 disabled={isSearching || state.total === 0}
                 onClick={() => navigate(-1)}
               >
@@ -918,7 +922,7 @@ function PDFViewerSearchControl({
                 type="button"
                 variant="outline"
                 size="icon-sm"
-                aria-label="Next result"
+                aria-label={t("nextResult")}
                 disabled={isSearching || state.total === 0}
                 onClick={() => navigate(1)}
               >
@@ -961,6 +965,7 @@ function PDFViewerThumbnails({
   selectedPageIndexes: Set<number>
   onSelectPage: (pageNumber: number, mode: ThumbnailSelectionMode) => void
 }) {
+  const t = useTranslations("Viewer")
   const thumbnailListboxId = React.useId()
   const activeDescendantId =
     activePage > 0 ? `${thumbnailListboxId}-page-${activePage}` : undefined
@@ -1040,7 +1045,7 @@ function PDFViewerThumbnails({
               role="option"
               data-pdf-viewer-thumbnail-option={pageNumber}
               aria-current={isActive ? "page" : undefined}
-              aria-label={`Page ${pageNumber}`}
+              aria-label={t("pageAria", { page: pageNumber })}
               aria-posinset={pageNumber}
               aria-selected={isSelected}
               aria-setsize={pageCount}
@@ -1817,6 +1822,7 @@ function PDFViewerInner({
   onPagePointerCancel,
   onUploadFile,
 }: PDFViewerInnerProps) {
+  const t = useTranslations("Viewer")
   const { registry } = useRegistry()
   const { state: scrollState, provides: scroll } = useScroll(documentId)
   const { state: zoomState, provides: zoom } = useZoom(documentId)
@@ -2246,12 +2252,12 @@ function PDFViewerInner({
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {showThumbnailSidebar ? (
               <TooltipProvider>
-                <ToolbarTooltip label="Toggle thumbnails">
+                <ToolbarTooltip label={t("toggleThumbnails")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Toggle thumbnails"
+                    aria-label={t("toggleThumbnails")}
                     disabled={controlsDisabled}
                     onClick={() => setSidebarOpen((open) => !open)}
                   >
@@ -2272,12 +2278,12 @@ function PDFViewerInner({
               {showRotateControls ? (
                 <>
                   <div className="flex flex-none items-center gap-1">
-                    <ToolbarTooltip label="Rotate counterclockwise">
+                    <ToolbarTooltip label={t("rotateCcw")}>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label="Rotate counterclockwise"
+                        aria-label={t("rotateCcw")}
                         disabled={controlsDisabled}
                         onClick={() => rotateSelectedPages(-1)}
                       >
@@ -2287,12 +2293,12 @@ function PDFViewerInner({
                         />
                       </Button>
                     </ToolbarTooltip>
-                    <ToolbarTooltip label="Rotate clockwise">
+                    <ToolbarTooltip label={t("rotateCw")}>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label="Rotate clockwise"
+                        aria-label={t("rotateCw")}
                         disabled={controlsDisabled}
                         onClick={() => rotateSelectedPages(1)}
                       >
@@ -2310,12 +2316,12 @@ function PDFViewerInner({
                 </>
               ) : null}
               <div className="flex flex-none items-center gap-1">
-                <ToolbarTooltip label="Zoom out">
+                <ToolbarTooltip label={t("zoomOut")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Zoom out"
+                    aria-label={t("zoomOut")}
                     disabled={
                       controlsDisabled || currentZoomLevel <= ZOOM_OPTIONS[0]
                     }
@@ -2337,7 +2343,7 @@ function PDFViewerInner({
                   modal={false}
                 >
                   <SelectTrigger size="sm" className="w-21 min-w-21">
-                    <SelectValue placeholder="Zoom">
+                    <SelectValue placeholder={t("zoom")}>
                       {Math.round(currentZoomLevel * 100)}%
                     </SelectValue>
                   </SelectTrigger>
@@ -2349,12 +2355,12 @@ function PDFViewerInner({
                     ))}
                   </SelectContent>
                 </Select>
-                <ToolbarTooltip label="Zoom in">
+                <ToolbarTooltip label={t("zoomIn")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Zoom in"
+                    aria-label={t("zoomIn")}
                     disabled={
                       controlsDisabled ||
                       currentZoomLevel >= ZOOM_OPTIONS[ZOOM_OPTIONS.length - 1]

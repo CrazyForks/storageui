@@ -13,6 +13,7 @@ import {
   type DocxPageThumbnailItem,
 } from "@extend-ai/react-docx"
 import { useVirtualizer } from "@tanstack/react-virtual"
+import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -348,6 +349,7 @@ function DocxFileActionsMenu({
   showNightRenderToggle: boolean
   showUploadButton: boolean
 }) {
+  const t = useTranslations("Viewer")
   const showFileActions = showDownloadButton || showUploadButton
 
   return (
@@ -357,7 +359,7 @@ function DocxFileActionsMenu({
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label="Open DOCX actions"
+          aria-label={t("docxActions")}
         >
           <AppIcon icon={MoreHorizontalIcon} className="size-4" />
         </Button>
@@ -373,7 +375,7 @@ function DocxFileActionsMenu({
             >
               <span className="flex min-w-0 items-center gap-2">
                 <AppIcon icon={Moon02Icon} className="size-4" />
-                Dark mode
+                {t("darkMode")}
               </span>
             </DropdownMenuCheckboxItem>
             <DropdownMenuSeparator />
@@ -389,7 +391,7 @@ function DocxFileActionsMenu({
         >
           <span className="flex min-w-0 items-center gap-2">
             <AppIcon icon={Comment01Icon} className="size-4" />
-            Comments/edits
+            {t("commentsEdits")}
           </span>
         </DropdownMenuCheckboxItem>
         {showFileActions ? <DropdownMenuSeparator /> : null}
@@ -400,13 +402,13 @@ function DocxFileActionsMenu({
             ) : (
               <AppIcon icon={Download01Icon} className="size-4" />
             )}
-            Download
+            {t("download")}
           </DropdownMenuItem>
         ) : null}
         {showUploadButton ? (
           <DropdownMenuItem onClick={onUploadClick}>
             <AppIcon icon={Upload01Icon} className="size-4" />
-            Upload
+            {t("upload")}
           </DropdownMenuItem>
         ) : null}
       </DropdownMenuContent>
@@ -425,6 +427,7 @@ function DocxPageNumberControl({
   onPageChange: (pageNumber: number) => void
   pageCount: number
 }) {
+  const t = useTranslations("Viewer")
   const activePage = useDocxActivePage(activePageStore)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const displayPage = pageCount ? activePage : 1
@@ -461,11 +464,11 @@ function DocxPageNumberControl({
 
   return (
     <div className="flex items-center text-sm whitespace-nowrap text-primary">
-      <span>Page</span>
+      <span>{t("page")}</span>
       {isEditing ? (
         <Input
           ref={inputRef}
-          aria-label="Page number"
+          aria-label={t("pageNumber")}
           inputMode="numeric"
           pattern="[0-9]*"
           size="sm"
@@ -490,7 +493,7 @@ function DocxPageNumberControl({
           variant="ghost"
           size="sm"
           className="font-normal"
-          aria-label={`Current page ${displayPage}. Edit page number`}
+          aria-label={t("currentPage", { page: displayPage })}
           disabled={controlsDisabled || !pageCount}
           onClick={() => {
             setDraftPage(String(displayPage))
@@ -500,7 +503,7 @@ function DocxPageNumberControl({
           {displayPage}
         </Button>
       )}
-      <span>of {pageCount || "-"}</span>
+      <span>{t("pageOf", { count: pageCount || "-" })}</span>
     </div>
   )
 }
@@ -548,6 +551,7 @@ function DocxToolbar({
   toolbarActions?: React.ReactNode
   zoomScale: number
 }) {
+  const t = useTranslations("Viewer")
   const canZoomIn = zoomScale < ZOOM_OPTIONS[ZOOM_OPTIONS.length - 1]
   const canZoomOut = zoomScale > ZOOM_OPTIONS[0]
 
@@ -569,12 +573,12 @@ function DocxToolbar({
               />
             </>
           ) : null}
-          <ToolbarTooltip label="Toggle thumbnails">
+          <ToolbarTooltip label={t("toggleThumbnails")}>
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label="Toggle thumbnails"
+              aria-label={t("toggleThumbnails")}
               disabled={controlsDisabled}
               onClick={onToggleSidebar}
             >
@@ -590,13 +594,13 @@ function DocxToolbar({
         </div>
         <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
           <div className="flex flex-none items-center gap-1">
-            <ToolbarTooltip label="Zoom out">
+            <ToolbarTooltip label={t("zoomOut")}>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
                 disabled={controlsDisabled || !canZoomOut}
-                aria-label="Zoom out"
+                aria-label={t("zoomOut")}
                 onClick={() =>
                   setZoomScale((currentZoomScale) =>
                     getNextZoomScale(currentZoomScale, -1)
@@ -615,7 +619,7 @@ function DocxToolbar({
               <SelectTrigger
                 size="sm"
                 className="w-21 min-w-21"
-                aria-label="Zoom level"
+                aria-label={t("zoomLevel")}
               >
                 <SelectValue>{Math.round(zoomScale)}%</SelectValue>
               </SelectTrigger>
@@ -627,13 +631,13 @@ function DocxToolbar({
                 ))}
               </SelectContent>
             </Select>
-            <ToolbarTooltip label="Zoom in">
+            <ToolbarTooltip label={t("zoomIn")}>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
                 disabled={controlsDisabled || !canZoomIn}
-                aria-label="Zoom in"
+                aria-label={t("zoomIn")}
                 onClick={() =>
                   setZoomScale((currentZoomScale) =>
                     getNextZoomScale(currentZoomScale, 1)
@@ -742,6 +746,7 @@ function DocxThumbnailSidebarList({
   sidebarOpen: boolean
   thumbnails: DocxPageThumbnailItem[]
 }) {
+  const t = useTranslations("Viewer")
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const thumbnailListboxId = React.useId()
   const visibleThumbnails = React.useMemo(
@@ -908,7 +913,7 @@ function DocxThumbnailSidebarList({
                   aria-current={
                     thumbnail.pageNumber === activePage ? "page" : undefined
                   }
-                  aria-label={`Page ${thumbnail.pageNumber}`}
+                  aria-label={t("pageAria", { page: thumbnail.pageNumber })}
                   aria-posinset={thumbnail.pageNumber}
                   aria-selected={thumbnail.pageNumber === activePage}
                   aria-setsize={pageCount}

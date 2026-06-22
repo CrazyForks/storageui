@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useDraggable, useDroppable } from "@dnd-kit/react"
+import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -39,6 +40,7 @@ export function FileSystemIconsView({
   selectedPaths,
   draggingPaths,
 }: FileSystemViewProps) {
+  const t = useTranslations("Explorer")
   const itemRefs = React.useRef(new Map<string, HTMLButtonElement>())
   const registerRef = React.useCallback(
     (path: string, element: HTMLButtonElement | null) => {
@@ -149,7 +151,7 @@ export function FileSystemIconsView({
       >
         <div
           role="listbox"
-          aria-label="Files"
+          aria-label={t("files")}
           className="absolute inset-x-0 grid gap-x-1 gap-y-3"
           // The auto-fill expression produces the same column count the
           // ResizeObserver measures (the measurement exists only for the

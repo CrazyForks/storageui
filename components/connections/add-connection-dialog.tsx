@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 
 import { toConnectionRef } from "@/lib/storage/connection-ref"
 import {
@@ -75,18 +76,18 @@ function ConnectionProviderIcon({
   }
 }
 
-function describeConnectionError(err: unknown): string {
+function describeConnectionError(
+  err: unknown,
+  t: (key: string) => string
+): string {
   const message = err instanceof Error ? err.message : String(err)
   if (/\(Unauthorized\)/.test(message)) {
-    return "Access denied. Check the access key and secret, and that the credentials have permission to list this bucket."
+    return t("errorAccessDenied")
   }
   if (/\(NotFound\)/.test(message)) {
-    return "Bucket not found. Check the bucket name, and the region or endpoint."
+    return t("errorNotFound")
   }
-  return (
-    message ||
-    "Could not connect. Check the bucket, credentials, and region/endpoint."
-  )
+  return message || t("errorGeneric")
 }
 
 type FormState = {
@@ -186,6 +187,8 @@ function Field({
 }
 
 export function AddConnectionDialog() {
+  const t = useTranslations("Connection")
+  const tc = useTranslations("Common")
   const {
     isAddDialogOpen,
     editingConnection,
@@ -242,7 +245,7 @@ export function AddConnectionDialog() {
       else addConnection(connection)
       setAddDialogOpen(false)
     } catch (err) {
-      setError(describeConnectionError(err))
+      setError(describeConnectionError(err, t))
     } finally {
       setStatus("idle")
     }
@@ -254,12 +257,10 @@ export function AddConnectionDialog() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingConnection ? "Edit connection" : "Add connection"}
+              {editingConnection ? t("editTitle") : t("addTitle")}
             </DialogTitle>
             <DialogDescription>
-              {editingConnection
-                ? "Update this connection and test it before saving."
-                : "Connect an S3, R2, Alibaba OSS, Backblaze B2, MinIO, or S3-compatible bucket. Credentials are stored in your browser only; the bucket must allow CORS."}
+              {editingConnection ? t("editDescription") : t("addDescription")}
             </DialogDescription>
           </DialogHeader>
 
@@ -279,7 +280,7 @@ export function AddConnectionDialog() {
               }}
               className="grid gap-4"
             >
-              <Field label="Provider">
+              <Field label={t("provider")}>
                 <Select
                   value={form.provider}
                   onValueChange={(value) => {
@@ -325,18 +326,15 @@ export function AddConnectionDialog() {
                 </Select>
               </Field>
 
-              <Field
-                label="Name"
-                hint="Shown in the sidebar. Defaults to the bucket name."
-              >
+              <Field label={t("name")} hint={t("nameHint")}>
                 <Input
                   value={form.name}
                   onChange={(e) => update("name", e.target.value)}
-                  placeholder="My bucket"
+                  placeholder={t("namePlaceholder")}
                 />
               </Field>
 
-              <Field label="Bucket" required>
+              <Field label={t("bucket")} required>
                 <Input
                   value={form.bucket}
                   onChange={(e) => update("bucket", e.target.value)}
@@ -347,8 +345,8 @@ export function AddConnectionDialog() {
 
               {provider === "r2" ? (
                 <Field
-                  label="Account ID"
-                  hint="Cloudflare account id."
+                  label={t("accountId")}
+                  hint={t("accountIdHint")}
                   required
                 >
                   <Input
@@ -360,7 +358,7 @@ export function AddConnectionDialog() {
               ) : null}
 
               {provider === "s3" ? (
-                <Field label="Region">
+                <Field label={t("region")}>
                   <Input
                     value={form.region}
                     onChange={(e) => update("region", e.target.value)}
@@ -372,8 +370,8 @@ export function AddConnectionDialog() {
               {provider === "alibaba" ? (
                 <>
                   <Field
-                    label="Region"
-                    hint="Alibaba OSS region code, without the “oss-” prefix."
+                    label={t("region")}
+                    hint={t("alibabaRegionHint")}
                     required
                   >
                     <Input
@@ -383,10 +381,7 @@ export function AddConnectionDialog() {
                       required
                     />
                   </Field>
-                  <Field
-                    label="Endpoint"
-                    hint="Optional. Defaults to https://oss-{region}.aliyuncs.com."
-                  >
+                  <Field label={t("endpoint")} hint={t("alibabaEndpointHint")}>
                     <Input
                       value={form.endpoint}
                       onChange={(e) => update("endpoint", e.target.value)}
@@ -400,7 +395,7 @@ export function AddConnectionDialog() {
                         update("forcePathStyle", checked)
                       }
                     />
-                    <span>Force path-style addressing</span>
+                    <span>{t("forcePathStyle")}</span>
                   </label>
                 </>
               ) : null}
@@ -408,8 +403,8 @@ export function AddConnectionDialog() {
               {provider === "backblaze-b2" ? (
                 <>
                   <Field
-                    label="Region"
-                    hint="B2 cluster code shown next to the bucket endpoint."
+                    label={t("region")}
+                    hint={t("backblazeRegionHint")}
                     required
                   >
                     <Input
@@ -420,8 +415,8 @@ export function AddConnectionDialog() {
                     />
                   </Field>
                   <Field
-                    label="Endpoint"
-                    hint="Optional. Defaults to https://s3.{region}.backblazeb2.com."
+                    label={t("endpoint")}
+                    hint={t("backblazeEndpointHint")}
                   >
                     <Input
                       value={form.endpoint}
@@ -436,7 +431,7 @@ export function AddConnectionDialog() {
                         update("forcePathStyle", checked)
                       }
                     />
-                    <span>Force path-style addressing</span>
+                    <span>{t("forcePathStyle")}</span>
                   </label>
                 </>
               ) : null}
@@ -444,8 +439,8 @@ export function AddConnectionDialog() {
               {provider === "s3-compatible" ? (
                 <>
                   <Field
-                    label="Endpoint"
-                    hint="e.g. https://s3.us-west-1.wasabisys.com"
+                    label={t("endpoint")}
+                    hint={t("s3cEndpointHint")}
                     required
                   >
                     <Input
@@ -455,7 +450,7 @@ export function AddConnectionDialog() {
                       required
                     />
                   </Field>
-                  <Field label="Region" hint="Optional. Defaults to “auto”.">
+                  <Field label={t("region")} hint={t("regionAutoHint")}>
                     <Input
                       value={form.region}
                       onChange={(e) => update("region", e.target.value)}
@@ -469,7 +464,7 @@ export function AddConnectionDialog() {
                         update("forcePathStyle", checked)
                       }
                     />
-                    <span>Force path-style addressing (MinIO, etc.)</span>
+                    <span>{t("forcePathStyleMinio")}</span>
                   </label>
                 </>
               ) : null}
@@ -477,8 +472,8 @@ export function AddConnectionDialog() {
               {provider === "minio" ? (
                 <>
                   <Field
-                    label="Endpoint"
-                    hint="Your MinIO server URL, including the scheme."
+                    label={t("endpoint")}
+                    hint={t("minioEndpointHint")}
                     required
                   >
                     <Input
@@ -488,10 +483,7 @@ export function AddConnectionDialog() {
                       required
                     />
                   </Field>
-                  <Field
-                    label="Region"
-                    hint="Optional. Defaults to “us-east-1”."
-                  >
+                  <Field label={t("region")} hint={t("regionDefaultHint")}>
                     <Input
                       value={form.region}
                       onChange={(e) => update("region", e.target.value)}
@@ -505,7 +497,7 @@ export function AddConnectionDialog() {
                         update("forcePathStyle", checked)
                       }
                     />
-                    <span>Force path-style addressing</span>
+                    <span>{t("forcePathStyle")}</span>
                   </label>
                 </>
               ) : null}
@@ -513,8 +505,8 @@ export function AddConnectionDialog() {
               <Field
                 label={
                   provider === "backblaze-b2"
-                    ? "Application key ID"
-                    : "Access key ID"
+                    ? t("applicationKeyId")
+                    : t("accessKeyId")
                 }
                 required
               >
@@ -529,10 +521,10 @@ export function AddConnectionDialog() {
               <Field
                 label={
                   provider === "alibaba"
-                    ? "AccessKey secret"
+                    ? t("accessKeySecret")
                     : provider === "backblaze-b2"
-                      ? "Application key"
-                      : "Secret access key"
+                      ? t("applicationKey")
+                      : t("secretAccessKey")
                 }
                 required
               >
@@ -545,10 +537,7 @@ export function AddConnectionDialog() {
                 />
               </Field>
 
-              <Field
-                label="Public base URL"
-                hint="Optional. A CDN/public origin; when set, file URLs skip signing."
-              >
+              <Field label={t("publicBaseUrl")} hint={t("publicBaseUrlHint")}>
                 <Input
                   value={form.publicBaseUrl}
                   onChange={(e) => update("publicBaseUrl", e.target.value)}
@@ -576,7 +565,7 @@ export function AddConnectionDialog() {
                 }}
               >
                 <AppIcon icon={Delete02Icon} className="size-4" />
-                Delete
+                {tc("delete")}
               </Button>
             ) : null}
             <Button
@@ -584,7 +573,7 @@ export function AddConnectionDialog() {
               variant="outline"
               onClick={() => setAddDialogOpen(false)}
             >
-              Cancel
+              {tc("cancel")}
             </Button>
             <Button
               type="submit"
@@ -592,10 +581,10 @@ export function AddConnectionDialog() {
               disabled={!canSubmit}
             >
               {status === "testing"
-                ? "Testing…"
+                ? t("testing")
                 : editingConnection
-                  ? "Test & Update"
-                  : "Test & Save"}
+                  ? t("testAndUpdate")
+                  : t("testAndSave")}
             </Button>
           </DialogFooter>
         </DialogContent>

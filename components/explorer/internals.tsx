@@ -3,6 +3,7 @@ import {
   createFileTreeIconResolver,
   getBuiltInSpriteSheet,
 } from "@pierre/trees"
+import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { Spinner } from "@/components/ui/spinner"
@@ -1139,6 +1140,7 @@ export function FileVisual({
   previewClassName?: string
   renderFilePreview?: (file: FileSystemFileItem) => React.ReactNode
 }) {
+  const t = useTranslations("Upload")
   const previewUrls = filePreviewUrls(file)
   const canLoadLazily = pageable && Boolean(loadPreviewImageUrlAction)
   const totalPages = Math.max(
@@ -1229,7 +1231,7 @@ export function FileVisual({
       <div className="absolute inset-x-0 bottom-1.5 flex items-center justify-center gap-1 opacity-0 transition-opacity group-focus-within/pager:opacity-100 group-hover/pager:opacity-100">
         <button
           type="button"
-          aria-label="Previous page"
+          aria-label={t("previousPage")}
           tabIndex={-1}
           disabled={clampedPageIndex === 0}
           onClick={(event) => {
@@ -1246,7 +1248,7 @@ export function FileVisual({
         </span>
         <button
           type="button"
-          aria-label="Next page"
+          aria-label={t("nextPage")}
           tabIndex={-1}
           disabled={clampedPageIndex >= totalPages - 1}
           onClick={(event) => {

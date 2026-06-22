@@ -14,6 +14,7 @@ import {
   type XlsxTableHeaderMenuRenderProps,
   type XlsxViewerController,
 } from "@extend-ai/react-xlsx"
+import { useTranslations } from "next-intl"
 import { createPortal } from "react-dom"
 
 import { cn } from "@/lib/utils"
@@ -484,6 +485,7 @@ function WorkbookFileActionsMenu({
   showNightRenderToggle?: boolean
   showUploadButton: boolean
 }) {
+  const t = useTranslations("Viewer")
   const showThemeControl = showNightRenderToggle && Boolean(onIsDarkChange)
   const showFileActions = (showDownloadButton && onDownload) || showUploadButton
   if (!showThemeControl && !showFileActions) return null
@@ -495,7 +497,7 @@ function WorkbookFileActionsMenu({
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label="Open workbook actions"
+          aria-label={t("workbookActions")}
         >
           <AppIcon icon={MoreHorizontalIcon} className="size-4" />
         </Button>
@@ -513,7 +515,7 @@ function WorkbookFileActionsMenu({
             >
               <span className="flex min-w-0 items-center gap-2">
                 <AppIcon icon={Moon02Icon} className="size-4" />
-                Dark mode
+                {t("darkMode")}
               </span>
             </DropdownMenuCheckboxItem>
             {showFileActions ? <DropdownMenuSeparator /> : null}
@@ -522,13 +524,13 @@ function WorkbookFileActionsMenu({
         {showDownloadButton && onDownload ? (
           <DropdownMenuItem onClick={onDownload}>
             <AppIcon icon={Download01Icon} className="size-4" />
-            Download
+            {t("download")}
           </DropdownMenuItem>
         ) : null}
         {showUploadButton ? (
           <DropdownMenuItem onClick={onUploadClick}>
             <AppIcon icon={Upload01Icon} className="size-4" />
-            Upload
+            {t("upload")}
           </DropdownMenuItem>
         ) : null}
       </DropdownMenuContent>
@@ -557,6 +559,7 @@ function WorkbookTableHeaderMenu({
   triggerIcon,
   triggerProps,
 }: XlsxTableHeaderMenuRenderProps) {
+  const t = useTranslations("Viewer")
   const [open, setOpen] = React.useState(false)
 
   return (
@@ -568,7 +571,7 @@ function WorkbookTableHeaderMenu({
           variant="ghost"
           size="icon-sm"
           className={cn("size-6 rounded-sm", triggerProps.className)}
-          aria-label="Column menu"
+          aria-label={t("columnMenu")}
         >
           {triggerIcon ? (
             triggerIcon
@@ -593,10 +596,10 @@ function WorkbookTableHeaderMenu({
           }}
         >
           <DropdownMenuRadioItem value="ascending">
-            Sort ascending
+            {t("sortAscending")}
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="descending">
-            Sort descending
+            {t("sortDescending")}
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
@@ -611,6 +614,7 @@ function WorkbookSearchPopover({
   viewportRef: React.RefObject<HTMLDivElement | null>
   workbookIdentity: string
 }) {
+  const t = useTranslations("Viewer")
   const controller = useXlsxViewer()
   const [searchDraft, setSearchDraft] = React.useState("")
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -632,12 +636,12 @@ function WorkbookSearchPopover({
     !controller.sheets.length
   const hasActiveQuery = Boolean(searchQuery.trim())
   const resultLabel = isSearching
-    ? "Searching"
+    ? t("searching")
     : !hasActiveQuery
-      ? "No search"
+      ? t("noSearch")
       : searchResults.length
         ? `${activeResultIndex + 1} / ${searchResults.length}`
-        : "No results"
+        : t("noResults")
 
   React.useEffect(() => {
     controllerRef.current = controller
@@ -756,13 +760,13 @@ function WorkbookSearchPopover({
 
   return (
     <Popover>
-      <ToolbarTooltip label="Search workbook">
+      <ToolbarTooltip label={t("searchWorkbook")}>
         <PopoverTrigger asChild>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Search workbook"
+            aria-label={t("searchWorkbook")}
             disabled={controlsDisabled}
           >
             <AppIcon icon={Search01Icon} className="size-4" />
@@ -772,7 +776,7 @@ function WorkbookSearchPopover({
       <PopoverContent align="end" className="w-72">
         <div className="space-y-3">
           <Input
-            placeholder="Search workbook"
+            placeholder={t("searchWorkbook")}
             value={searchDraft}
             onChange={(event) => setSearchDraft(event.target.value)}
             onKeyDown={(event) => {
@@ -813,7 +817,7 @@ function WorkbookSearchPopover({
                 type="button"
                 variant="outline"
                 size="icon-sm"
-                aria-label="Previous result"
+                aria-label={t("prevResult")}
                 disabled={isSearching || searchResults.length === 0}
                 onClick={() => goToRelativeResult(-1)}
               >
@@ -823,7 +827,7 @@ function WorkbookSearchPopover({
                 type="button"
                 variant="outline"
                 size="icon-sm"
-                aria-label="Next result"
+                aria-label={t("nextResult")}
                 disabled={isSearching || searchResults.length === 0}
                 onClick={() => goToRelativeResult(1)}
               >
@@ -838,7 +842,7 @@ function WorkbookSearchPopover({
               size="sm"
               onClick={clearSearch}
             >
-              Clear
+              {t("clear")}
             </Button>
           </div>
         </div>
@@ -870,6 +874,7 @@ function WorkbookToolbar({
   viewportRef: React.RefObject<HTMLDivElement | null>
   workbookIdentity: string
 }) {
+  const t = useTranslations("Viewer")
   const { canZoomIn, canZoomOut, setZoomScale, zoomIn, zoomOut, zoomScale } =
     useXlsxViewerZoom()
   const currentZoom = Math.round(zoomScale)
@@ -883,13 +888,13 @@ function WorkbookToolbar({
       <TooltipProvider>
         <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
           <div className="flex flex-none items-center gap-1">
-            <ToolbarTooltip label="Zoom out">
+            <ToolbarTooltip label={t("zoomOut")}>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
                 disabled={!canZoomOut}
-                aria-label="Zoom out"
+                aria-label={t("zoomOut")}
                 onClick={zoomOut}
               >
                 <AppIcon icon={MinusSignCircleIcon} className="size-4" />
@@ -903,7 +908,7 @@ function WorkbookToolbar({
               <SelectTrigger
                 size="sm"
                 className="w-21 min-w-21"
-                aria-label="Zoom level"
+                aria-label={t("zoomLevel")}
               >
                 <SelectValue>{currentZoom}%</SelectValue>
               </SelectTrigger>
@@ -919,13 +924,13 @@ function WorkbookToolbar({
                 ))}
               </SelectContent>
             </Select>
-            <ToolbarTooltip label="Zoom in">
+            <ToolbarTooltip label={t("zoomIn")}>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
                 disabled={!canZoomIn}
-                aria-label="Zoom in"
+                aria-label={t("zoomIn")}
                 onClick={zoomIn}
               >
                 <AppIcon icon={PlusSignCircleIcon} className="size-4" />
@@ -1324,6 +1329,7 @@ function XlsxWorkbookSurface({
   toolbarActions?: React.ReactNode
   workbookIdentity: string
 }) {
+  const t = useTranslations("Viewer")
   const { error } = useXlsxViewer()
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const renderSearchableScroller = React.useCallback(
@@ -1387,7 +1393,7 @@ function XlsxWorkbookSurface({
             renderScroller={renderSearchableScroller}
             errorState={
               <div className="grid h-full w-full min-w-full place-items-center p-6 text-sm text-destructive">
-                {error?.message ?? "Unable to display workbook."}
+                {error?.message ?? t("unableWorkbook")}
               </div>
             }
             renderTableHeaderMenu={renderTableHeaderMenu}

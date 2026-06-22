@@ -1,5 +1,6 @@
 import * as React from "react"
 import { DragDropProvider, DragOverlay, PointerSensor } from "@dnd-kit/react"
+import { useTranslations } from "next-intl"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
 
@@ -74,8 +75,6 @@ import {
   FileSystemIconSpriteSheet,
   fileTypeFilterGroup,
   FileTypeIcon,
-  FILTER_OPERATOR_LABELS,
-  FILTER_TYPE_LABELS,
   filterOperatorChoices,
   formatEntryName,
   IPAD_MIN_WIDTH,
@@ -166,35 +165,86 @@ export type {
 
 const VIEW_OPTIONS: Array<{
   icon: React.ComponentProps<typeof AppIcon>["icon"]
-  label: string
+  labelKey: string
   value: FileSystemView
 }> = [
-  { icon: GridViewIcon, label: "Grid", value: "icons" },
-  { icon: LeftToRightListBulletIcon, label: "List", value: "list" },
-  { icon: LayoutThreeColumnIcon, label: "Columns", value: "columns" },
-  { icon: GalleryThumbnailsIcon, label: "Gallery", value: "gallery" },
+  { icon: GridViewIcon, labelKey: "viewIcons", value: "icons" },
+  { icon: LeftToRightListBulletIcon, labelKey: "viewList", value: "list" },
+  { icon: LayoutThreeColumnIcon, labelKey: "viewColumns", value: "columns" },
+  { icon: GalleryThumbnailsIcon, labelKey: "viewGallery", value: "gallery" },
 ]
+
+// Stable enum values → catalog keys for the constant-driven labels rendered
+// across the toolbar and filter UI (the constants live in internals.tsx).
+const SORT_LABEL_KEYS: Record<string, string> = {
+  name: "sortName",
+  kind: "sortKind",
+  createdAt: "sortCreated",
+  updatedAt: "sortUpdated",
+  size: "sortSize",
+}
+const SORT_TRIGGER_KEYS: Record<string, string> = {
+  name: "sortTriggerName",
+  kind: "sortTriggerKind",
+  createdAt: "sortTriggerCreated",
+  updatedAt: "sortTriggerUpdated",
+  size: "sortTriggerSize",
+}
+const FILTER_TYPE_KEYS: Record<string, string> = {
+  dateCreated: "filterDateCreated",
+  dateModified: "filterDateModified",
+  fileType: "filterFileType",
+}
+const OPERATOR_KEYS: Record<string, string> = {
+  after: "opAfter",
+  before: "opBefore",
+  "in-range": "opInRange",
+  is: "opIs",
+  "is-any-of": "opIsAnyOf",
+  "is-not": "opIsNot",
+  "not-in-range": "opNotInRange",
+}
+const GROUP_KEYS: Record<string, string> = {
+  Documents: "groupDocuments",
+  Spreadsheets: "groupSpreadsheets",
+  Images: "groupImages",
+  Code: "groupCode",
+  Text: "groupText",
+  "Archives & binary": "groupBinary",
+}
+const DATE_PRESET_KEYS: Record<string, string> = {
+  "1 day ago": "preset1Day",
+  "3 days ago": "preset3Days",
+  "1 week ago": "preset1Week",
+  "1 month ago": "preset1Month",
+  "3 months ago": "preset3Months",
+  "6 months ago": "preset6Months",
+  "1 year ago": "preset1Year",
+}
 
 const EMPTY_SELECTION: ReadonlySet<string> = new Set()
 
 // Validate a move of `targets` into `destination` (a "prefix/" or "" root).
-// Returns an error message, or null when the move is allowed.
+// Returns a translation key (+ values) describing the problem, or null when the
+// move is allowed. The caller translates it (this helper can't use hooks).
+type MoveError = { key: string; values?: Record<string, string> }
+
 function validateMove(
   targets: FileSystemEntry[],
   destination: string,
   files: ReadonlyMap<string, unknown>,
   folders: ReadonlyMap<string, unknown>
-): string | null {
-  if (targets.length === 0) return "Nothing to move."
+): MoveError | null {
+  if (targets.length === 0) return { key: "moveNothing" }
   if (targets.every((target) => target.parentPath === destination)) {
-    return "The items are already in this folder."
+    return { key: "moveAlreadyHere" }
   }
   for (const target of targets) {
     if (
       target.kind === "folder" &&
       (destination === target.path || destination.startsWith(target.path))
     ) {
-      return "Can’t move a folder into itself."
+      return { key: "moveIntoItself" }
     }
     const destFilePath = `${destination}${target.name}`
     if (
@@ -202,8 +252,8 @@ function validateMove(
       folders.has(normalizeFolderPath(destFilePath))
     ) {
       return targets.length > 1
-        ? `An item named “${target.name}” already exists there.`
-        : "An item with this name already exists there."
+        ? { key: "moveNameExistsNamed", values: { name: target.name } }
+        : { key: "moveNameExists" }
     }
   }
   return null
@@ -287,6 +337,7 @@ export function FileSystem({
   renderFilePreview,
   reloadToken,
 }: FileSystemProps) {
+  const t = useTranslations("Explorer")
   const [internalView, setInternalView] = React.useState(defaultView)
   const view = viewProp ?? internalView
   const setView = React.useCallback(
@@ -1240,12 +1291,10 @@ export function FileSystem({
       }
 
       void Promise.resolve(onDownloadEntry(entry)).catch((error) => {
-        toast.error(
-          error instanceof Error ? error.message : "Could not download item."
-        )
+        toast.error(error instanceof Error ? error.message : t("errorDownload"))
       })
     },
-    [downloadFile, onDownloadEntry]
+    [downloadFile, onDownloadEntry, t]
   )
 
   const confirmDeleteEntry = React.useCallback(async () => {
@@ -1271,7 +1320,7 @@ export function FileSystem({
       selectEntry(null)
     } catch (error) {
       setDeleteEntryError(
-        error instanceof Error ? error.message : "Could not delete item."
+        error instanceof Error ? error.message : t("errorDelete")
       )
     } finally {
       setDeletingEntry(false)
@@ -1283,6 +1332,7 @@ export function FileSystem({
     onDeleteEntries,
     onDeleteEntry,
     selectEntry,
+    t,
   ])
 
   const confirmRenameEntry = React.useCallback(() => {
@@ -1325,9 +1375,7 @@ export function FileSystem({
     setRenamingPaths((previous) => new Set(previous).add(target.path))
     void Promise.resolve(onRenameEntryAction(target, name))
       .catch((error) => {
-        toast.error(
-          error instanceof Error ? error.message : "Could not rename item."
-        )
+        toast.error(error instanceof Error ? error.message : t("errorRename"))
       })
       .finally(() => {
         setRenamingPaths((previous) => {
@@ -1343,6 +1391,7 @@ export function FileSystem({
     selectEntry,
     sortedIndex.files,
     sortedIndex.folders,
+    t,
   ])
 
   const startRename = React.useCallback((entry: FileSystemEntry) => {
@@ -1429,7 +1478,7 @@ export function FileSystem({
         sortedIndex.folders
       )
       if (error) {
-        setMoveEntryError(error)
+        setMoveEntryError(t(error.key, error.values))
         return
       }
 
@@ -1439,9 +1488,7 @@ export function FileSystem({
         await executeMove(moveTargets, destination)
         setMoveTargets([])
       } catch (err) {
-        setMoveEntryError(
-          err instanceof Error ? err.message : "Could not move item."
-        )
+        setMoveEntryError(err instanceof Error ? err.message : t("errorMove"))
       } finally {
         setMovingEntry(false)
       }
@@ -1454,6 +1501,7 @@ export function FileSystem({
       onMoveEntry,
       sortedIndex.files,
       sortedIndex.folders,
+      t,
     ]
   )
 
@@ -1488,15 +1536,15 @@ export function FileSystem({
         sortedIndex.folders
       )
       if (error) {
-        toast.error(error)
+        toast.error(t(error.key, error.values))
         return
       }
 
       void executeMove(targets, destination).catch((err) => {
-        toast.error(err instanceof Error ? err.message : "Could not move item.")
+        toast.error(err instanceof Error ? err.message : t("errorMove"))
       })
     },
-    [executeMove, sortedIndex.files, sortedIndex.folders]
+    [executeMove, sortedIndex.files, sortedIndex.folders, t]
   )
 
   // The path grabbed for the current drag (null when not dragging). Drives the
@@ -1627,9 +1675,6 @@ export function FileSystem({
     contextFileTargets.every((entry) =>
       isStarred?.(entry as FileSystemFileItem)
     )
-  const contextCountLabel =
-    contextTargets.length > 1 ? ` ${contextTargets.length} items` : ""
-
   const currentFolderName =
     currentPath === "" ? title : pathName(currentPath) || title
   const isLoadingCurrentFolder = loadingFolders.has(currentPath)
@@ -1677,7 +1722,7 @@ export function FileSystem({
       setNewFolderName("")
     } catch (error) {
       setNewFolderError(
-        error instanceof Error ? error.message : "Could not create the folder."
+        error instanceof Error ? error.message : t("errorCreateFolder")
       )
     } finally {
       setCreatingFolder(false)
@@ -1689,6 +1734,7 @@ export function FileSystem({
     onCreateFolderAction,
     sortedIndex.files,
     sortedIndex.folders,
+    t,
   ])
 
   const handleContextMenuCapture = React.useCallback(
@@ -1764,7 +1810,7 @@ export function FileSystem({
   const activeViewOption = VIEW_OPTIONS.find((option) => option.value === view)
   const viewerCloseToolbarAction = (
     <DialogClose
-      aria-label="Close preview"
+      aria-label={t("closePreview")}
       render={<Button type="button" variant="ghost" size="icon-sm" />}
     >
       <AppIcon icon={Cancel01Icon} className="size-4" />
@@ -1797,8 +1843,8 @@ export function FileSystem({
               {headerLeading}
               <button
                 type="button"
-                aria-label="Back"
-                title="Back"
+                aria-label={t("back")}
+                title={t("back")}
                 disabled={!canGoBack}
                 onClick={goBack}
                 className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
@@ -1807,8 +1853,8 @@ export function FileSystem({
               </button>
               <button
                 type="button"
-                aria-label="Forward"
-                title="Forward"
+                aria-label={t("forward")}
+                title={t("forward")}
                 disabled={!canGoForward}
                 onClick={goForward}
                 className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
@@ -1831,7 +1877,7 @@ export function FileSystem({
               >
                 <SelectTrigger
                   size="sm"
-                  aria-label="View"
+                  aria-label={t("view")}
                   // Icon-only like the sort select: sheds the base min-width to
                   // hug icon + chevron at the filter button's 28px height.
                   className="h-7 min-h-7 w-auto min-w-0 [&_svg]:size-4"
@@ -1850,7 +1896,7 @@ export function FileSystem({
                     <SelectItem key={option.value} value={option.value}>
                       <span className="flex items-center gap-2">
                         <AppIcon icon={option.icon} className="size-4" />
-                        {option.label}
+                        {t(option.labelKey)}
                       </span>
                     </SelectItem>
                   ))}
@@ -1868,8 +1914,8 @@ export function FileSystem({
                     <TabsTrigger
                       key={option.value}
                       value={option.value}
-                      aria-label={`${option.label} view`}
-                      title={option.label}
+                      aria-label={t(option.labelKey)}
+                      title={t(option.labelKey)}
                       className="grow-0"
                     >
                       <AppIcon icon={option.icon} className="size-4" />
@@ -1980,9 +2026,9 @@ export function FileSystem({
                 onDragEnd={handleDragEnd}
               >
                 {isLoading ? (
-                  <FileSystemEmptyState label="Loading..." />
+                  <FileSystemEmptyState label={t("loading")} />
                 ) : isLoadingCurrentFolder && currentEntries.length === 0 ? (
-                  <FileSystemEmptyState label="Loading…" isLoading />
+                  <FileSystemEmptyState label={t("loading")} isLoading />
                 ) : currentEntries.length === 0 &&
                   (view !== "columns" || isSearching || hasActiveFilters) ? (
                   <FileSystemEmptyState
@@ -1990,8 +2036,8 @@ export function FileSystem({
                       isSearching
                         ? `No results for “${searchInput.trim()}”`
                         : hasActiveFilters
-                          ? "No items match the active filters"
-                          : "This folder is empty"
+                          ? t("emptyFiltered")
+                          : t("emptyFolder")
                     }
                   />
                 ) : view === "icons" ? (
@@ -2029,7 +2075,9 @@ export function FileSystem({
                   // set of entries.
                   <>
                     <ContextMenuItem disabled className="opacity-100">
-                      {contextTargets.length} items selected
+                      {t("itemsSelectedCount", {
+                        count: contextTargets.length,
+                      })}
                     </ContextMenuItem>
                     {onToggleStar && contextFileTargets.length > 0 ? (
                       <>
@@ -2053,7 +2101,9 @@ export function FileSystem({
                                 : undefined
                             }
                           />
-                          {contextAllFilesStarred ? "Remove Star" : "Add Star"}
+                          {contextAllFilesStarred
+                            ? t("removeStar")
+                            : t("addStar")}
                         </ContextMenuItem>
                       </>
                     ) : null}
@@ -2066,7 +2116,7 @@ export function FileSystem({
                       }}
                     >
                       <AppIcon icon={Download01Icon} />
-                      Download{contextCountLabel}
+                      {t("downloadItems", { count: contextTargets.length })}
                     </ContextMenuItem>
                     {onMoveEntry || onMoveEntries ? (
                       <ContextMenuItem
@@ -2076,7 +2126,7 @@ export function FileSystem({
                         }}
                       >
                         <AppIcon icon={MoveIcon} />
-                        Move{contextCountLabel}
+                        {t("moveItems", { count: contextTargets.length })}
                       </ContextMenuItem>
                     ) : null}
                     {onDeleteEntry || onDeleteEntries ? (
@@ -2090,7 +2140,7 @@ export function FileSystem({
                           }}
                         >
                           <AppIcon icon={Delete02Icon} />
-                          Delete{contextCountLabel}
+                          {t("deleteItems", { count: contextTargets.length })}
                         </ContextMenuItem>
                       </>
                     ) : null}
@@ -2107,14 +2157,14 @@ export function FileSystem({
                             : File01Icon
                         }
                       />
-                      Open
+                      {t("open")}
                     </ContextMenuItem>
                     {contextMenuEntry.kind === "file" ? (
                       <ContextMenuItem
                         onClick={() => openFileInNewTab(contextMenuEntry)}
                       >
                         <AppIcon icon={ExternalLinkIcon} />
-                        Open in New Tab
+                        {t("openInNewTab")}
                       </ContextMenuItem>
                     ) : null}
                     {contextMenuEntry.kind === "file" && onToggleStar ? (
@@ -2132,8 +2182,8 @@ export function FileSystem({
                             }
                           />
                           {isStarred?.(contextMenuEntry)
-                            ? "Remove Star"
-                            : "Add Star"}
+                            ? t("removeStar")
+                            : t("addStar")}
                         </ContextMenuItem>
                       </>
                     ) : null}
@@ -2142,7 +2192,7 @@ export function FileSystem({
                       onClick={() => setInfoTarget(contextMenuEntry)}
                     >
                       <AppIcon icon={InformationCircleIcon} />
-                      Get Info
+                      {t("getInfo")}
                     </ContextMenuItem>
                     {onDownloadEntry ||
                     onRenameEntryAction ||
@@ -2155,7 +2205,7 @@ export function FileSystem({
                         onClick={() => handleDownloadEntry(contextMenuEntry)}
                       >
                         <AppIcon icon={Download01Icon} />
-                        Download
+                        {t("download")}
                       </ContextMenuItem>
                     ) : null}
                     {onRenameEntryAction ? (
@@ -2178,7 +2228,7 @@ export function FileSystem({
                         }}
                       >
                         <AppIcon icon={Edit02Icon} />
-                        Rename
+                        {t("rename")}
                       </ContextMenuItem>
                     ) : null}
                     {onMoveEntry ? (
@@ -2189,7 +2239,7 @@ export function FileSystem({
                         }}
                       >
                         <AppIcon icon={MoveIcon} />
-                        Move
+                        {t("move")}
                       </ContextMenuItem>
                     ) : null}
                     {onDeleteEntry ? (
@@ -2203,7 +2253,7 @@ export function FileSystem({
                           }}
                         >
                           <AppIcon icon={Delete02Icon} />
-                          Delete
+                          {t("delete")}
                         </ContextMenuItem>
                       </>
                     ) : null}
@@ -2215,23 +2265,23 @@ export function FileSystem({
                     <>
                       <ContextMenuItem onClick={openNewFolderDialog}>
                         <AppIcon icon={Folder01Icon} />
-                        New Folder
+                        {t("newFolder")}
                       </ContextMenuItem>
                       <ContextMenuSeparator />
                     </>
                   ) : null}
                   <ContextMenuItem disabled={!canGoBack} onClick={goBack}>
                     <AppIcon icon={ArrowLeft01Icon} />
-                    Back
+                    {t("back")}
                   </ContextMenuItem>
                   <ContextMenuItem disabled={!canGoForward} onClick={goForward}>
                     <AppIcon icon={ArrowRight01Icon} />
-                    Forward
+                    {t("forward")}
                   </ContextMenuItem>
                   <ContextMenuSeparator />
                   <ContextMenuItem onClick={() => window.location.reload()}>
                     <AppIcon icon={RotateClockwiseIcon} />
-                    Reload
+                    {t("reload")}
                   </ContextMenuItem>
                 </>
               )}
@@ -2242,24 +2292,24 @@ export function FileSystem({
             className="flex h-7 shrink-0 items-center justify-center gap-1 border-t bg-muted/40 px-3 text-xs text-muted-foreground"
           >
             <span>
-              {currentEntries.length}{" "}
               {isSearching
-                ? currentEntries.length === 1
-                  ? "result"
-                  : "results"
-                : currentEntries.length === 1
-                  ? "item"
-                  : "items"}
+                ? t("footerResults", { count: currentEntries.length })
+                : t("footerItems", { count: currentEntries.length })}
             </span>
             {selectedPaths.size > 1 ? (
-              <span>· {selectedPaths.size} selected</span>
+              <span>
+                {t("footerSelectedCount", { count: selectedPaths.size })}
+              </span>
             ) : selectedEntry ? (
               <span
                 className="min-w-0 max-[800px]:max-w-40 max-[800px]:truncate"
-                title={`${formatEntryName(selectedEntry, showFileExtensions)} selected`}
+                title={t("selectedNameTitle", {
+                  name: formatEntryName(selectedEntry, showFileExtensions),
+                })}
               >
-                · “{formatEntryName(selectedEntry, showFileExtensions)}”
-                selected
+                {t("footerSelectedName", {
+                  name: formatEntryName(selectedEntry, showFileExtensions),
+                })}
               </span>
             ) : null}
           </div>
@@ -2424,6 +2474,7 @@ function FileSystemSearchField({
   onValueChange: (value: string) => void
   value: string
 }) {
+  const t = useTranslations("Explorer")
   const isInline = layout === "full"
 
   React.useEffect(() => {
@@ -2445,8 +2496,8 @@ function FileSystemSearchField({
         ref={inputRef}
         type="text"
         role="searchbox"
-        aria-label="Search files"
-        placeholder="Search"
+        aria-label={t("searchFiles")}
+        placeholder={t("searchPlaceholder")}
         value={value}
         onChange={(event) => onValueChange(event.target.value)}
         onKeyDown={(event) => {
@@ -2465,7 +2516,7 @@ function FileSystemSearchField({
       {value ? (
         <button
           type="button"
-          aria-label="Clear search"
+          aria-label={t("clearSearch")}
           onClick={() => {
             onValueChange("")
             inputRef.current?.focus()
@@ -2491,8 +2542,8 @@ function FileSystemSearchField({
         render={
           <button
             type="button"
-            aria-label="Search"
-            title="Search"
+            aria-label={t("search")}
+            title={t("search")}
             className={cn(TOOLBAR_ICON_BUTTON_CLASSNAME, "relative")}
           />
         }
@@ -2522,6 +2573,7 @@ function FileSystemSortSelect({
   showLabel: boolean
   sort: FileSystemSortState
 }) {
+  const t = useTranslations("Explorer")
   const activeOption = SORT_OPTIONS.find((option) => option.key === sort.key)
 
   return (
@@ -2531,21 +2583,23 @@ function FileSystemSortSelect({
     >
       <SelectTrigger
         size="sm"
-        aria-label="Sort by"
-        title="Sort by"
+        aria-label={t("sortBy")}
+        title={t("sortBy")}
         className="h-7 min-h-7 w-auto min-w-0 shrink-0 [&_svg]:size-4"
       >
         <SelectValue>
           <span className="flex items-center gap-1.5">
             <AppIcon icon={ArrowUpDownIcon} className="size-4" />
-            {layout === "full" && showLabel ? activeOption?.triggerLabel : null}
+            {layout === "full" && showLabel && activeOption
+              ? t(SORT_TRIGGER_KEYS[activeOption.key])
+              : null}
           </span>
         </SelectValue>
       </SelectTrigger>
       <SelectContent align="end" alignItemWithTrigger={false}>
         {SORT_OPTIONS.map((option) => (
           <SelectItem key={option.key} value={option.key}>
-            {option.label}
+            {t(SORT_LABEL_KEYS[option.key])}
           </SelectItem>
         ))}
       </SelectContent>
@@ -2565,6 +2619,7 @@ function FileSystemFileTypeCommand({
   onToggle: (mime: string, checked: boolean) => void
   options: FileTypeFilterOption[]
 }) {
+  const t = useTranslations("Explorer")
   const inputRef = React.useRef<HTMLInputElement | null>(null)
 
   // The menu focuses its popup when it opens; pull focus into the search
@@ -2590,11 +2645,11 @@ function FileSystemFileTypeCommand({
     >
       <CommandInput
         ref={inputRef}
-        placeholder="Search file types…"
+        placeholder={t("searchFileTypes")}
         className="h-9"
       />
       <CommandList className="max-h-none">
-        <CommandEmpty>No file types found.</CommandEmpty>
+        <CommandEmpty>{t("noFileTypes")}</CommandEmpty>
         <ScrollArea orientation="vertical" className="h-auto max-h-64">
           {FILE_TYPE_FILTER_GROUPS.map((group) => {
             const groupOptions = options.filter(
@@ -2604,7 +2659,7 @@ function FileSystemFileTypeCommand({
             if (groupOptions.length === 0) return null
 
             return (
-              <CommandGroup key={group} heading={group}>
+              <CommandGroup key={group} heading={t(GROUP_KEYS[group])}>
                 {groupOptions.map((option) => {
                   const isChecked = checkedMimes.includes(option.mime)
 
@@ -2655,6 +2710,7 @@ function FileSystemFilterMenu({
   onSelectDatePreset: (type: FileSystemDateFilterType, preset: string) => void
   onToggleFileType: (mime: string, checked: boolean) => void
 }) {
+  const t = useTranslations("Explorer")
   const fileTypeFilter = filters.find((filter) => filter.type === "fileType")
 
   return (
@@ -2665,8 +2721,8 @@ function FileSystemFilterMenu({
             type="button"
             variant="outline"
             size="icon-sm"
-            aria-label="Filter"
-            title="Filter"
+            aria-label={t("filter")}
+            title={t("filter")}
             className="relative size-7 sm:size-7"
           />
         }
@@ -2683,7 +2739,7 @@ function FileSystemFilterMenu({
               icon={File01Icon}
               className="size-4 text-muted-foreground"
             />
-            File type
+            {t("filterFileType")}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-60">
             <FileSystemFileTypeCommand
@@ -2700,7 +2756,7 @@ function FileSystemFilterMenu({
                 icon={Calendar03Icon}
                 className="size-4 text-muted-foreground"
               />
-              {FILTER_TYPE_LABELS[type]}
+              {t(FILTER_TYPE_KEYS[type])}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
               <ScrollArea orientation="vertical" className="h-auto max-h-72">
@@ -2709,11 +2765,11 @@ function FileSystemFilterMenu({
                     key={preset}
                     onClick={() => onSelectDatePreset(type, preset)}
                   >
-                    {preset}
+                    {t(DATE_PRESET_KEYS[preset])}
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuItem onClick={() => onOpenCustomRange(type)}>
-                  Custom date range…
+                  {t("customRange")}
                 </DropdownMenuItem>
               </ScrollArea>
             </DropdownMenuSubContent>
@@ -2752,6 +2808,7 @@ function FileSystemFilterPill({
   onSelectDatePreset: (preset: string) => void
   onToggleFileType: (mime: string, checked: boolean) => void
 }) {
+  const t = useTranslations("Explorer")
   const isCustomRange =
     filter.type !== "fileType" && isCustomDateRangeValue(filter.value)
   const selectedTypeLabels =
@@ -2775,7 +2832,7 @@ function FileSystemFilterPill({
           icon={filter.type === "fileType" ? File01Icon : Calendar03Icon}
           className="size-3"
         />
-        {FILTER_TYPE_LABELS[filter.type]}
+        {t(FILTER_TYPE_KEYS[filter.type])}
       </span>
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -2786,7 +2843,7 @@ function FileSystemFilterPill({
             />
           }
         >
-          {FILTER_OPERATOR_LABELS[filter.operator]}
+          {t(OPERATOR_KEYS[filter.operator])}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-28">
           {filterOperatorChoices(filter).map((operator) => (
@@ -2794,7 +2851,7 @@ function FileSystemFilterPill({
               key={operator}
               onClick={() => onOperatorChange(operator)}
             >
-              {FILTER_OPERATOR_LABELS[operator]}
+              {t(OPERATOR_KEYS[operator])}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
@@ -2812,7 +2869,7 @@ function FileSystemFilterPill({
           >
             {filter.value.length === 1
               ? selectedTypeLabels[0]
-              : `${filter.value.length} selected`}
+              : t("selectedCount", { count: filter.value.length })}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-60">
             <FileSystemFileTypeCommand
@@ -2829,7 +2886,7 @@ function FileSystemFilterPill({
           className={FILTER_PILL_BUTTON_CLASSNAME}
         >
           {filter.value
-            .map((value) => new Date(value).toLocaleDateString("en-US"))
+            .map((value) => new Date(value).toLocaleDateString())
             .join(" – ")}
         </button>
       ) : (
@@ -2839,7 +2896,9 @@ function FileSystemFilterPill({
               <button type="button" className={FILTER_PILL_BUTTON_CLASSNAME} />
             }
           >
-            {filter.value[0]}
+            {DATE_PRESET_KEYS[filter.value[0]]
+              ? t(DATE_PRESET_KEYS[filter.value[0]])
+              : filter.value[0]}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <ScrollArea orientation="vertical" className="h-auto max-h-72">
@@ -2848,11 +2907,11 @@ function FileSystemFilterPill({
                   key={preset}
                   onClick={() => onSelectDatePreset(preset)}
                 >
-                  {preset}
+                  {t(DATE_PRESET_KEYS[preset])}
                 </DropdownMenuItem>
               ))}
               <DropdownMenuItem onClick={onOpenCustomRange}>
-                Custom date range…
+                {t("customRange")}
               </DropdownMenuItem>
             </ScrollArea>
           </DropdownMenuContent>
@@ -2860,7 +2919,9 @@ function FileSystemFilterPill({
       )}
       <button
         type="button"
-        aria-label={`Remove ${FILTER_TYPE_LABELS[filter.type]} filter`}
+        aria-label={t("removeFilter", {
+          label: t(FILTER_TYPE_KEYS[filter.type]),
+        })}
         onClick={onRemove}
         className={cn(
           FILTER_PILL_BUTTON_CLASSNAME,

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -37,6 +38,7 @@ function BulkProgressBar({
   verb: string
   progress: BulkProgress
 }) {
+  const t = useTranslations("Dialogs")
   const percent = progress.total
     ? Math.round((progress.done / progress.total) * 100)
     : 0
@@ -45,7 +47,11 @@ function BulkProgressBar({
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
-          {verb} {progress.done} of {progress.total}…
+          {t("progress", {
+            verb,
+            done: progress.done,
+            total: progress.total,
+          })}
         </span>
         <span className="tabular-nums">{percent}%</span>
       </div>
@@ -78,14 +84,16 @@ export function NewFolderDialog({
   onSubmitAction: () => void
   open: boolean
 }) {
+  const t = useTranslations("Dialogs")
+  const tc = useTranslations("Common")
   return (
     <Dialog open={open} onOpenChange={onOpenChangeAction}>
       {open ? (
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>New Folder</DialogTitle>
+            <DialogTitle>{t("newFolderTitle")}</DialogTitle>
             <DialogDescription>
-              Create a folder in {currentFolderName}.
+              {t("newFolderDescription", { folder: currentFolderName })}
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
@@ -101,7 +109,7 @@ export function NewFolderDialog({
                 autoFocus
                 value={name}
                 onChange={(event) => onNameChangeAction(event.target.value)}
-                placeholder="Untitled Folder"
+                placeholder={t("newFolderPlaceholder")}
                 aria-invalid={error ? true : undefined}
               />
               {error ? (
@@ -116,7 +124,7 @@ export function NewFolderDialog({
               disabled={isPending}
               onClick={() => onOpenChangeAction(false)}
             >
-              Cancel
+              {tc("cancel")}
             </Button>
             <Button
               type="submit"
@@ -124,7 +132,7 @@ export function NewFolderDialog({
               loading={isPending}
               disabled={!name.trim()}
             >
-              Create
+              {t("create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -167,6 +175,8 @@ export function MoveEntriesDialog({
   onOpenChangeAction: (open: boolean) => void
   targets: FileSystemEntry[]
 }) {
+  const t = useTranslations("Dialogs")
+  const tc = useTranslations("Common")
   const open = targets.length > 0
   // The folder currently being browsed; "" is the bucket root.
   const [navPath, setNavPath] = React.useState("")
@@ -210,12 +220,12 @@ export function MoveEntriesDialog({
           <DialogHeader>
             <DialogTitle>
               {targets.length > 1
-                ? `Move ${targets.length} items`
-                : `Move ${targets[0].kind === "folder" ? "Folder" : "File"}`}
+                ? t("moveItemsTitle", { count: targets.length })
+                : targets[0].kind === "folder"
+                  ? t("moveFolderTitle")
+                  : t("moveFileTitle")}
             </DialogTitle>
-            <DialogDescription>
-              Pick a destination folder, then move here.
-            </DialogDescription>
+            <DialogDescription>{t("moveDescription")}</DialogDescription>
           </DialogHeader>
           <DialogPanel className="space-y-2">
             {/* Breadcrumb of the browsing path. */}
@@ -250,11 +260,11 @@ export function MoveEntriesDialog({
             <div className="h-56 overflow-y-auto rounded-md border p-1">
               {isLoading && subfolders.length === 0 ? (
                 <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  Loading…
+                  {t("moveLoading")}
                 </div>
               ) : subfolders.length === 0 ? (
                 <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  No subfolders here.
+                  {t("moveNoSubfolders")}
                 </div>
               ) : (
                 subfolders.map((folder) => (
@@ -279,7 +289,7 @@ export function MoveEntriesDialog({
 
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
             {progress ? (
-              <BulkProgressBar verb="Moving" progress={progress} />
+              <BulkProgressBar verb={t("moving")} progress={progress} />
             ) : null}
           </DialogPanel>
           <DialogFooter>
@@ -289,7 +299,7 @@ export function MoveEntriesDialog({
               disabled={isPending}
               onClick={() => onOpenChangeAction(false)}
             >
-              Cancel
+              {tc("cancel")}
             </Button>
             <Button
               type="button"
@@ -298,8 +308,10 @@ export function MoveEntriesDialog({
               onClick={() => onMoveAction(navPath)}
             >
               {navPath === ""
-                ? `Move to ${rootLabel}`
-                : `Move to “${segments[segments.length - 1]?.name}”`}
+                ? t("moveToRoot", { root: rootLabel })
+                : t("moveToFolder", {
+                    name: segments[segments.length - 1]?.name ?? "",
+                  })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -324,6 +336,8 @@ export function InfoEntryDialog({
   entry: FileSystemEntry | null
   onOpenChangeAction: (open: boolean) => void
 }) {
+  const t = useTranslations("Dialogs")
+  const tc = useTranslations("Common")
   const open = entry !== null
   const isFolder = entry?.kind === "folder"
 
@@ -351,27 +365,33 @@ export function InfoEntryDialog({
                   {entry.name}
                 </DialogTitle>
                 <DialogDescription className="text-left">
-                  {isFolder ? "Folder" : (typeLabel ?? "File")}
+                  {isFolder ? t("infoFolder") : (typeLabel ?? t("infoFile"))}
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
           <DialogPanel>
             <dl className="divide-y">
-              {!isFolder && size ? <InfoRow label="Size" value={size} /> : null}
+              {!isFolder && size ? (
+                <InfoRow label={t("infoSize")} value={size} />
+              ) : null}
               {!isFolder && typeLabel ? (
-                <InfoRow label="Type" value={typeLabel} />
+                <InfoRow label={t("infoType")} value={typeLabel} />
               ) : null}
               <InfoRow
-                label="Location"
+                label={t("infoLocation")}
                 value={<span className="break-all">{location}</span>}
               />
               <InfoRow
-                label="Path"
+                label={t("infoPath")}
                 value={<span className="break-all">{entry.path}</span>}
               />
-              {created ? <InfoRow label="Created" value={created} /> : null}
-              {modified ? <InfoRow label="Modified" value={modified} /> : null}
+              {created ? (
+                <InfoRow label={t("infoCreated")} value={created} />
+              ) : null}
+              {modified ? (
+                <InfoRow label={t("infoModified")} value={modified} />
+              ) : null}
               {!isFolder && entry.etag ? (
                 <InfoRow
                   label="ETag"
@@ -386,7 +406,7 @@ export function InfoEntryDialog({
           </DialogPanel>
           <DialogFooter>
             <Button type="button" onClick={() => onOpenChangeAction(false)}>
-              Done
+              {tc("done")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -410,6 +430,8 @@ export function DeleteEntriesDialog({
   onSubmitAction: () => void
   targets: FileSystemEntry[]
 }) {
+  const t = useTranslations("Dialogs")
+  const tc = useTranslations("Common")
   const open = targets.length > 0
 
   return (
@@ -419,17 +441,17 @@ export function DeleteEntriesDialog({
           <DialogHeader>
             <DialogTitle>
               {targets.length > 1
-                ? `Delete ${targets.length} items?`
-                : `Delete ${targets[0].kind === "folder" ? "Folder" : "File"}?`}
+                ? t("deleteItemsTitle", { count: targets.length })
+                : targets[0].kind === "folder"
+                  ? t("deleteFolderTitle")
+                  : t("deleteFileTitle")}
             </DialogTitle>
             <DialogDescription>
               {targets.length > 1
-                ? `These ${targets.length} items will be permanently deleted, including everything inside any folders.`
-                : `“${targets[0].name}” will be permanently deleted${
-                    targets[0].kind === "folder"
-                      ? " along with everything inside it."
-                      : "."
-                  }`}
+                ? t("deleteItemsDescription", { count: targets.length })
+                : targets[0].kind === "folder"
+                  ? t("deleteFolderDescription", { name: targets[0].name })
+                  : t("deleteFileDescription", { name: targets[0].name })}
             </DialogDescription>
           </DialogHeader>
           {error || progress ? (
@@ -438,7 +460,7 @@ export function DeleteEntriesDialog({
                 <p className="text-sm text-destructive">{error}</p>
               ) : null}
               {progress ? (
-                <BulkProgressBar verb="Deleting" progress={progress} />
+                <BulkProgressBar verb={t("deleting")} progress={progress} />
               ) : null}
             </DialogPanel>
           ) : null}
@@ -449,7 +471,7 @@ export function DeleteEntriesDialog({
               disabled={isPending}
               onClick={() => onOpenChangeAction(false)}
             >
-              Cancel
+              {tc("cancel")}
             </Button>
             <Button
               type="button"
@@ -457,7 +479,7 @@ export function DeleteEntriesDialog({
               loading={isPending}
               onClick={onSubmitAction}
             >
-              Delete
+              {tc("delete")}
             </Button>
           </DialogFooter>
         </DialogContent>
