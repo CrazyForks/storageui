@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
+import { NextIntlClientProvider } from "next-intl"
+import { getLocale } from "next-intl/server"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 
 import { withUiBasePath } from "@/lib/config/base-path"
@@ -69,13 +71,15 @@ export const metadata: Metadata = {
   manifest: withUiBasePath("/site.webmanifest"),
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getLocale()
+
   return (
-    <html lang="en" suppressHydrationWarning className={fontVariables}>
+    <html lang={locale} suppressHydrationWarning className={fontVariables}>
       <head>
         <Script
           id="theme-layout-init"
@@ -97,17 +101,19 @@ export default function RootLayout({
           "group/body relative overscroll-none antialiased [--footer-height:--spacing(14)] [--header-height:--spacing(14)] xl:[--footer-height:--spacing(24)]"
         )}
       >
-        <ThemeProvider>
-          <ActiveThemeProvider>
-            <NuqsAdapter>
-              <TooltipProvider delayDuration={0}>
-                {children}
-                <Toaster position="top-center" />
-              </TooltipProvider>
-            </NuqsAdapter>
-            <TailwindIndicator />
-          </ActiveThemeProvider>
-        </ThemeProvider>
+        <NextIntlClientProvider>
+          <ThemeProvider>
+            <ActiveThemeProvider>
+              <NuqsAdapter>
+                <TooltipProvider delayDuration={0}>
+                  {children}
+                  <Toaster position="top-center" />
+                </TooltipProvider>
+              </NuqsAdapter>
+              <TailwindIndicator />
+            </ActiveThemeProvider>
+          </ThemeProvider>
+        </NextIntlClientProvider>
         <Analytics />
         <div id="portal" className="fixed top-0 left-0 z-40" />
       </body>

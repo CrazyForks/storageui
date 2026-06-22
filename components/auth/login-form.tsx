@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useActionState } from "react"
+import { useTranslations } from "next-intl"
 
 import { siteConfig } from "@/lib/config/site"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ import { loginAction, type LoginState } from "@/app/actions/auth"
 const INITIAL_STATE: LoginState = { error: null }
 
 export function LoginForm() {
+  const t = useTranslations("Login")
   const [state, formAction, isPending] = useActionState(
     loginAction,
     INITIAL_STATE
@@ -22,20 +24,24 @@ export function LoginForm() {
       <div className="space-y-4">
         <Logo className="size-7 text-foreground" />
         <div className="space-y-1">
-          <h1 className="text-lg font-semibold tracking-tight">Sign in</h1>
-          <p className="text-muted-foreground">Continue to {siteConfig.name}</p>
+          <h1 className="text-lg font-semibold tracking-tight">
+            {t("signIn")}
+          </h1>
+          <p className="text-muted-foreground">
+            {t("continueTo", { name: siteConfig.name })}
+          </p>
         </div>
       </div>
 
       <form action={formAction} className="space-y-6">
         <div className="grid grid-cols-[6rem_1fr] items-center gap-x-5 gap-y-4">
           <label htmlFor="username" className="text-sm font-medium">
-            Username
+            {t("username")}
           </label>
           <Input
             id="username"
             name="username"
-            placeholder="Enter your username"
+            placeholder={t("usernamePlaceholder")}
             autoComplete="username"
             autoFocus
             required
@@ -43,13 +49,13 @@ export function LoginForm() {
           />
 
           <label htmlFor="password" className="text-sm font-medium">
-            Password
+            {t("password")}
           </label>
           <Input
             id="password"
             name="password"
             type="password"
-            placeholder="Enter your password"
+            placeholder={t("passwordPlaceholder")}
             autoComplete="current-password"
             required
             aria-invalid={state.error ? true : undefined}
@@ -63,7 +69,7 @@ export function LoginForm() {
         </div>
 
         <Button type="submit" loading={isPending}>
-          Sign in
+          {t("signIn")}
         </Button>
       </form>
     </div>

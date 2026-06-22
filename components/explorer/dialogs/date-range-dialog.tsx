@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useLocale, useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -59,6 +60,16 @@ export const DATE_RANGE_DIALOG_PRESETS = [
   "Last 12 months",
 ]
 
+// Stable preset id (English, also the switch key) → catalog key for display.
+const PRESET_LABEL_KEYS: Record<string, string> = {
+  "Last 7 days": "rangeLast7",
+  "This month": "rangeThisMonth",
+  "Last 1 month": "rangeLastMonth",
+  "Last 3 months": "rangeLast3Months",
+  "This year": "rangeThisYear",
+  "Last 12 months": "rangeLast12Months",
+}
+
 export function dateRangePresetRange(preset: string) {
   const from = new Date()
   const to = new Date()
@@ -105,6 +116,15 @@ export function FileSystemRangeCalendar({
   onSelectAction: (range: { from?: Date; to?: Date }) => void
   range: { from?: Date; to?: Date }
 }) {
+  const t = useTranslations("Dialogs")
+  const locale = useLocale()
+  // Localized short weekday names, Sunday-first (2024-01-07 is a Sunday).
+  const weekdayLabels = React.useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, { weekday: "short" })
+    return Array.from({ length: 7 }, (_, index) =>
+      formatter.format(new Date(2024, 0, 7 + index))
+    )
+  }, [locale])
   const [viewMonth, setViewMonth] = React.useState(() => {
     const base = range.from ?? new Date()
 
@@ -132,7 +152,7 @@ export function FileSystemRangeCalendar({
     <div className="relative">
       <button
         type="button"
-        aria-label="Previous month"
+        aria-label={t("previousMonth")}
         onClick={() =>
           setViewMonth(
             (previous) =>
@@ -145,7 +165,7 @@ export function FileSystemRangeCalendar({
       </button>
       <button
         type="button"
-        aria-label="Next month"
+        aria-label={t("nextMonth")}
         onClick={() =>
           setViewMonth(
             (previous) =>
@@ -179,14 +199,14 @@ export function FileSystemRangeCalendar({
               className={cn(monthIndex === 1 && "max-sm:hidden")}
             >
               <div className="text-center text-sm leading-6 font-medium">
-                {month.toLocaleDateString("en-US", {
+                {month.toLocaleDateString(locale, {
                   month: "long",
                   year: "numeric",
                 })}
               </div>
               <div className="mt-1 grid grid-cols-7 text-center text-xs text-muted-foreground">
-                {WEEKDAY_LABELS.map((weekday) => (
-                  <span key={weekday} className="h-6 leading-6">
+                {weekdayLabels.map((weekday, weekdayIndex) => (
+                  <span key={weekdayIndex} className="h-6 leading-6">
                     {weekday}
                   </span>
                 ))}
@@ -250,6 +270,8 @@ export function FileSystemDateRangeDialog({
   onApplyAction: (from: Date, to: Date) => void
   onCloseAction: () => void
 }) {
+  const t = useTranslations("Dialogs")
+  const tc = useTranslations("Common")
   const [range, setRange] = React.useState<{ from?: Date; to?: Date }>(
     () => initialRange ?? {}
   )
@@ -282,7 +304,7 @@ export function FileSystemDateRangeDialog({
           type="text"
           value={value}
           placeholder="YYYY-MM-DD"
-          aria-label={`${label} date`}
+          aria-label={t("dateAria", { label })}
           onChange={(event) => onChange(event.target.value)}
           className="h-8 pl-8 sm:h-8"
         />
@@ -299,11 +321,11 @@ export function FileSystemDateRangeDialog({
     >
       <DialogContent className="w-120 max-w-[calc(100vw-2rem)]">
         <DialogHeader>
-          <DialogTitle>Custom date range</DialogTitle>
+          <DialogTitle>{t("dateRangeTitle")}</DialogTitle>
         </DialogHeader>
         <DialogPanel className="flex flex-col gap-4">
           <div className="flex gap-3">
-            {dateField("From", fromInput, (value) => {
+            {dateField(t("from"), fromInput, (value) => {
               setFromInput(value)
 
               const parsed = parseDateInputValue(value)
@@ -311,7 +333,7 @@ export function FileSystemDateRangeDialog({
               if (parsed)
                 setRange((previous) => ({ ...previous, from: parsed }))
             })}
-            {dateField("To", toInput, (value) => {
+            {dateField(t("to"), toInput, (value) => {
               setToInput(value)
 
               const parsed = parseDateInputValue(value)
@@ -329,14 +351,14 @@ export function FileSystemDateRangeDialog({
                 size="sm"
                 onClick={() => selectRange(dateRangePresetRange(preset))}
               >
-                {preset}
+                {t(PRESET_LABEL_KEYS[preset])}
               </Button>
             ))}
           </div>
         </DialogPanel>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCloseAction}>
-            Cancel
+            {tc("cancel")}
           </Button>
           <Button
             type="button"
@@ -352,7 +374,7 @@ export function FileSystemDateRangeDialog({
               onApplyAction(from, to)
             }}
           >
-            Apply
+            {tc("apply")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,5 +1,9 @@
 "use client"
 
+import * as React from "react"
+import { useRouter } from "next/navigation"
+import { localeNames, locales, type Locale } from "@/i18n/config"
+import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 
 import { usePreferencesStore } from "@/lib/store/preferences-store"
@@ -22,11 +26,12 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs"
 import { Logo } from "@/components/foundations/logo"
+import { setLocale } from "@/app/actions/locale"
 
 const THEME_OPTIONS = [
-  { label: "System", value: "system" },
-  { label: "Light", value: "light" },
-  { label: "Dark", value: "dark" },
+  { labelKey: "themeSystem", value: "system" },
+  { labelKey: "themeLight", value: "light" },
+  { labelKey: "themeDark", value: "dark" },
 ] as const
 
 type SettingsDialogProps = {
@@ -38,6 +43,10 @@ export function SettingsDialog({
   open,
   onOpenChangeAction,
 }: SettingsDialogProps) {
+  const t = useTranslations("Settings")
+  const locale = useLocale() as Locale
+  const router = useRouter()
+  const [isLocalePending, startLocaleTransition] = React.useTransition()
   const { theme, setTheme } = useTheme()
   const isMobile = useIsMobile()
   const showFileExtensions = usePreferencesStore(
@@ -46,15 +55,21 @@ export function SettingsDialog({
   const setShowFileExtensions = usePreferencesStore(
     (state) => state.setShowFileExtensions
   )
+
+  function changeLocale(next: Locale) {
+    if (next === locale) return
+    startLocaleTransition(async () => {
+      await setLocale(next)
+      router.refresh()
+    })
+  }
   return (
     <Dialog open={open} onOpenChange={onOpenChangeAction}>
       {open ? (
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Settings</DialogTitle>
-            <DialogDescription>
-              Manage the app appearance and information.
-            </DialogDescription>
+            <DialogTitle>{t("title")}</DialogTitle>
+            <DialogDescription>{t("description")}</DialogDescription>
           </DialogHeader>
 
           <DialogPanel className="pt-2">
@@ -69,8 +84,8 @@ export function SettingsDialog({
                   isMobile ? "shrink-0 self-start" : "w-36 shrink-0 self-start"
                 }
               >
-                <TabsTab value="general">General</TabsTab>
-                <TabsTab value="about">About</TabsTab>
+                <TabsTab value="general">{t("tabGeneral")}</TabsTab>
+                <TabsTab value="about">{t("tabAbout")}</TabsTab>
               </TabsList>
 
               <TabsPanel
@@ -80,9 +95,9 @@ export function SettingsDialog({
                 <div className="divide-y">
                   <div className="flex items-center justify-between gap-6 pb-4 first:pt-0">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium">Appearance</p>
+                      <p className="text-sm font-medium">{t("appearance")}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        Choose how the interface looks on this device.
+                        {t("appearanceHint")}
                       </p>
                     </div>
                     <Select
@@ -91,17 +106,43 @@ export function SettingsDialog({
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue>
-                          {
-                            THEME_OPTIONS.find(
-                              (option) => option.value === (theme ?? "system")
-                            )?.label
-                          }
+                          {(() => {
+                            const option = THEME_OPTIONS.find(
+                              (item) => item.value === (theme ?? "system")
+                            )
+                            return option ? t(option.labelKey) : null
+                          })()}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {THEME_OPTIONS.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                            {t(option.labelKey)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-6 py-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{t("language")}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {t("languageHint")}
+                      </p>
+                    </div>
+                    <Select
+                      value={locale}
+                      onValueChange={(value) => changeLocale(value as Locale)}
+                      disabled={isLocalePending}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue>{localeNames[locale]}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locales.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {localeNames[option]}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -111,11 +152,10 @@ export function SettingsDialog({
                   <label className="flex cursor-pointer items-center justify-between gap-6 pt-4">
                     <div className="min-w-0">
                       <p className="text-sm font-medium">
-                        Show filename extensions
+                        {t("showExtensions")}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        Display extensions like .pdf or .docx in the file
-                        browser.
+                        {t("showExtensionsHint")}
                       </p>
                     </div>
                     <Switch
@@ -135,19 +175,18 @@ export function SettingsDialog({
                   <div className="min-w-0">
                     <p className="text-base font-semibold">Drive UI</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      A Finder-style browser for S3, R2, Alibaba OSS, Backblaze
-                      B2, and compatible object storage.
+                      {t("appDescription")}
                     </p>
                   </div>
                 </div>
 
                 <dl className="divide-y text-sm">
                   <div className="flex items-center justify-between py-3">
-                    <dt className="text-muted-foreground">Version</dt>
+                    <dt className="text-muted-foreground">{t("version")}</dt>
                     <dd>0.1.0</dd>
                   </div>
                   <div className="flex items-center justify-between py-3">
-                    <dt className="text-muted-foreground">License</dt>
+                    <dt className="text-muted-foreground">{t("license")}</dt>
                     <dd>MIT</dd>
                   </div>
                 </dl>

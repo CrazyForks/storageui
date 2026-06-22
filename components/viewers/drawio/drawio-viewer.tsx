@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -11,14 +12,8 @@ import {
   PlusSignCircleIcon,
 } from "@/components/foundations/icons"
 
-// The diagrams.net read-only viewer. Diagram XML is fetched here and pushed in
-// over postMessage, so the file's (signed) URL is never handed to the iframe and
-// the diagram is rendered locally inside it — nothing about the file is sent to
-// diagrams.net.
 const DRAWIO_VIEWER_ORIGIN = "https://viewer.diagrams.net"
 
-// `.drawio.svg` / `.drawio.png` exports are real images — render them directly
-// instead of round-tripping through the iframe viewer.
 const IMAGE_LIKE = /\.(svg|png|jpe?g|gif|webp)$/
 
 const ZOOM_MIN = 0.2
@@ -63,6 +58,7 @@ function DrawioImageViewer({
   fileName: string
   className?: string
 }) {
+  const t = useTranslations("Viewer")
   const [zoom, setZoom] = React.useState(1)
   const [loaded, setLoaded] = React.useState(false)
   const [failed, setFailed] = React.useState(false)
@@ -75,7 +71,7 @@ function DrawioImageViewer({
       <div className="flex min-h-0 flex-1 overflow-auto bg-(--drawio-canvas) p-4 [--drawio-canvas:#f7f8fa] dark:[--drawio-canvas:#1b1d22]">
         {failed ? (
           <div className="m-auto text-sm text-muted-foreground">
-            Couldn’t load this diagram.
+            {t("diagramError")}
           </div>
         ) : (
           <div className="m-auto">
@@ -119,6 +115,7 @@ function DrawioXmlViewer({
   className?: string
   isDark: boolean
 }) {
+  const t = useTranslations("Viewer")
   const iframeRef = React.useRef<HTMLIFrameElement>(null)
   const [xml, setXml] = React.useState<string | null>(null)
   const [status, setStatus] = React.useState<"loading" | "ready" | "error">(
@@ -199,7 +196,7 @@ function DrawioXmlViewer({
           className
         )}
       >
-        Couldn’t load this diagram.
+        {t("diagramError")}
       </div>
     )
   }
@@ -235,13 +232,14 @@ function ZoomBar({
   onZoomOut: () => void
   onReset: () => void
 }) {
+  const t = useTranslations("Viewer")
   return (
     <div className="flex shrink-0 items-center justify-center gap-1 border-t px-3 py-1.5">
       <Button
         size="icon-sm"
         variant="ghost"
-        aria-label="Zoom out"
-        title="Zoom out"
+        aria-label={t("zoomOut")}
+        title={t("zoomOut")}
         onClick={onZoomOut}
         disabled={zoom <= ZOOM_MIN}
       >
@@ -251,15 +249,15 @@ function ZoomBar({
         type="button"
         onClick={onReset}
         className="min-w-12 rounded px-1.5 py-0.5 text-xs text-muted-foreground tabular-nums transition-colors hover:bg-accent"
-        title="Reset zoom"
+        title={t("resetZoom")}
       >
         {Math.round(zoom * 100)}%
       </button>
       <Button
         size="icon-sm"
         variant="ghost"
-        aria-label="Zoom in"
-        title="Zoom in"
+        aria-label={t("zoomIn")}
+        title={t("zoomIn")}
         onClick={onZoomIn}
         disabled={zoom >= ZOOM_MAX}
       >

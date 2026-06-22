@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 
 import { siteConfig } from "@/lib/config/site"
 import { useConnections } from "@/lib/store/connection-store"
@@ -37,18 +38,19 @@ import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { isAuthEnabledAction, logoutAction } from "@/app/actions/auth"
 
 type BrowseItem = {
-  title: string
+  labelKey: "allFiles" | "recents" | "starred"
   icon: typeof FolderLibraryIcon
   section: BrowseSection
 }
 
 const BROWSE: BrowseItem[] = [
-  { title: "All Files", icon: FolderLibraryIcon, section: "all" },
-  { title: "Recents", icon: Clock01Icon, section: "recents" },
-  { title: "Starred", icon: FavouriteIcon, section: "starred" },
+  { labelKey: "allFiles", icon: FolderLibraryIcon, section: "all" },
+  { labelKey: "recents", icon: Clock01Icon, section: "recents" },
+  { labelKey: "starred", icon: FavouriteIcon, section: "starred" },
 ]
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
+  const t = useTranslations("Sidebar")
   const [isSettingsOpen, setSettingsOpen] = React.useState(false)
   const [authEnabled, setAuthEnabled] = React.useState(false)
   React.useEffect(() => {
@@ -89,8 +91,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   variant="default"
                   title={
                     activeConnection?.readOnly
-                      ? "This bucket is read-only"
-                      : "Upload files"
+                      ? t("readOnlyTooltip")
+                      : t("uploadFiles")
                   }
                   disabled={!activeConnection || activeConnection.readOnly}
                   onClick={() => pickFiles?.()}
@@ -98,7 +100,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                 >
                   <AppIcon icon={Upload01Icon} />
                   <span className="group-data-[collapsible=icon]:hidden">
-                    Upload
+                    {t("upload")}
                   </span>
                 </Button>
               </SidebarMenuItem>
@@ -106,17 +108,17 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroup>
 
           <SidebarGroup>
-            <SidebarGroupLabel>Browse</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("browse")}</SidebarGroupLabel>
             <SidebarMenu>
               {BROWSE.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.section}>
                   <SidebarMenuButton
                     isActive={item.section === section && !!activeConnection}
-                    tooltip={item.title}
+                    tooltip={t(item.labelKey)}
                     onClick={() => setSection(item.section)}
                   >
                     <AppIcon icon={item.icon} />
-                    <span>{item.title}</span>
+                    <span>{t(item.labelKey)}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -124,7 +126,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroup>
 
           <SidebarGroup>
-            <SidebarGroupLabel>Connections</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("connections")}</SidebarGroupLabel>
             <SidebarMenu>
               {!hasHydrated ? (
                 ["w-24", "w-32", "w-20"].map((width, index) => (
@@ -155,7 +157,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                           <div className="ms-auto flex shrink-0 items-center gap-1 group-data-[collapsible=icon]:hidden">
                             {connection.readOnly ? (
                               <span className="rounded bg-muted px-1 text-[0.625rem] tracking-wide text-muted-foreground uppercase">
-                                Read Only
+                                {t("readOnly")}
                               </span>
                             ) : null}
                             {connection.source === "env" ? (
@@ -171,8 +173,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                           variant="ghost"
                           size="icon-xs"
                           data-sidebar="menu-action"
-                          aria-label="Edit connection"
-                          title="Edit connection"
+                          aria-label={t("editConnection")}
+                          title={t("editConnection")}
                           onClick={() => openEditDialog(connection)}
                           className="absolute top-1/2 right-1 -translate-y-1/2 opacity-0 transition-opacity group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 group-data-[collapsible=icon]:hidden focus-visible:opacity-100"
                         >
@@ -184,17 +186,17 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                   {connections.length === 0 ? (
                     <SidebarMenuItem>
                       <span className="px-2 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-                        No connections yet
+                        {t("noConnections")}
                       </span>
                     </SidebarMenuItem>
                   ) : null}
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      tooltip="Add connection"
+                      tooltip={t("addConnection")}
                       onClick={openAddDialog}
                     >
                       <AppIcon icon={PlusSignCircleIcon} />
-                      <span>Add connection</span>
+                      <span>{t("addConnection")}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
@@ -207,21 +209,21 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                tooltip="Settings"
+                tooltip={t("settings")}
                 onClick={() => setSettingsOpen(true)}
               >
                 <AppIcon icon={Settings01Icon} />
-                <span>Settings</span>
+                <span>{t("settings")}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             {authEnabled ? (
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  tooltip="Sign out"
+                  tooltip={t("signOut")}
                   onClick={() => void logoutAction()}
                 >
                   <AppIcon icon={LogoutIcon} />
-                  <span>Sign out</span>
+                  <span>{t("signOut")}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ) : null}

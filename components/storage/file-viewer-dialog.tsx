@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 
 import { getFileKind, type FileKind } from "@/lib/file-kind"
@@ -70,28 +71,28 @@ function ViewerFallback() {
 }
 
 function UnsupportedFile({ fileName, url }: { fileName: string; url: string }) {
+  const t = useTranslations("Viewer")
   return (
     <div className="flex flex-col items-center gap-4 p-8 text-center">
       <div className="flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
         <AppIcon icon={File01Icon} className="size-6" />
       </div>
       <div className="space-y-1">
-        <p className="text-sm font-medium">No inline preview</p>
+        <p className="text-sm font-medium">{t("noPreviewTitle")}</p>
         <p className="max-w-xs text-sm text-muted-foreground">
-          This file type can’t be previewed. Download it or open it in a new
-          tab.
+          {t("noPreviewDescription")}
         </p>
       </div>
       <div className="flex gap-2">
         <Button render={<a href={url} download={fileName} />}>
           <AppIcon icon={Download01Icon} className="size-4" />
-          Download
+          {t("download")}
         </Button>
         <Button
           variant="outline"
           render={<a href={url} target="_blank" rel="noopener noreferrer" />}
         >
-          Open in new tab
+          {t("openInNewTab")}
         </Button>
       </div>
     </div>
@@ -196,12 +197,14 @@ function StarButton({
   isStarred: boolean
   onToggleStar: () => void
 }) {
+  const t = useTranslations("Viewer")
+  const label = isStarred ? t("removeStar") : t("addStar")
   return (
     <Button
       size="icon"
       variant="ghost"
-      aria-label={isStarred ? "Remove star" : "Add star"}
-      title={isStarred ? "Remove star" : "Add star"}
+      aria-label={label}
+      title={label}
       onClick={onToggleStar}
       className={isStarred ? "text-amber-500 hover:text-amber-500" : undefined}
     >
@@ -228,6 +231,7 @@ export function FileViewerDialog({
   isStarred?: boolean
   onToggleStarAction?: () => void
 }) {
+  const t = useTranslations("Viewer")
   const kind = file ? getFileKind(file) : "other"
   const fileName = file
     ? (file.name ?? file.path.split("/").pop() ?? file.path)
@@ -250,7 +254,7 @@ export function FileViewerDialog({
     />
   ) : (
     <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
-      Couldn’t resolve a URL for this file.
+      {t("noUrl")}
     </div>
   )
 
@@ -281,8 +285,8 @@ export function FileViewerDialog({
                   ) : null}
                   {kind === "text" ? (
                     <Button
-                      aria-label="Search"
-                      title="Search"
+                      aria-label={t("search")}
+                      title={t("search")}
                       size="icon-sm"
                       variant="ghost"
                       onClick={() => codeViewerRef.current?.toggleSearch()}
@@ -292,8 +296,8 @@ export function FileViewerDialog({
                   ) : null}
                   {kind === "text" && url ? (
                     <Button
-                      aria-label="Download"
-                      title="Download"
+                      aria-label={t("download")}
+                      title={t("download")}
                       size="icon-sm"
                       variant="ghost"
                       render={<a href={url} download={fileName} />}
@@ -302,7 +306,7 @@ export function FileViewerDialog({
                     </Button>
                   ) : null}
                   <DialogClose
-                    aria-label="Close"
+                    aria-label={t("close")}
                     render={<Button size="icon" variant="ghost" />}
                   >
                     <AppIcon icon={Cancel01Icon} />

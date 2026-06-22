@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 
 import type { MarkedFile } from "@/lib/store/file-marks-store"
 import { cn } from "@/lib/utils"
@@ -15,11 +16,6 @@ import {
   Clock01Icon,
   FavouriteIcon,
 } from "@/components/foundations/icons"
-
-const SECTION_LABELS = {
-  recents: "Recents",
-  starred: "Starred",
-} as const
 
 type MarkedFilesViewProps = {
   section: "recents" | "starred"
@@ -87,20 +83,21 @@ export function MarkedFilesView({
   onClearRecentsAction,
   showFileExtensions,
 }: MarkedFilesViewProps) {
+  const t = useTranslations("Marked")
   return (
     <div className="flex h-full min-h-0 flex-col">
       <FileSystemIconSpriteSheet />
       <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b px-3">
         <div className="flex min-w-0 items-center gap-2">
           {headerLeading}
-          <span className="text-sm font-medium">{SECTION_LABELS[section]}</span>
+          <span className="text-sm font-medium">{t(section)}</span>
           <Badge variant="secondary" className="truncate text-sm">
             {connectionName}
           </Badge>
         </div>
         {section === "recents" && files.length > 0 ? (
           <Button size="sm" variant="ghost" onClick={onClearRecentsAction}>
-            Clear
+            {t("clearRecents")}
           </Button>
         ) : null}
       </div>
@@ -115,12 +112,10 @@ export function MarkedFilesView({
           </div>
           <div className="space-y-1">
             <h2 className="text-base font-semibold">
-              {section === "recents" ? "No recent files" : "No starred files"}
+              {section === "recents" ? t("noRecents") : t("noStarred")}
             </h2>
             <p className="max-w-sm text-sm text-muted-foreground">
-              {section === "recents"
-                ? "Files you open show up here for quick access."
-                : "Star a file from its preview or from this list to keep it handy."}
+              {section === "recents" ? t("recentsHint") : t("starredHint")}
             </p>
           </div>
         </div>
@@ -158,8 +153,8 @@ export function MarkedFilesView({
                   <Button
                     size="icon-sm"
                     variant="ghost"
-                    aria-label={starred ? "Remove star" : "Add star"}
-                    title={starred ? "Remove star" : "Add star"}
+                    aria-label={starred ? t("removeStar") : t("addStar")}
+                    title={starred ? t("removeStar") : t("addStar")}
                     onClick={(event) => {
                       event.stopPropagation()
                       onToggleStarAction(file)

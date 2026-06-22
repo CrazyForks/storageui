@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
+import { getTranslations } from "next-intl/server"
 
 import {
   createSessionToken,
@@ -26,7 +27,8 @@ export async function loginAction(
   const password = String(formData.get("password") ?? "")
 
   if (!verifyCredentials(username, password)) {
-    return { error: "Incorrect username or password." }
+    const t = await getTranslations("Login")
+    return { error: t("invalidCredentials") }
   }
 
   const cookieStore = await cookies()

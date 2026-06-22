@@ -1,3 +1,5 @@
+import createNextIntlPlugin from "next-intl/plugin"
+
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? ""
 const assetPrefix = process.env.NEXT_PUBLIC_ASSET_PREFIX ?? ""
 
@@ -65,4 +67,6 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+const withNextIntl = createNextIntlPlugin()
+
+export default withNextIntl(nextConfig)

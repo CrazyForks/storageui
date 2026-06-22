@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 
 import { useS3FileSystem } from "@/lib/storage/hooks/use-file-system"
 import { useUploads } from "@/lib/storage/hooks/use-uploads"
@@ -35,10 +36,11 @@ import { UploadProgressPanel } from "@/components/storage/upload-progress-panel"
 const EMPTY_MARKS: MarkedFile[] = []
 
 function MobileSidebarTrigger() {
+  const t = useTranslations("Browser")
   return (
     <SidebarTrigger
-      aria-label="Open sidebar"
-      title="Open sidebar"
+      aria-label={t("openSidebar")}
+      title={t("openSidebar")}
       className="shrink-0 min-[800px]:hidden"
     />
   )
@@ -68,6 +70,7 @@ function fromMarkedFile(file: MarkedFile): FileSystemFileItem {
 }
 
 function EmptyState() {
+  const t = useTranslations("Browser")
   const { openAddDialog } = useConnections()
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
@@ -75,22 +78,21 @@ function EmptyState() {
         <AppIcon icon={CloudServerIcon} className="size-6" />
       </div>
       <div className="space-y-1">
-        <h2 className="text-base font-semibold">No bucket connected</h2>
+        <h2 className="text-base font-semibold">{t("noBucketTitle")}</h2>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Connect an S3, R2, Alibaba OSS, Backblaze B2, or S3-compatible bucket
-          to browse its objects. Local credentials stay in your browser; the
-          bucket must allow CORS.
+          {t("noBucketDescription")}
         </p>
       </div>
       <Button onClick={openAddDialog}>
         <AppIcon icon={PlusSignCircleIcon} className="size-4" />
-        Add connection
+        {t("addConnection")}
       </Button>
     </div>
   )
 }
 
 export function FileBrowser() {
+  const t = useTranslations("Browser")
   const { activeConnection, hasHydrated } = useConnections()
   const isReadOnly = activeConnection?.readOnly === true
   const bucketKey = activeConnection ? bucketBrowserKey(activeConnection) : ""
@@ -252,7 +254,7 @@ export function FileBrowser() {
           title={activeConnection.name}
           titleBadge={
             isReadOnly ? (
-              <Badge variant="secondary">Read Only</Badge>
+              <Badge variant="secondary">{t("readOnly")}</Badge>
             ) : undefined
           }
           headerLeading={<MobileSidebarTrigger />}
@@ -360,9 +362,11 @@ export function FileBrowser() {
               <AppIcon icon={Upload01Icon} className="size-6" />
             </div>
             <div className="space-y-0.5 text-center">
-              <p className="text-sm font-medium">Drop files to upload</p>
+              <p className="text-sm font-medium">{t("dropTitle")}</p>
               <p className="text-xs text-muted-foreground">
-                {currentPath ? `to ${currentPath}` : "to the bucket root"}
+                {currentPath
+                  ? t("dropToPath", { path: currentPath })
+                  : t("dropToRoot")}
               </p>
             </div>
           </div>
