@@ -3,6 +3,7 @@ import "server-only"
 import { createFiles as createFilesSdk, type Files } from "files-sdk"
 import { alibaba } from "files-sdk/alibaba"
 import { backblazeB2 } from "files-sdk/backblaze-b2"
+import { minio } from "files-sdk/minio"
 import { r2 } from "files-sdk/r2"
 import { s3 } from "files-sdk/s3"
 import { zip, type ZipApi } from "files-sdk/zip"
@@ -77,7 +78,8 @@ function slotToConnection(raw: RawEnvSlot, id: string): Connection | null {
     !raw.bucket ||
     !raw.accessKeyId ||
     !raw.secretAccessKey ||
-    ((provider === "alibaba" || provider === "backblaze-b2") && !raw.region)
+    ((provider === "alibaba" || provider === "backblaze-b2") && !raw.region) ||
+    (provider === "minio" && !raw.endpoint)
   )
     return null
 
@@ -88,7 +90,11 @@ function slotToConnection(raw: RawEnvSlot, id: string): Connection | null {
     bucket: raw.bucket,
     region: raw.region || undefined,
     endpoint: raw.endpoint || undefined,
-    forcePathStyle: raw.forcePathStyle === "true",
+    // MinIO is path-style by default; other providers default to off.
+    forcePathStyle:
+      provider === "minio"
+        ? raw.forcePathStyle !== "false"
+        : raw.forcePathStyle === "true",
     accountId: raw.accountId || undefined,
     accessKeyId: raw.accessKeyId,
     secretAccessKey: raw.secretAccessKey,
@@ -172,6 +178,25 @@ function buildFiles(connection: Connection): FilesClient {
         bucket: connection.bucket,
         region: connection.region,
         endpoint: connection.endpoint,
+        forcePathStyle: connection.forcePathStyle,
+        accessKeyId: connection.accessKeyId,
+        secretAccessKey: connection.secretAccessKey,
+        publicBaseUrl: connection.publicBaseUrl,
+      }),
+      plugins: [zip()],
+    })
+  }
+
+  if (connection.provider === "minio") {
+    if (!connection.endpoint) {
+      throw new Error("MinIO requires an endpoint URL.")
+    }
+
+    return createFilesSdk({
+      adapter: minio({
+        bucket: connection.bucket,
+        endpoint: connection.endpoint,
+        region: connection.region,
         forcePathStyle: connection.forcePathStyle,
         accessKeyId: connection.accessKeyId,
         secretAccessKey: connection.secretAccessKey,

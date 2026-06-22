@@ -18,6 +18,7 @@ export type ConnectionProvider =
   | "r2"
   | "alibaba"
   | "backblaze-b2"
+  | "minio"
   | "s3-compatible"
 
 export type Connection = {

@@ -34,6 +34,7 @@ import {
   AwsIcon,
   BackblazeIcon,
   CloudflareIcon,
+  MinioIcon,
 } from "@/components/foundations/cloud-provider-icons"
 import {
   AppIcon,
@@ -47,6 +48,7 @@ const PROVIDER_OPTIONS: { value: ConnectionProvider; label: string }[] = [
   { value: "r2", label: "Cloudflare R2" },
   { value: "alibaba", label: "Alibaba Cloud OSS" },
   { value: "backblaze-b2", label: "Backblaze B2" },
+  { value: "minio", label: "MinIO" },
   { value: "s3-compatible", label: "S3-compatible (custom endpoint)" },
 ]
 
@@ -66,6 +68,8 @@ function ConnectionProviderIcon({
       return <AlibabaCloudIcon className={className} />
     case "backblaze-b2":
       return <BackblazeIcon className={cn(className, "w-auto")} />
+    case "minio":
+      return <MinioIcon className={cn(className, "rounded-[3px]")} />
     case "s3-compatible":
       return <AppIcon icon={CloudServerIcon} className={className} />
   }
@@ -133,8 +137,10 @@ function buildConnection(
   const isR2 = form.provider === "r2"
   const isAlibaba = form.provider === "alibaba"
   const isBackblaze = form.provider === "backblaze-b2"
+  const isMinio = form.provider === "minio"
   const isS3Compatible = form.provider === "s3-compatible"
-  const supportsEndpointOverride = isS3Compatible || isAlibaba || isBackblaze
+  const supportsEndpointOverride =
+    isS3Compatible || isAlibaba || isBackblaze || isMinio
 
   return {
     id: existing?.id ?? createConnectionId(),
@@ -218,6 +224,7 @@ export function AddConnectionDialog() {
     (provider !== "r2" || form.accountId.trim()) &&
     (provider !== "alibaba" || form.region.trim()) &&
     (provider !== "backblaze-b2" || form.region.trim()) &&
+    (provider !== "minio" || form.endpoint.trim()) &&
     (provider !== "s3-compatible" || form.endpoint.trim()) &&
     status !== "testing"
 
@@ -252,7 +259,7 @@ export function AddConnectionDialog() {
             <DialogDescription>
               {editingConnection
                 ? "Update this connection and test it before saving."
-                : "Connect an S3, R2, Alibaba OSS, Backblaze B2, or S3-compatible bucket. Credentials are stored in your browser only; the bucket must allow CORS."}
+                : "Connect an S3, R2, Alibaba OSS, Backblaze B2, MinIO, or S3-compatible bucket. Credentials are stored in your browser only; the bucket must allow CORS."}
             </DialogDescription>
           </DialogHeader>
 
@@ -275,9 +282,17 @@ export function AddConnectionDialog() {
               <Field label="Provider">
                 <Select
                   value={form.provider}
-                  onValueChange={(value) =>
-                    update("provider", value as ConnectionProvider)
-                  }
+                  onValueChange={(value) => {
+                    const next = value as ConnectionProvider
+                    setForm((prev) => ({
+                      ...prev,
+                      provider: next,
+                      // MinIO almost always needs path-style addressing.
+                      forcePathStyle:
+                        next === "minio" ? true : prev.forcePathStyle,
+                    }))
+                    setError(null)
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue>
@@ -455,6 +470,42 @@ export function AddConnectionDialog() {
                       }
                     />
                     <span>Force path-style addressing (MinIO, etc.)</span>
+                  </label>
+                </>
+              ) : null}
+
+              {provider === "minio" ? (
+                <>
+                  <Field
+                    label="Endpoint"
+                    hint="Your MinIO server URL, including the scheme."
+                    required
+                  >
+                    <Input
+                      value={form.endpoint}
+                      onChange={(e) => update("endpoint", e.target.value)}
+                      placeholder="http://localhost:9000"
+                      required
+                    />
+                  </Field>
+                  <Field
+                    label="Region"
+                    hint="Optional. Defaults to “us-east-1”."
+                  >
+                    <Input
+                      value={form.region}
+                      onChange={(e) => update("region", e.target.value)}
+                      placeholder="us-east-1"
+                    />
+                  </Field>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={form.forcePathStyle}
+                      onCheckedChange={(checked) =>
+                        update("forcePathStyle", checked)
+                      }
+                    />
+                    <span>Force path-style addressing</span>
                   </label>
                 </>
               ) : null}
