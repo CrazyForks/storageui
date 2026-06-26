@@ -5,6 +5,7 @@ import {
 } from "@pierre/trees"
 import { useTranslations } from "next-intl"
 
+import type { TimeFormat } from "@/lib/store/preferences-store"
 import { cn } from "@/lib/utils"
 import { Spinner } from "@/components/ui/spinner"
 import { FileThumbnail } from "@/components/explorer/file-thumbnail"
@@ -238,11 +239,13 @@ export const FILE_KIND_LABELS: Record<string, string> = {
 
 export function fileKindLabel(file: FileEntry) {
   const byExtension = FILE_KIND_LABELS[fileExtension(file.name)]
+  const contentType = normalizedContentType(file.contentType)
 
   if (byExtension) return byExtension
-  if (file.contentType?.startsWith("image/")) return "Image"
+  if (contentType?.startsWith("image/")) return "Image"
+  if (contentType === FALLBACK_MIME_TYPE) return "Binary"
 
-  return file.contentType ?? "Document"
+  return contentType ?? "Document"
 }
 
 // Folders sort under the "Folder" kind alphabetically among the file kinds,
@@ -327,10 +330,17 @@ export const MIME_TYPE_LABELS: Record<string, string> = {
   "text/yaml": "YAML",
 }
 
+function normalizedContentType(contentType: string | undefined) {
+  return contentType?.split(";")[0]?.trim().toLowerCase() || undefined
+}
+
 export function mimeTypeForFile(file: FileEntry) {
+  const contentType = normalizedContentType(file.contentType)
+  const byExtension = EXTENSION_MIME_TYPES[fileExtension(file.name)]
+
   return (
-    file.contentType ??
-    EXTENSION_MIME_TYPES[fileExtension(file.name)] ??
+    (contentType === FALLBACK_MIME_TYPE ? byExtension : contentType) ??
+    byExtension ??
     FALLBACK_MIME_TYPE
   )
 }
@@ -437,7 +447,10 @@ export function formatByteSize(size: number | undefined) {
   return null
 }
 
-export function formatTimestamp(value: string | undefined) {
+export function formatTimestamp(
+  value: string | undefined,
+  timeFormat: TimeFormat = "12h"
+) {
   if (!value) return null
 
   const date = new Date(value)
@@ -451,6 +464,7 @@ export function formatTimestamp(value: string | undefined) {
   })
   const time = date.toLocaleTimeString("en-US", {
     hour: "numeric",
+    hourCycle: timeFormat === "24h" ? "h23" : "h12",
     minute: "2-digit",
   })
 

@@ -2004,7 +2004,7 @@ export function FileSystem({
                 onClick={() => setFilters([])}
                 className="rounded-md px-1.5 py-0.5 transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               >
-                Clear
+                {t("clearFilters")}
               </button>
             </div>
           ) : null}
@@ -2034,7 +2034,9 @@ export function FileSystem({
                   <FileSystemEmptyState
                     label={
                       isSearching
-                        ? `No results for “${searchInput.trim()}”`
+                        ? t("noSearchResults", {
+                            query: searchInput.trim(),
+                          })
                         : hasActiveFilters
                           ? t("emptyFiltered")
                           : t("emptyFolder")

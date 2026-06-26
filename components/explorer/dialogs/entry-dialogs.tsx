@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useTranslations } from "next-intl"
 
+import { usePreferencesStore } from "@/lib/store/preferences-store"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -338,6 +339,7 @@ export function InfoEntryDialog({
 }) {
   const t = useTranslations("Dialogs")
   const tc = useTranslations("Common")
+  const timeFormat = usePreferencesStore((state) => state.timeFormat)
   const open = entry !== null
   const isFolder = entry?.kind === "folder"
 
@@ -346,8 +348,8 @@ export function InfoEntryDialog({
   const mime = entry && !isFolder ? mimeTypeForFile(entry) : null
   const typeLabel = mime ? (MIME_TYPE_LABELS[mime] ?? mime) : null
   const size = entry && !isFolder ? (formatByteSize(entry.size) ?? "—") : null
-  const created = formatTimestamp(entry?.createdAt)
-  const modified = formatTimestamp(entry?.updatedAt)
+  const created = formatTimestamp(entry?.createdAt, timeFormat)
+  const modified = formatTimestamp(entry?.updatedAt, timeFormat)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChangeAction}>

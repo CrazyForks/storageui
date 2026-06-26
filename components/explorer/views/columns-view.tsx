@@ -2,6 +2,7 @@ import * as React from "react"
 import { useDraggable, useDroppable } from "@dnd-kit/react"
 import { useTranslations } from "next-intl"
 
+import { usePreferencesStore } from "@/lib/store/preferences-store"
 import { cn } from "@/lib/utils"
 import { ScrollArea, ScrollAreaPrimitive } from "@/components/ui/scroll-area"
 import { Spinner } from "@/components/ui/spinner"
@@ -574,9 +575,10 @@ export function FileSystemInformation({
   index: FileSystemIndex
 }) {
   const t = useTranslations("Dialogs")
+  const timeFormat = usePreferencesStore((state) => state.timeFormat)
   const rows: Array<[string, string]> = []
-  const created = formatTimestamp(entry.createdAt)
-  const updated = formatTimestamp(entry.updatedAt)
+  const created = formatTimestamp(entry.createdAt, timeFormat)
+  const updated = formatTimestamp(entry.updatedAt, timeFormat)
 
   if (created) rows.push([t("infoCreated"), created])
   if (updated) rows.push([t("infoModified"), updated])

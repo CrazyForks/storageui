@@ -1,5 +1,5 @@
 {
-  "name": "driveui",
+  "name": "storageui",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
@@ -136,9 +136,16 @@
       "",
       "^[./]"
     ],
-    "importOrderParserPlugins": ["typescript", "jsx", "decorators-legacy"],
+    "importOrderParserPlugins": [
+      "typescript",
+      "jsx",
+      "decorators-legacy"
+    ],
     "tailwindStylesheet": "./app/globals.css",
-    "tailwindFunctions": ["cn", "cva"],
+    "tailwindFunctions": [
+      "cn",
+      "cva"
+    ],
     "plugins": [
       "@ianvs/prettier-plugin-sort-imports",
       "prettier-plugin-tailwindcss"

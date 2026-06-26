@@ -50,6 +50,7 @@ const PROVIDER_OPTIONS: { value: ConnectionProvider; label: string }[] = [
   { value: "alibaba", label: "Alibaba Cloud OSS" },
   { value: "backblaze-b2", label: "Backblaze B2" },
   { value: "minio", label: "MinIO" },
+  { value: "tencent", label: "Tencent Cloud COS" },
   { value: "s3-compatible", label: "S3-compatible (custom endpoint)" },
 ]
 
@@ -71,6 +72,8 @@ function ConnectionProviderIcon({
       return <BackblazeIcon className={cn(className, "w-auto")} />
     case "minio":
       return <MinioIcon className={cn(className, "rounded-[3px]")} />
+    case "tencent":
+      return <AppIcon icon={CloudServerIcon} className={className} />
     case "s3-compatible":
       return <AppIcon icon={CloudServerIcon} className={className} />
   }
@@ -139,9 +142,10 @@ function buildConnection(
   const isAlibaba = form.provider === "alibaba"
   const isBackblaze = form.provider === "backblaze-b2"
   const isMinio = form.provider === "minio"
+  const isTencent = form.provider === "tencent"
   const isS3Compatible = form.provider === "s3-compatible"
   const supportsEndpointOverride =
-    isS3Compatible || isAlibaba || isBackblaze || isMinio
+    isS3Compatible || isAlibaba || isBackblaze || isMinio || isTencent
 
   return {
     id: existing?.id ?? createConnectionId(),
@@ -227,6 +231,7 @@ export function AddConnectionDialog() {
     (provider !== "r2" || form.accountId.trim()) &&
     (provider !== "alibaba" || form.region.trim()) &&
     (provider !== "backblaze-b2" || form.region.trim()) &&
+    (provider !== "tencent" || form.region.trim()) &&
     (provider !== "minio" || form.endpoint.trim()) &&
     (provider !== "s3-compatible" || form.endpoint.trim()) &&
     status !== "testing"
@@ -436,6 +441,39 @@ export function AddConnectionDialog() {
                 </>
               ) : null}
 
+              {provider === "tencent" ? (
+                <>
+                  <Field
+                    label={t("region")}
+                    hint={t("tencentRegionHint")}
+                    required
+                  >
+                    <Input
+                      value={form.region}
+                      onChange={(e) => update("region", e.target.value)}
+                      placeholder="ap-guangzhou"
+                      required
+                    />
+                  </Field>
+                  <Field label={t("endpoint")} hint={t("tencentEndpointHint")}>
+                    <Input
+                      value={form.endpoint}
+                      onChange={(e) => update("endpoint", e.target.value)}
+                      placeholder="https://cos.ap-guangzhou.myqcloud.com"
+                    />
+                  </Field>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={form.forcePathStyle}
+                      onCheckedChange={(checked) =>
+                        update("forcePathStyle", checked)
+                      }
+                    />
+                    <span>{t("forcePathStyle")}</span>
+                  </label>
+                </>
+              ) : null}
+
               {provider === "s3-compatible" ? (
                 <>
                   <Field
@@ -506,7 +544,9 @@ export function AddConnectionDialog() {
                 label={
                   provider === "backblaze-b2"
                     ? t("applicationKeyId")
-                    : t("accessKeyId")
+                    : provider === "tencent"
+                      ? t("secretId")
+                      : t("accessKeyId")
                 }
                 required
               >
@@ -524,7 +564,9 @@ export function AddConnectionDialog() {
                     ? t("accessKeySecret")
                     : provider === "backblaze-b2"
                       ? t("applicationKey")
-                      : t("secretAccessKey")
+                      : provider === "tencent"
+                        ? t("secretKey")
+                        : t("secretAccessKey")
                 }
                 required
               >

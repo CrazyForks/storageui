@@ -1,6 +1,6 @@
 {
-  "name": "Drive UI",
-  "short_name": "Drive UI",
+  "name": "StorageUI",
+  "short_name": "StorageUI",
   "icons": [
     {
       "src": "icon.png",

@@ -6,6 +6,7 @@ import { backblazeB2 } from "files-sdk/backblaze-b2"
 import { minio } from "files-sdk/minio"
 import { r2 } from "files-sdk/r2"
 import { s3 } from "files-sdk/s3"
+import { tencent } from "files-sdk/tencent"
 import { zip, type ZipApi } from "files-sdk/zip"
 
 import type { ConnectionRef } from "@/lib/storage/connection-ref"
@@ -78,7 +79,10 @@ function slotToConnection(raw: RawEnvSlot, id: string): Connection | null {
     !raw.bucket ||
     !raw.accessKeyId ||
     !raw.secretAccessKey ||
-    ((provider === "alibaba" || provider === "backblaze-b2") && !raw.region) ||
+    ((provider === "alibaba" ||
+      provider === "backblaze-b2" ||
+      provider === "tencent") &&
+      !raw.region) ||
     (provider === "minio" && !raw.endpoint)
   )
     return null
@@ -197,6 +201,25 @@ function buildFiles(connection: Connection): FilesClient {
         bucket: connection.bucket,
         endpoint: connection.endpoint,
         region: connection.region,
+        forcePathStyle: connection.forcePathStyle,
+        accessKeyId: connection.accessKeyId,
+        secretAccessKey: connection.secretAccessKey,
+        publicBaseUrl: connection.publicBaseUrl,
+      }),
+      plugins: [zip()],
+    })
+  }
+
+  if (connection.provider === "tencent") {
+    if (!connection.region) {
+      throw new Error("Tencent Cloud COS requires a region.")
+    }
+
+    return createFilesSdk({
+      adapter: tencent({
+        bucket: connection.bucket,
+        region: connection.region,
+        endpoint: connection.endpoint,
         forcePathStyle: connection.forcePathStyle,
         accessKeyId: connection.accessKeyId,
         secretAccessKey: connection.secretAccessKey,

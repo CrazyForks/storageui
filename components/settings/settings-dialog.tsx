@@ -6,7 +6,11 @@ import { localeNames, locales, type Locale } from "@/i18n/config"
 import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 
-import { usePreferencesStore } from "@/lib/store/preferences-store"
+import { siteConfig } from "@/lib/config/site"
+import {
+  usePreferencesStore,
+  type TimeFormat,
+} from "@/lib/store/preferences-store"
 import { useIsMobile } from "@/hooks/use-media-query"
 import {
   Dialog,
@@ -34,6 +38,14 @@ const THEME_OPTIONS = [
   { labelKey: "themeDark", value: "dark" },
 ] as const
 
+const TIME_FORMAT_OPTIONS: Array<{
+  labelKey: "timeFormat12" | "timeFormat24"
+  value: TimeFormat
+}> = [
+  { labelKey: "timeFormat12", value: "12h" },
+  { labelKey: "timeFormat24", value: "24h" },
+]
+
 type SettingsDialogProps = {
   open: boolean
   onOpenChangeAction: (open: boolean) => void
@@ -55,6 +67,8 @@ export function SettingsDialog({
   const setShowFileExtensions = usePreferencesStore(
     (state) => state.setShowFileExtensions
   )
+  const timeFormat = usePreferencesStore((state) => state.timeFormat)
+  const setTimeFormat = usePreferencesStore((state) => state.setTimeFormat)
 
   function changeLocale(next: Locale) {
     if (next === locale) return
@@ -149,6 +163,38 @@ export function SettingsDialog({
                     </Select>
                   </div>
 
+                  <div className="flex items-center justify-between gap-6 py-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{t("timeFormat")}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {t("timeFormatHint")}
+                      </p>
+                    </div>
+                    <Select
+                      value={timeFormat}
+                      onValueChange={(value) =>
+                        setTimeFormat(value as TimeFormat)
+                      }
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue>
+                          {t(
+                            TIME_FORMAT_OPTIONS.find(
+                              (option) => option.value === timeFormat
+                            )?.labelKey ?? "timeFormat12"
+                          )}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIME_FORMAT_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {t(option.labelKey)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <label className="flex cursor-pointer items-center justify-between gap-6 pt-4">
                     <div className="min-w-0">
                       <p className="text-sm font-medium">
@@ -173,7 +219,7 @@ export function SettingsDialog({
                 <div className="flex items-center gap-3 border-b pb-4">
                   <Logo className="h-10 w-auto shrink-0 text-foreground" />
                   <div className="min-w-0">
-                    <p className="text-base font-semibold">Drive UI</p>
+                    <p className="text-base font-semibold">{siteConfig.name}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {t("appDescription")}
                     </p>

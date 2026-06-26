@@ -7,6 +7,7 @@ import {
 import { FileTree as PierreFileTree, useFileTree } from "@pierre/trees/react"
 import { useTranslations } from "next-intl"
 
+import { usePreferencesStore } from "@/lib/store/preferences-store"
 import { cn } from "@/lib/utils"
 import {
   compareEntriesBySort,
@@ -224,6 +225,7 @@ export function FileSystemPierreTree({
   sort: FileSystemSortState
   treeExpansionRef: React.RefObject<Map<string, readonly string[]>>
 }) {
+  const timeFormat = usePreferencesStore((state) => state.timeFormat)
   // The tree's comparator receives whole paths, not siblings, so it walks
   // the shared segments and applies the active sort at the first level the
   // two paths diverge — keeping directories first per level, the tree's
@@ -365,7 +367,7 @@ export function FileSystemPierreTree({
       // The decoration lane renders one <span title>; CSS splits it into
       // aligned Date Modified (::before from title) and Size columns.
       const dateColumn =
-        formatTimestamp(entry.updatedAt ?? entry.createdAt) ?? "—"
+        formatTimestamp(entry.updatedAt ?? entry.createdAt, timeFormat) ?? "—"
 
       if (entry.kind === "folder") {
         const childCount = index.children.get(entry.path)?.length

@@ -1,8 +1,8 @@
-# Drive UI
+# Storage UI
 
 A browser-based, Finder-style file explorer for AWS S3, Cloudflare R2, Alibaba
-Cloud OSS, Backblaze B2, and other S3-compatible object storage. Built with
-Next.js and Extend UI.
+Cloud OSS, Tencent Cloud COS, Backblaze B2, and other S3-compatible object
+storage. Built with Next.js and Extend UI.
 
 ## Features
 
