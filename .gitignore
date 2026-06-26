@@ -55,3 +55,5 @@ public/r
 
 # ide
 .idea
+.zed
+.vscode
