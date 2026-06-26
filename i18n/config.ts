@@ -1,5 +1,3 @@
-// Supported UI locales. The active locale is stored in a cookie (no per-locale
-// URL routing), so adding a language is: add it here + a messages/<locale>.json.
 export const locales = ["en", "zh"] as const
 
 export type Locale = (typeof locales)[number]
