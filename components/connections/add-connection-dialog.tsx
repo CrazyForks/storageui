@@ -10,7 +10,6 @@ import {
   type ConnectionProvider,
 } from "@/lib/storage/connections"
 import { useConnections } from "@/lib/store/connection-store"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -36,6 +35,7 @@ import {
   BackblazeIcon,
   CloudflareIcon,
   MinioIcon,
+  TencentIcon,
 } from "@/components/foundations/cloud-provider-icons"
 import {
   AppIcon,
@@ -54,6 +54,9 @@ const PROVIDER_OPTIONS: { value: ConnectionProvider; label: string }[] = [
   { value: "s3-compatible", label: "S3-compatible (custom endpoint)" },
 ]
 
+const PROVIDER_ICON_CLASS_NAME =
+  "h-4 w-4 shrink-0 overflow-hidden rounded-[3px]"
+
 function ConnectionProviderIcon({
   provider,
   className,
@@ -69,11 +72,11 @@ function ConnectionProviderIcon({
     case "alibaba":
       return <AlibabaCloudIcon className={className} />
     case "backblaze-b2":
-      return <BackblazeIcon className={cn(className, "w-auto")} />
+      return <BackblazeIcon className={className} />
     case "minio":
-      return <MinioIcon className={cn(className, "rounded-[3px]")} />
+      return <MinioIcon className={className} />
     case "tencent":
-      return <AppIcon icon={CloudServerIcon} className={className} />
+      return <TencentIcon className={className} />
     case "s3-compatible":
       return <AppIcon icon={CloudServerIcon} className={className} />
   }
@@ -306,7 +309,7 @@ export function AddConnectionDialog() {
                         <span className="flex min-w-0 items-center gap-2">
                           <ConnectionProviderIcon
                             provider={selectedProvider.value}
-                            className="h-4 w-4 shrink-0"
+                            className={PROVIDER_ICON_CLASS_NAME}
                           />
                           <span className="truncate">
                             {selectedProvider.label}
@@ -321,7 +324,7 @@ export function AddConnectionDialog() {
                         <span className="flex min-w-0 items-center gap-2">
                           <ConnectionProviderIcon
                             provider={option.value}
-                            className="h-4 w-4 shrink-0"
+                            className={PROVIDER_ICON_CLASS_NAME}
                           />
                           <span className="truncate">{option.label}</span>
                         </span>
