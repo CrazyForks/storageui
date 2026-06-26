@@ -6,8 +6,6 @@ import {
   verifySessionToken,
 } from "@/lib/auth/core"
 
-export const runtime = "edge"
-
 const LOGIN_PATH = "/login"
 
 export async function proxy(request: NextRequest) {
