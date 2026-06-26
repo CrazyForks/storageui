@@ -35,6 +35,7 @@
     "title": "设置",
     "description": "管理应用外观和信息。",
     "tabGeneral": "通用",
+    "tabAdvanced": "高级",
     "tabAbout": "关于",
     "appearance": "外观",
     "appearanceHint": "选择界面在此设备上的显示方式。",

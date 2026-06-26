@@ -99,6 +99,7 @@ export function SettingsDialog({
                 }
               >
                 <TabsTab value="general">{t("tabGeneral")}</TabsTab>
+                <TabsTab value="advanced">{t("tabAdvanced")}</TabsTab>
                 <TabsTab value="about">{t("tabAbout")}</TabsTab>
               </TabsList>
 
@@ -194,22 +195,25 @@ export function SettingsDialog({
                       </SelectContent>
                     </Select>
                   </div>
-
-                  <label className="flex cursor-pointer items-center justify-between gap-6 pt-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">
-                        {t("showExtensions")}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {t("showExtensionsHint")}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={showFileExtensions}
-                      onCheckedChange={setShowFileExtensions}
-                    />
-                  </label>
                 </div>
+              </TabsPanel>
+
+              <TabsPanel
+                value="advanced"
+                className="min-h-0 min-w-0 overflow-y-auto pe-1"
+              >
+                <label className="flex cursor-pointer items-center justify-between gap-6">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{t("showExtensions")}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {t("showExtensionsHint")}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={showFileExtensions}
+                    onCheckedChange={setShowFileExtensions}
+                  />
+                </label>
               </TabsPanel>
 
               <TabsPanel

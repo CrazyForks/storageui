@@ -35,6 +35,7 @@
     "title": "Settings",
     "description": "Manage the app appearance and information.",
     "tabGeneral": "General",
+    "tabAdvanced": "Advanced",
     "tabAbout": "About",
     "appearance": "Appearance",
     "appearanceHint": "Choose how the interface looks on this device.",
