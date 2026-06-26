@@ -1,4 +1,13 @@
+
+![storage ui cover](public/readme/github-banner.png)
+
 # Storage UI
+
+<p align="start">
+  <a href="https://cloud.dify.ai">Website</a> ·
+  <a href="https://docs.dify.ai/getting-started/install-self-hosted">Self-hosting</a> ·
+  <a href="https://docs.dify.ai">Documentation</a> ·
+</p>
 
 A browser-based, Finder-style file explorer for AWS S3, Cloudflare R2, Alibaba
 Cloud OSS, Tencent Cloud COS, Backblaze B2, and other S3-compatible object
@@ -13,21 +22,17 @@ storage. Built with Next.js and Extend UI.
 - Per-bucket read-only mode for environment-configured connections
 - Responsive layout and dark mode
 
-## Development
+## Quick Start
+
+### Option 1: With OpenAI (Cloud)
 
 ```bash
-bun install
-cp .env.example .env.local
-bun dev
+git clone https://github.com/ibelick/zola.git
+cd zola
+npm install
+echo "OPENAI_API_KEY=your-key" > .env.local
+npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000). Storage connections can be
-configured through environment variables or added directly in the app.
-
-> Connections configured through environment variables keep their credentials
-> on the server. Connections added in the app are stored in the browser and sent
-> to the Next.js server for each operation. Use local connections only in a
-> trusted environment and configure bucket CORS for direct signed transfers.
 
 ## License
 
