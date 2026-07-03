@@ -13,9 +13,14 @@ import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ActiveThemeProvider } from "@/components/providers/active-theme"
 import { TailwindIndicator } from "@/components/providers/tailwind-indicator"
+import { ThemeFavicon } from "@/components/providers/theme-favicon"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 
 import "@/app/globals.css"
+
+const LIGHT_ICON_URL = withUiBasePath("/icon.svg")
+const DARK_ICON_URL = withUiBasePath("/icon-dark.svg")
+const PNG_ICON_URL = withUiBasePath("/icon.png")
 
 export const metadata: Metadata = {
   title: {
@@ -58,15 +63,24 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: withUiBasePath("/icon.svg"), type: "image/svg+xml" },
       {
-        url: withUiBasePath("/icon.png"),
+        url: LIGHT_ICON_URL,
+        media: "(prefers-color-scheme: light)",
+        type: "image/svg+xml",
+      },
+      {
+        url: DARK_ICON_URL,
+        media: "(prefers-color-scheme: dark)",
+        type: "image/svg+xml",
+      },
+      {
+        url: PNG_ICON_URL,
         sizes: "256x256",
         type: "image/png",
       },
     ],
-    shortcut: withUiBasePath("/icon.png"),
-    apple: withUiBasePath("/icon.png"),
+    shortcut: PNG_ICON_URL,
+    apple: PNG_ICON_URL,
   },
   manifest: withUiBasePath("/site.webmanifest"),
 }
@@ -87,9 +101,16 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                if (localStorage.theme === 'dark' || ((!('theme' in localStorage) || localStorage.theme === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                const isDark = localStorage.theme === 'dark' || ((!('theme' in localStorage) || localStorage.theme === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+                if (isDark) {
                   document.querySelector('meta[name="theme-color"]').setAttribute('content', '${META_THEME_COLORS.dark}')
                 }
+                const favicon = document.querySelector('link[data-theme-favicon="true"]') || document.createElement('link')
+                favicon.setAttribute('rel', 'icon')
+                favicon.setAttribute('type', 'image/svg+xml')
+                favicon.setAttribute('data-theme-favicon', 'true')
+                favicon.setAttribute('href', isDark ? ${JSON.stringify(DARK_ICON_URL)} : ${JSON.stringify(LIGHT_ICON_URL)})
+                document.head.appendChild(favicon)
               } catch (_) {}
             `,
           }}
@@ -103,6 +124,7 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider>
           <ThemeProvider>
+            <ThemeFavicon />
             <ActiveThemeProvider>
               <NuqsAdapter>
                 <TooltipProvider delayDuration={0}>
