@@ -1,4 +1,3 @@
-
 ![storage ui cover](public/readme/github-banner.png)
 
 # Storage UI
@@ -24,16 +23,18 @@ storage. Built with Next.js and Extend UI.
 
 ## Quick Start
 
-### Option 1: With OpenAI (Cloud)
+### Local development
 
 ```bash
-git clone https://github.com/ibelick/zola.git
-cd zola
-npm install
-echo "OPENAI_API_KEY=your-key" > .env.local
-npm run dev
+bun install
+cp .env.example .env.local
+bun run dev
 ```
+
+Open http://localhost:3000. You can add a storage connection from the UI, or
+preconfigure server-side buckets by filling the `BUCKET_1_*` variables in
+`.env.local`.
 
 ## License
 
-MIT
+AGPLv3
