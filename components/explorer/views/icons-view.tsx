@@ -8,7 +8,6 @@ import { Spinner } from "@/components/ui/spinner"
 import {
   FileSystemFolderGlyph,
   FileVisual,
-  InlineRenameName,
   RenameContext,
   scrollIndexIntoView,
   useFormatEntryName,
@@ -51,7 +50,6 @@ export function FileSystemIconsView({
   )
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
   const typeAhead = useEntryTypeAhead()
-  const formatName = useFormatEntryName()
   const rename = React.useContext(RenameContext)
   // The column count mirrors what `repeat(auto-fill, minmax(6.5rem, 1fr))`
   // produces (the CSS owns the actual layout) so item indices map to grid
@@ -196,33 +194,7 @@ export function FileSystemIconsView({
         >
           {visibleEntries.map((entry) => {
             const isSelected = selectedPaths.has(entry.path)
-            const isRenaming = rename?.targetPath === entry.path
             const isSaving = rename?.pendingPaths.has(entry.path) ?? false
-
-            // The tile is a <button>, which can't contain an <input>; while
-            // renaming, render a plain container with the inline editor.
-            if (isRenaming) {
-              return (
-                <div
-                  key={entry.path}
-                  className="flex h-25.5 flex-col items-center gap-1.5"
-                >
-                  <TileGlyph
-                    entry={entry}
-                    isSelected={isSelected}
-                    isSaving={isSaving}
-                    renderFilePreview={renderFilePreview}
-                  />
-                  <InlineRenameName
-                    entry={entry}
-                    multiline
-                    className="w-20 text-center text-xs leading-tight"
-                  >
-                    {formatName(entry)}
-                  </InlineRenameName>
-                </div>
-              )
-            }
 
             return (
               <IconTile
@@ -245,8 +217,7 @@ export function FileSystemIconsView({
   )
 }
 
-// The glyph box (folder/file visual + saving spinner). Shared by the rename
-// placeholder and the draggable tile.
+// The glyph box (folder/file visual + saving spinner).
 function TileGlyph({
   entry,
   isSelected,

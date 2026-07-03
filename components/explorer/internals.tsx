@@ -89,118 +89,12 @@ export function useFormatEntryName() {
   )
 }
 
-// Inline rename: the views render an editable input in place of the name label
-// for the entry currently being renamed, instead of opening a dialog.
 export type RenameController = {
-  targetPath: string | null
-  value: string
-  error: boolean
   /** Paths whose rename is saving in the background (show a spinner). */
   pendingPaths: ReadonlySet<string>
-  setValue: (value: string) => void
-  commit: () => void
-  cancel: () => void
 }
 
 export const RenameContext = React.createContext<RenameController | null>(null)
-
-// Renders an inline text input when `entry` is the active rename target, and
-// otherwise the supplied label. Used by the icons, columns, and gallery views.
-// `multiline` renders an auto-growing textarea so long names wrap (like the
-// icon grid's two-line label) instead of scrolling in a single-line field.
-export function InlineRenameName({
-  entry,
-  children,
-  className,
-  multiline = false,
-}: {
-  entry: FileSystemEntry
-  children: React.ReactNode
-  className?: string
-  multiline?: boolean
-}): React.ReactElement {
-  const rename = React.useContext(RenameContext)
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null)
-
-  // Grow the textarea to fit its wrapped content on every change.
-  React.useLayoutEffect(() => {
-    const element = textareaRef.current
-    if (!element) return
-    element.style.height = "auto"
-    element.style.height = `${element.scrollHeight}px`
-  })
-
-  if (!rename || rename.targetPath !== entry.path) {
-    return <>{children}</>
-  }
-
-  const selectBaseName = (element: HTMLInputElement | HTMLTextAreaElement) => {
-    // Select the base name (sans extension) like Finder.
-    const dotIndex = entry.kind === "file" ? rename.value.lastIndexOf(".") : -1
-    element.setSelectionRange(0, dotIndex > 0 ? dotIndex : rename.value.length)
-  }
-
-  const handleKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    event.stopPropagation()
-    if (event.key === "Enter") {
-      // Names are single-line, so Enter commits rather than inserting a break.
-      event.preventDefault()
-      rename.commit()
-    } else if (event.key === "Escape") {
-      event.preventDefault()
-      rename.cancel()
-    }
-  }
-
-  const baseClassName = cn(
-    "min-w-0 rounded-sm border border-primary bg-background px-1 py-0.5 text-foreground outline-none aria-invalid:border-destructive",
-    className
-  )
-
-  // Keep clicks/double-clicks on the field from selecting or opening the row.
-  const stop = (event: React.SyntheticEvent) => event.stopPropagation()
-
-  if (multiline) {
-    return (
-      <textarea
-        ref={textareaRef}
-        autoFocus
-        rows={1}
-        value={rename.value}
-        aria-invalid={rename.error || undefined}
-        onClick={stop}
-        onDoubleClick={stop}
-        onPointerDown={stop}
-        onChange={(event) => rename.setValue(event.target.value)}
-        onFocus={(event) => selectBaseName(event.currentTarget)}
-        onKeyDown={handleKeyDown}
-        onBlur={() => rename.commit()}
-        className={cn(
-          "resize-none overflow-hidden wrap-break-word",
-          baseClassName
-        )}
-      />
-    )
-  }
-
-  return (
-    <input
-      autoFocus
-      value={rename.value}
-      aria-invalid={rename.error || undefined}
-      onClick={stop}
-      onDoubleClick={stop}
-      onPointerDown={stop}
-      onChange={(event) => rename.setValue(event.target.value)}
-      onFocus={(event) => selectBaseName(event.currentTarget)}
-      onKeyDown={handleKeyDown}
-      onBlur={() => rename.commit()}
-      className={baseClassName}
-    />
-  )
-}
 
 export const FILE_KIND_LABELS: Record<string, string> = {
   css: "CSS Stylesheet",

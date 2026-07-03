@@ -15,7 +15,6 @@ import {
   folderHasChildren,
   formatByteSize,
   formatTimestamp,
-  InlineRenameName,
   pathParent,
   RenameContext,
   scrollIndexIntoView,
@@ -319,7 +318,6 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
 }) {
   const t = useTranslations("Explorer")
   const viewportRef = React.useRef<HTMLDivElement | null>(null)
-  const formatName = useFormatEntryName()
   const rename = React.useContext(RenameContext)
   const registerRowRef = React.useCallback(
     (path: string, element: HTMLButtonElement | null) => {
@@ -382,7 +380,6 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
 
               const coverUrl =
                 entry.kind === "file" ? filePreviewUrls(entry)[0] : undefined
-              const isRenaming = rename?.targetPath === entry.path
               const isSaving = rename?.pendingPaths.has(entry.path) ?? false
 
               const rowIcon =
@@ -401,25 +398,6 @@ export const FileSystemColumn = React.memo(function FileSystemColumn({
                     className="size-4 shrink-0"
                   />
                 )
-
-              // The row is a <button>, which can't contain an <input>; while
-              // renaming, render a plain container with the inline editor.
-              if (isRenaming) {
-                return (
-                  <div
-                    key={entry.path}
-                    className="flex h-7 shrink-0 items-center gap-2 rounded-md px-2 py-1 text-sm"
-                  >
-                    {rowIcon}
-                    <InlineRenameName
-                      entry={entry}
-                      className="min-w-0 flex-1 text-sm"
-                    >
-                      {formatName(entry)}
-                    </InlineRenameName>
-                  </div>
-                )
-              }
 
               return (
                 <ColumnRow

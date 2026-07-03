@@ -10,7 +10,6 @@ import {
   FileSystemViewerLoading,
   FileVisual,
   formatByteSize,
-  InlineRenameName,
   LazyDocxViewerPreview,
   LazyPDFViewer,
   LazyXlsxViewerPreview,
@@ -436,18 +435,10 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start gap-1.5 text-sm font-semibold">
                   <div
-                    className={cn(
-                      "min-w-0 flex-1 wrap-break-word",
-                      rename?.targetPath !== activeEntry.path && "line-clamp-2"
-                    )}
+                    className="line-clamp-2 min-w-0 flex-1 wrap-break-word"
                     title={formatName(activeEntry)}
                   >
-                    <InlineRenameName
-                      entry={activeEntry}
-                      className="w-full text-sm font-semibold"
-                    >
-                      {formatName(activeEntry)}
-                    </InlineRenameName>
+                    {formatName(activeEntry)}
                   </div>
                   {rename?.pendingPaths.has(activeEntry.path) ? (
                     <Spinner className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />

@@ -23,7 +23,6 @@ import {
 import type {
   FileSystemEntry,
   FileSystemIndex,
-  FileSystemItem,
   FileSystemSortKey,
   FileSystemSortState,
   FileSystemViewProps,
@@ -83,8 +82,6 @@ export function FileSystemListView({
   onSelect,
   onSelectMany,
   onSortColumnClick,
-  onRenameEntryAction,
-  startTreeRenameRef,
   searchQuery,
   selectedPath,
   sort,
@@ -177,8 +174,6 @@ export function FileSystemListView({
         onOpen={onOpen}
         onSelect={onSelect}
         onSelectMany={onSelectMany}
-        onRenameEntryAction={onRenameEntryAction}
-        startTreeRenameRef={startTreeRenameRef}
         relativePaths={relativePaths}
         searchQuery={searchQuery}
         sort={sort}
@@ -201,8 +196,6 @@ export function FileSystemPierreTree({
   onOpen,
   onSelect,
   onSelectMany,
-  onRenameEntryAction,
-  startTreeRenameRef,
   relativePaths,
   searchQuery,
   sort,
@@ -215,11 +208,6 @@ export function FileSystemPierreTree({
   onOpen: (entry: FileSystemEntry) => void
   onSelect: (entry: FileSystemEntry | null) => void
   onSelectMany: (entries: FileSystemEntry[]) => void
-  onRenameEntryAction?: (
-    item: FileSystemItem,
-    name: string
-  ) => void | Promise<void>
-  startTreeRenameRef: React.RefObject<((entry: FileSystemEntry) => void) | null>
   relativePaths: string[]
   searchQuery: string
   sort: FileSystemSortState
@@ -343,19 +331,6 @@ export function FileSystemPierreTree({
     itemHeight: 28,
     overscan: 12,
     preparedInput,
-    // Native inline rename: the row turns into an input, and the committed name
-    // is forwarded to the consumer's rename handler.
-    renaming: {
-      onRename: ({ sourcePath, destinationPath }) => {
-        if (!onRenameEntryAction) return
-        const source =
-          index.files.get(`${currentPath}${sourcePath}`) ??
-          index.folders.get(normalizeFolderPath(`${currentPath}${sourcePath}`))
-        const name = destinationPath.replace(/\/$/, "").split("/").pop()
-        if (!source || !name) return
-        void onRenameEntryAction(source, name)
-      },
-    },
     renderRowDecoration: ({ row }) => {
       const entry =
         row.kind === "file"
@@ -399,18 +374,6 @@ export function FileSystemPierreTree({
       button[data-type='item'][data-item-selected] *:not([data-icon-token]):not([data-icon-token] *),
       button[data-type='item'][data-item-selected] [data-item-section]::before {
         color: var(--color-primary-foreground) !important;
-      }
-      /* The inline rename field is transparent and inherits color, so on a
-         selected row the rule above paints its text the (light) selected
-         foreground over the field's normal background — invisible. Give it an
-         explicit surface and text color. The selected-row rule above is
-         specificity (0,4,1); the :not(#x) here adds an id's worth of
-         specificity so this wins cleanly regardless of DOM nesting. */
-      [data-item-rename-input]:not(#x) {
-        color: var(--color-foreground) !important;
-        background: var(--color-background) !important;
-        border-radius: 4px;
-        box-shadow: inset 0 0 0 1px var(--color-primary);
       }
       [data-item-section='decoration'] > span {
         display: grid;
@@ -462,20 +425,6 @@ export function FileSystemPierreTree({
   React.useEffect(() => {
     model.setIcons(icons)
   }, [icons, model])
-
-  // Let the (shared) context menu start the tree's native inline rename.
-  React.useEffect(() => {
-    startTreeRenameRef.current = (entry) => {
-      const relative = entry.path.slice(currentPath.length).replace(/\/$/, "")
-      const item = model.getItem(relative) ?? model.getItem(`${relative}/`)
-      if (!item) return
-      model.scrollToPath(item.getPath())
-      model.startRenaming(item.getPath())
-    }
-    return () => {
-      startTreeRenameRef.current = null
-    }
-  }, [currentPath, model, startTreeRenameRef])
 
   // The folders currently expanded in the mounted model, derived from the
   // given path list (the model knows the rows; the paths name the
@@ -712,21 +661,6 @@ export function FileSystemPierreTree({
       // open the focused file. Printable keys run the shared type-ahead
       // over the visible rows.
       onKeyDown={(event) => {
-        // While the inline rename input is focused, let the tree's native
-        // rename handle the keys (typing, Enter to commit, Escape to cancel)
-        // instead of opening the row or running type-ahead.
-        if (
-          event.nativeEvent
-            .composedPath()
-            .some(
-              (target) =>
-                target instanceof HTMLElement &&
-                target.hasAttribute("data-item-rename-input")
-            )
-        ) {
-          return
-        }
-
         if (event.key === "Enter") {
           const entry = entryFromEvent(event)
 

@@ -56,6 +56,7 @@ import {
   InfoEntryDialog,
   MoveEntriesDialog,
   NewFolderDialog,
+  RenameEntryDialog,
 } from "@/components/explorer/dialogs/entry-dialogs"
 import type {
   FileSystemDateFilterType,
@@ -1033,11 +1034,6 @@ export function FileSystem({
   const [renamingPaths, setRenamingPaths] = React.useState<ReadonlySet<string>>(
     () => new Set()
   )
-  // Set by the list view's tree so the context menu can start its native inline
-  // rename; the other views rename through RenameContext.
-  const startTreeRenameRef = React.useRef<
-    ((entry: FileSystemEntry) => void) | null
-  >(null)
   const [moveTargets, setMoveTargets] = React.useState<FileSystemEntry[]>([])
   const [moveEntryError, setMoveEntryError] = React.useState<string | null>(
     null
@@ -1407,25 +1403,9 @@ export function FileSystem({
 
   const renameController = React.useMemo<RenameController>(
     () => ({
-      targetPath: renameEntryTarget?.path ?? null,
-      value: renameEntryName,
-      error: renameEntryError !== null,
       pendingPaths: renamingPaths,
-      setValue: (value) => {
-        setRenameEntryName(value)
-        setRenameEntryError(null)
-      },
-      commit: () => void confirmRenameEntry(),
-      cancel: cancelRename,
     }),
-    [
-      cancelRename,
-      confirmRenameEntry,
-      renameEntryError,
-      renameEntryName,
-      renameEntryTarget,
-      renamingPaths,
-    ]
+    [renamingPaths]
   )
 
   // Run the actual move, reporting per-item progress for the bar. Shared by the
@@ -1800,8 +1780,6 @@ export function FileSystem({
     draggingPaths,
     sort,
     treeExpansionRef,
-    onRenameEntryAction,
-    startTreeRenameRef,
   }
 
   const openedFileName = openedFile
@@ -2212,22 +2190,7 @@ export function FileSystem({
                     ) : null}
                     {onRenameEntryAction ? (
                       <ContextMenuItem
-                        onClick={() => {
-                          const entry = contextMenuEntry
-                          // The list view renames inline inside the tree's own
-                          // row; the other views render an inline input via
-                          // context.
-                          if (view === "list" && startTreeRenameRef.current) {
-                            // Let the context menu finish closing before the
-                            // tree grabs focus for its input.
-                            window.setTimeout(
-                              () => startTreeRenameRef.current?.(entry),
-                              0
-                            )
-                          } else {
-                            startRename(entry)
-                          }
-                        }}
+                        onClick={() => startRename(contextMenuEntry)}
                       >
                         <AppIcon icon={Edit02Icon} />
                         {t("rename")}
@@ -2331,6 +2294,24 @@ export function FileSystem({
               if (!open) setNewFolderError(null)
             }}
             onSubmitAction={() => void createNewFolder()}
+          />
+          <RenameEntryDialog
+            entry={renameEntryTarget}
+            error={renameEntryError}
+            isPending={
+              renameEntryTarget
+                ? renamingPaths.has(renameEntryTarget.path)
+                : false
+            }
+            name={renameEntryName}
+            onNameChangeAction={(name) => {
+              setRenameEntryName(name)
+              setRenameEntryError(null)
+            }}
+            onOpenChangeAction={(open) => {
+              if (!open) cancelRename()
+            }}
+            onSubmitAction={() => void confirmRenameEntry()}
           />
           <MoveEntriesDialog
             error={moveEntryError}

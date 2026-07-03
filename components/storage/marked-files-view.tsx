@@ -16,6 +16,7 @@ import {
   Clock01Icon,
   FavouriteIcon,
 } from "@/components/foundations/icons"
+import { NEUTRAL_BADGE_CLASSNAME } from "@/components/storage/badge-styles"
 
 type MarkedFilesViewProps = {
   section: "recents" | "starred"
@@ -91,7 +92,10 @@ export function MarkedFilesView({
         <div className="flex min-w-0 items-center gap-2">
           {headerLeading}
           <span className="text-sm font-medium">{t(section)}</span>
-          <Badge variant="secondary" className="truncate text-sm">
+          <Badge
+            variant="outline"
+            className={cn(NEUTRAL_BADGE_CLASSNAME, "truncate text-sm")}
+          >
             {connectionName}
           </Badge>
         </div>

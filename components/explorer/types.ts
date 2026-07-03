@@ -193,9 +193,4 @@ export type FileSystemViewProps = {
   draggingPaths: ReadonlySet<string>
   sort: FileSystemSortState
   treeExpansionRef: RefObject<Map<string, readonly string[]>>
-  onRenameEntryAction?: (
-    item: FileSystemItem,
-    name: string
-  ) => void | Promise<void>
-  startTreeRenameRef: RefObject<((entry: FileSystemEntry) => void) | null>
 }

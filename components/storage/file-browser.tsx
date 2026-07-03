@@ -29,6 +29,7 @@ import {
   PlusSignCircleIcon,
   Upload01Icon,
 } from "@/components/foundations/icons"
+import { NEUTRAL_BADGE_CLASSNAME } from "@/components/storage/badge-styles"
 import { FileViewerDialog } from "@/components/storage/file-viewer-dialog"
 import { MarkedFilesView } from "@/components/storage/marked-files-view"
 import { UploadProgressPanel } from "@/components/storage/upload-progress-panel"
@@ -254,7 +255,9 @@ export function FileBrowser() {
           title={activeConnection.name}
           titleBadge={
             isReadOnly ? (
-              <Badge variant="secondary">{t("readOnly")}</Badge>
+              <Badge variant="outline" className={NEUTRAL_BADGE_CLASSNAME}>
+                {t("readOnly")}
+              </Badge>
             ) : undefined
           }
           headerLeading={<MobileSidebarTrigger />}

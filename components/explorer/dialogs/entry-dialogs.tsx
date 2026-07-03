@@ -142,6 +142,95 @@ export function NewFolderDialog({
   )
 }
 
+export function RenameEntryDialog({
+  entry,
+  error,
+  isPending,
+  name,
+  onNameChangeAction,
+  onOpenChangeAction,
+  onSubmitAction,
+}: {
+  entry: FileSystemEntry | null
+  error: string | null
+  isPending: boolean
+  name: string
+  onNameChangeAction: (name: string) => void
+  onOpenChangeAction: (open: boolean) => void
+  onSubmitAction: () => void
+}) {
+  const t = useTranslations("Dialogs")
+  const tc = useTranslations("Common")
+  const open = entry !== null
+
+  const selectBaseName = (element: HTMLInputElement) => {
+    if (!entry) return
+    const dotIndex = entry.kind === "file" ? name.lastIndexOf(".") : -1
+
+    element.setSelectionRange(0, dotIndex > 0 ? dotIndex : name.length)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChangeAction}>
+      {entry ? (
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {entry.kind === "folder"
+                ? t("renameFolderTitle")
+                : t("renameFileTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("renameDescription", { name: entry.name })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogPanel>
+            <form
+              id="rename-entry-form"
+              className="grid gap-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                onSubmitAction()
+              }}
+            >
+              <Input
+                autoFocus
+                value={name}
+                aria-label={t("renameNameLabel")}
+                aria-invalid={error ? true : undefined}
+                placeholder={t("renamePlaceholder")}
+                onChange={(event) => onNameChangeAction(event.target.value)}
+                onFocus={(event) => selectBaseName(event.currentTarget)}
+              />
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
+            </form>
+          </DialogPanel>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPending}
+              onClick={() => onOpenChangeAction(false)}
+            >
+              {tc("cancel")}
+            </Button>
+            <Button
+              type="submit"
+              form="rename-entry-form"
+              loading={isPending}
+              disabled={!name.trim()}
+            >
+              {t("rename")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      ) : null}
+    </Dialog>
+  )
+}
+
 // Trailing-slash path → display segments and per-segment absolute paths.
 function pathSegments(folderPath: string) {
   const trimmed = folderPath.replace(/\/$/, "")
