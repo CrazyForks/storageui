@@ -7,7 +7,9 @@ import {
   SESSION_COOKIE_NAME,
   verifySessionToken,
 } from "@/lib/auth/core"
+import { siteConfig } from "@/lib/config/site"
 import { LoginForm } from "@/components/auth/login-form"
+import { AppIcon, ExternalLinkIcon } from "@/components/foundations/icons"
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -23,8 +25,29 @@ export default async function LoginPage() {
   if (await verifySessionToken(token)) redirect("/")
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-background p-6">
+    <main className="relative flex min-h-svh items-center justify-center bg-background p-6 pb-16">
       <LoginForm />
+      <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2 text-sm text-muted-foreground">
+        <a
+          href={siteConfig.url}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          Website
+          <AppIcon icon={ExternalLinkIcon} className="size-3.5" />
+        </a>
+        <span aria-hidden="true">·</span>
+        <a
+          href={siteConfig.githubUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          GitHub
+          <AppIcon icon={ExternalLinkIcon} className="size-3.5" />
+        </a>
+      </div>
     </main>
   )
 }
