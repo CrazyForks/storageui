@@ -3,13 +3,13 @@ import { atomWithStorage } from "jotai/utils"
 
 type Config = {
   style: "new-york-v4"
-  packageManager: "npm" | "yarn" | "pnpm" | "bun"
+  packageManager: "npm" | "yarn" | "bun"
   installationType: "cli" | "manual"
 }
 
 const configAtom = atomWithStorage<Config>("config", {
   style: "new-york-v4",
-  packageManager: "pnpm",
+  packageManager: "bun",
   installationType: "cli",
 })
 

@@ -64,8 +64,14 @@ export function SettingsDialog({
   const showFileExtensions = usePreferencesStore(
     (state) => state.showFileExtensions
   )
+  const showImagePreviews = usePreferencesStore(
+    (state) => state.showImagePreviews
+  )
   const setShowFileExtensions = usePreferencesStore(
     (state) => state.setShowFileExtensions
+  )
+  const setShowImagePreviews = usePreferencesStore(
+    (state) => state.setShowImagePreviews
   )
   const timeFormat = usePreferencesStore((state) => state.timeFormat)
   const setTimeFormat = usePreferencesStore((state) => state.setTimeFormat)
@@ -202,18 +208,37 @@ export function SettingsDialog({
                 value="advanced"
                 className="min-h-0 min-w-0 overflow-y-auto pe-1"
               >
-                <label className="flex cursor-pointer items-center justify-between gap-6">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{t("showExtensions")}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {t("showExtensionsHint")}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={showFileExtensions}
-                    onCheckedChange={setShowFileExtensions}
-                  />
-                </label>
+                <div className="divide-y">
+                  <label className="flex cursor-pointer items-center justify-between gap-6 pb-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {t("showImagePreviews")}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {t("showImagePreviewsHint")}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={showImagePreviews}
+                      onCheckedChange={setShowImagePreviews}
+                    />
+                  </label>
+
+                  <label className="flex cursor-pointer items-center justify-between gap-6 py-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {t("showExtensions")}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {t("showExtensionsHint")}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={showFileExtensions}
+                      onCheckedChange={setShowFileExtensions}
+                    />
+                  </label>
+                </div>
               </TabsPanel>
 
               <TabsPanel

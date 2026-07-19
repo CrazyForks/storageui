@@ -48,6 +48,8 @@
     "timeFormatHint": "Choose how file times are displayed.",
     "timeFormat12": "12-hour",
     "timeFormat24": "24-hour",
+    "showImagePreviews": "Show image previews",
+    "showImagePreviewsHint": "Display image contents directly in file thumbnails. This may use additional network data.",
     "showExtensions": "Show filename extensions",
     "showExtensionsHint": "Display extensions like .pdf or .docx in the file browser.",
     "appDescription": "Open-source file browser for S3, R2, and other storage backends. Browse, preview, search, and manage files in a modern, self-hosted web interface.",

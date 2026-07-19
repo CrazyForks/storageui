@@ -48,6 +48,8 @@
     "timeFormatHint": "选择文件时间的显示方式。",
     "timeFormat12": "12 小时制",
     "timeFormat24": "24 小时制",
+    "showImagePreviews": "显示图片预览",
+    "showImagePreviewsHint": "直接在文件缩略图中显示图片内容，可能会使用额外的网络流量。",
     "showExtensions": "显示文件扩展名",
     "showExtensionsHint": "在文件浏览器中显示 .pdf、.docx 等扩展名。",
     "appDescription": "面向 S3、R2 及其他存储后端的开源文件浏览器。通过现代化的自托管 Web 界面浏览、预览、搜索和管理文件。",

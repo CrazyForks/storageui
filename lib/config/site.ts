@@ -3,7 +3,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://storageui.dev"
 export const siteConfig = {
   name: "Storage UI",
   url: appUrl,
-  githubUrl: "https://github.com/hahahumble/driveui",
+  githubUrl: "https://github.com/hahahumble/storageui",
   ogImage: `${appUrl}/opengraph-image.png`,
   description:
     "A Finder-style file browser for S3, R2, Alibaba OSS, Tencent COS, Backblaze B2, and compatible object stores, with built-in document preview.",

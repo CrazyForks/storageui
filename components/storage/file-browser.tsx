@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useTranslations } from "next-intl"
 
+import { getFileKind } from "@/lib/file-kind"
 import { useS3FileSystem } from "@/lib/storage/hooks/use-file-system"
 import { useUploads } from "@/lib/storage/hooks/use-uploads"
 import {
@@ -22,6 +23,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { FileSystem } from "@/components/explorer/file-system"
+import { ImageThumbnailPreview } from "@/components/explorer/image-thumbnail-preview"
 import type { FileSystemFileItem } from "@/components/explorer/types"
 import {
   AppIcon,
@@ -106,6 +108,9 @@ export function FileBrowser() {
   const showFileExtensions = usePreferencesStore(
     (state) => state.showFileExtensions
   )
+  const showImagePreviews = usePreferencesStore(
+    (state) => state.showImagePreviews
+  )
   const section = useNavStore((state) => state.section)
   const recents = useFileMarksStore(
     (state) => state.buckets[bucketKey]?.recents ?? EMPTY_MARKS
@@ -134,6 +139,22 @@ export function FileBrowser() {
     isLoading,
     error,
   } = useS3FileSystem(activeConnection)
+  const [imagePreviewUrlCache] = React.useState(() => new Map<string, string>())
+  const renderFilePreview = React.useCallback(
+    (file: FileSystemFileItem) => {
+      if (!showImagePreviews || getFileKind(file) !== "image") return null
+
+      return (
+        <ImageThumbnailPreview
+          cacheKey={`${activeConnection?.id ?? ""}\u0000${file.path}`}
+          file={file}
+          getFileUrl={getFileUrl}
+          urlCache={imagePreviewUrlCache}
+        />
+      )
+    },
+    [activeConnection?.id, getFileUrl, imagePreviewUrlCache, showImagePreviews]
+  )
   const [opened, setOpened] = React.useState<{
     file: FileSystemFileItem
     url: string | null
@@ -274,6 +295,7 @@ export function FileBrowser() {
           defaultPath={currentPath}
           loadChildren={loadChildren}
           getFileUrl={getFileUrl}
+          renderFilePreview={renderFilePreview}
           onCreateFolderAction={
             isReadOnly
               ? undefined

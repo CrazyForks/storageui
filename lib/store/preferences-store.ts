@@ -11,11 +11,13 @@ const STORE_VERSION = 1
 export type TimeFormat = "12h" | "24h"
 
 type PersistedPreferencesState = {
+  showImagePreviews: boolean
   showFileExtensions: boolean
   timeFormat: TimeFormat
 }
 
 type PreferencesStore = PersistedPreferencesState & {
+  setShowImagePreviews: (value: boolean) => void
   setShowFileExtensions: (value: boolean) => void
   setTimeFormat: (value: TimeFormat) => void
 }
@@ -23,8 +25,10 @@ type PreferencesStore = PersistedPreferencesState & {
 export const usePreferencesStore = create<PreferencesStore>()(
   persist(
     (set) => ({
+      showImagePreviews: true,
       showFileExtensions: true,
       timeFormat: "12h",
+      setShowImagePreviews: (value) => set({ showImagePreviews: value }),
       setShowFileExtensions: (value) => set({ showFileExtensions: value }),
       setTimeFormat: (value) => set({ timeFormat: value }),
     }),
@@ -34,6 +38,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
       storage: createJSONStorage(() => window.localStorage),
       skipHydration: true,
       partialize: (state): PersistedPreferencesState => ({
+        showImagePreviews: state.showImagePreviews,
         showFileExtensions: state.showFileExtensions,
         timeFormat: state.timeFormat,
       }),

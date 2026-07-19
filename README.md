@@ -23,6 +23,10 @@ storage. Built with Next.js and Extend UI.
 
 ## Quick Start
 
+### Deploy with Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/hahahumble/storageui)
+
 ### Local development
 
 ```bash
