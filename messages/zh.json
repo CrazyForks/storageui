@@ -52,6 +52,8 @@
     "showImagePreviewsHint": "直接在文件缩略图中显示图片内容，可能会使用额外的网络流量。",
     "showExtensions": "显示文件扩展名",
     "showExtensionsHint": "在文件浏览器中显示 .pdf、.docx 等扩展名。",
+    "directClientRequests": "客户端直连请求",
+    "directClientRequestsHint": "对你在此添加的连接，直接从浏览器发送存储请求，而不经过服务端。存储桶需要为所有操作配置 CORS。",
     "appDescription": "面向 S3、R2 及其他存储后端的开源文件浏览器。通过现代化的自托管 Web 界面浏览、预览、搜索和管理文件。",
     "version": "版本",
     "license": "许可证"

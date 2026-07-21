@@ -1,5 +1,6 @@
 import type { ConnectionRef } from "@/lib/storage/connection-ref"
 import { resolveFiles } from "@/lib/storage/connections-server"
+import { collectZipKeys } from "@/lib/storage/file-operations"
 
 export const dynamic = "force-dynamic"
 
@@ -32,10 +33,7 @@ export async function POST(request: Request) {
 
   let keys: string[]
   try {
-    keys = []
-    for await (const item of files.listAll({ prefix })) {
-      if (item.key !== prefix && !item.key.endsWith("/")) keys.push(item.key)
-    }
+    keys = await collectZipKeys(files, prefix)
   } catch (error) {
     return new Response(
       error instanceof Error ? error.message : "Could not list folder.",

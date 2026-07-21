@@ -14,12 +14,18 @@ type PersistedPreferencesState = {
   showImagePreviews: boolean
   showFileExtensions: boolean
   timeFormat: TimeFormat
+  /**
+   * Run storage operations for UI-added (local) connections directly in the
+   * browser via `files-sdk`, bypassing the server. Off by default.
+   */
+  directClientRequests: boolean
 }
 
 type PreferencesStore = PersistedPreferencesState & {
   setShowImagePreviews: (value: boolean) => void
   setShowFileExtensions: (value: boolean) => void
   setTimeFormat: (value: TimeFormat) => void
+  setDirectClientRequests: (value: boolean) => void
 }
 
 export const usePreferencesStore = create<PreferencesStore>()(
@@ -28,9 +34,11 @@ export const usePreferencesStore = create<PreferencesStore>()(
       showImagePreviews: true,
       showFileExtensions: true,
       timeFormat: "12h",
+      directClientRequests: false,
       setShowImagePreviews: (value) => set({ showImagePreviews: value }),
       setShowFileExtensions: (value) => set({ showFileExtensions: value }),
       setTimeFormat: (value) => set({ timeFormat: value }),
+      setDirectClientRequests: (value) => set({ directClientRequests: value }),
     }),
     {
       name: STORE_NAME,
@@ -41,6 +49,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
         showImagePreviews: state.showImagePreviews,
         showFileExtensions: state.showFileExtensions,
         timeFormat: state.timeFormat,
+        directClientRequests: state.directClientRequests,
       }),
     }
   )

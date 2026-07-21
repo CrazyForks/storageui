@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect } from "react"
-import { useTheme } from "next-themes"
 
 import { withUiBasePath } from "@/lib/config/base-path"
 
@@ -26,13 +25,16 @@ function updateThemeFavicon(theme: "light" | "dark") {
 }
 
 export function ThemeFavicon() {
-  const { resolvedTheme } = useTheme()
-
   useEffect(() => {
-    if (resolvedTheme !== "light" && resolvedTheme !== "dark") return
+    const media = window.matchMedia("(prefers-color-scheme: dark)")
 
-    updateThemeFavicon(resolvedTheme)
-  }, [resolvedTheme])
+    const apply = () => updateThemeFavicon(media.matches ? "dark" : "light")
+
+    apply()
+    media.addEventListener("change", apply)
+
+    return () => media.removeEventListener("change", apply)
+  }, [])
 
   return null
 }

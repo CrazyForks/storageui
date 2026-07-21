@@ -55,6 +55,8 @@ export function DocumentViewerThumbnailSidebar({
   const shouldAnimateSidebar = transitionsReady && open
 
   React.useEffect(() => {
+    if (transitionsReady || !open) return
+
     let secondFrameId = 0
     const firstFrameId = window.requestAnimationFrame(() => {
       secondFrameId = window.requestAnimationFrame(() => {
@@ -66,7 +68,7 @@ export function DocumentViewerThumbnailSidebar({
       window.cancelAnimationFrame(firstFrameId)
       window.cancelAnimationFrame(secondFrameId)
     }
-  }, [])
+  }, [open, transitionsReady])
 
   return (
     <aside

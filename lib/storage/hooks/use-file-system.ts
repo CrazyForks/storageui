@@ -7,6 +7,9 @@ import {
   type ConnectionRef,
 } from "@/lib/storage/connection-ref"
 import type { Connection } from "@/lib/storage/connections"
+import * as clientFileOps from "@/lib/storage/file-operations"
+import type { EntryRef, SignedUpload } from "@/lib/storage/files-client"
+import { usePreferencesStore } from "@/lib/store/preferences-store"
 import type {
   FileSystemFileItem,
   FileSystemItem,
@@ -20,8 +23,6 @@ import {
   renameEntryAction,
   signFileUrlAction,
   signUploadUrlAction,
-  type EntryRef,
-  type SignedUpload,
 } from "@/app/actions/files"
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? ""
@@ -129,7 +130,112 @@ function uploadToSignedUrl(
   })
 }
 
-/** Adapts a connection's server-side `files-sdk` client to the FileSystem props. */
+/**
+ * The transport for a connection's storage operations. Two implementations back
+ * it: server actions (the default), and direct in-browser `files-sdk` calls for
+ * local connections when the user enables direct client requests.
+ */
+type FileOps = {
+  listFolder: (
+    prefix: string,
+    cursor: string | null
+  ) => Promise<FileSystemLoadChildrenResult>
+  signFileUrl: (key: string) => Promise<string>
+  signUploadUrl: (key: string, contentType?: string) => Promise<SignedUpload>
+  createFolder: (path: string) => Promise<void>
+  deleteEntry: (item: FileSystemItem) => Promise<void>
+  renameEntry: (item: FileSystemItem, name: string) => Promise<void>
+  moveEntry: (item: FileSystemItem, destinationFolder: string) => Promise<void>
+  downloadFolder: (item: FileSystemItem) => Promise<void>
+}
+
+/** Route operations through the Next.js server actions (the default). */
+function serverOps(ref: ConnectionRef): FileOps {
+  return {
+    listFolder: (prefix, cursor) => listFolderAction(ref, prefix, cursor),
+    signFileUrl: (key) => signFileUrlAction(ref, key),
+    signUploadUrl: (key, contentType) =>
+      signUploadUrlAction(ref, key, contentType),
+    createFolder: (path) => createFolderAction(ref, path),
+    deleteEntry: (item) => deleteEntryAction(ref, toEntryRef(item)),
+    renameEntry: (item, name) => renameEntryAction(ref, toEntryRef(item), name),
+    moveEntry: (item, destinationFolder) =>
+      moveEntryAction(ref, toEntryRef(item), destinationFolder),
+    downloadFolder: async (item) => {
+      const response = await fetch(`${BASE_PATH}/api/zip`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref, path: item.path }),
+      })
+      if (!response.ok) {
+        throw new Error((await response.text()) || "Could not download folder.")
+      }
+
+      const blob = await response.blob()
+      const folderName =
+        item.name ?? item.path.replace(/\/$/, "").split("/").pop() ?? "folder"
+      saveDownload(URL.createObjectURL(blob), `${folderName}.zip`, true)
+    },
+  }
+}
+
+/**
+ * Route operations directly from the browser. Lazily imports the client-side
+ * `files-sdk` builder so the AWS SDK stays out of the default bundle, then runs
+ * the shared operations against a `FilesClient` built once for this connection.
+ */
+async function makeClientOps(connection: Connection): Promise<FileOps> {
+  const { buildFilesForConnectionClient } =
+    await import("@/lib/storage/connections-client")
+  const files = buildFilesForConnectionClient(connection)
+
+  const assertWritable = () => {
+    if (connection.readOnly) throw new Error("This bucket is read-only.")
+  }
+
+  return {
+    listFolder: (prefix, cursor) =>
+      clientFileOps.listFolder(files, prefix, cursor),
+    signFileUrl: (key) => clientFileOps.signFileUrl(files, key),
+    signUploadUrl: async (key, contentType) => {
+      assertWritable()
+      return clientFileOps.signUploadUrl(files, key, contentType)
+    },
+    createFolder: async (path) => {
+      assertWritable()
+      return clientFileOps.createFolder(files, path)
+    },
+    deleteEntry: async (item) => {
+      assertWritable()
+      return clientFileOps.deleteEntry(files, toEntryRef(item))
+    },
+    renameEntry: async (item, name) => {
+      assertWritable()
+      return clientFileOps.renameEntry(files, toEntryRef(item), name)
+    },
+    moveEntry: async (item, destinationFolder) => {
+      assertWritable()
+      return clientFileOps.moveEntry(files, toEntryRef(item), destinationFolder)
+    },
+    downloadFolder: async (item) => {
+      const prefix = item.path.endsWith("/") ? item.path : `${item.path}/`
+      const keys = await clientFileOps.collectZipKeys(files, prefix)
+      if (keys.length === 0) {
+        throw new Error("This folder has no files to download.")
+      }
+
+      const stream = files.zip(keys, {
+        name: (key: string) => key.slice(prefix.length),
+      })
+      const blob = await new Response(stream).blob()
+      const folderName =
+        item.name ?? item.path.replace(/\/$/, "").split("/").pop() ?? "folder"
+      saveDownload(URL.createObjectURL(blob), `${folderName}.zip`, true)
+    },
+  }
+}
+
+/** Adapts a connection's `files-sdk` client (server or direct) to FileSystem props. */
 export function useS3FileSystem(connection: Connection | null): S3FileSystem {
   const [items, setItems] = React.useState<FileSystemItem[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
@@ -137,12 +243,26 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     React.useState<Connection | null>(null)
   const [error, setError] = React.useState<string | null>(null)
 
+  const directClientRequests = usePreferencesStore(
+    (state) => state.directClientRequests
+  )
+  // Only local connections can run in the browser — env credentials are blanked
+  // client-side, so those always go through the server.
+  const direct = directClientRequests && connection?.source === "local"
+
   const ref = React.useMemo<ConnectionRef | null>(
     () => (connection ? toConnectionRef(connection) : null),
     [connection]
   )
 
-  // Load the bucket root whenever the active connection changes.
+  // Resolve the transport once per (connection, direct) pair. In direct mode the
+  // client `FilesClient` is built a single time behind this memoized promise.
+  const opsPromise = React.useMemo<Promise<FileOps | null>>(() => {
+    if (!ref || !connection) return Promise.resolve(null)
+    return direct ? makeClientOps(connection) : Promise.resolve(serverOps(ref))
+  }, [ref, connection, direct])
+
+  // Load the bucket root whenever the active connection or transport changes.
   React.useEffect(() => {
     if (!ref) {
       setItems([])
@@ -155,9 +275,10 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     setIsLoading(true)
     setError(null)
 
-    listFolderAction(ref, "", null)
+    opsPromise
+      .then((ops) => (ops ? ops.listFolder("", null) : null))
       .then((result) => {
-        if (!cancelled) setItems(result.items)
+        if (!cancelled && result) setItems(result.items)
       })
       .catch((err) => {
         if (!cancelled) {
@@ -175,7 +296,7 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     return () => {
       cancelled = true
     }
-  }, [ref, connection])
+  }, [ref, connection, opsPromise])
 
   // Re-fetch the root listing on demand (after uploads/deletes). Runs silently
   // — it deliberately doesn't toggle `isLoading`, so re-listing after a
@@ -183,25 +304,30 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
   // state. The FileSystem's own `reloadToken` handles the visible folder.
   const refresh = React.useCallback(() => {
     if (!ref) return
-    listFolderAction(ref, "", null)
-      .then((result) => setItems(result.items))
+    opsPromise
+      .then((ops) => (ops ? ops.listFolder("", null) : null))
+      .then((result) => {
+        if (result) setItems(result.items)
+      })
       .catch((err) => setError(errorMessage(err)))
-  }, [ref])
+  }, [ref, opsPromise])
 
   const loadChildren = React.useCallback(
     async ({ path, cursor }: { path: string; cursor: string | null }) => {
-      if (!ref) return { items: [], nextCursor: null }
-      return listFolderAction(ref, path, cursor)
+      const ops = await opsPromise
+      if (!ops) return { items: [], nextCursor: null }
+      return ops.listFolder(path, cursor)
     },
-    [ref]
+    [opsPromise]
   )
 
   const getFileUrl = React.useCallback(
     async (file: FileSystemFileItem) => {
-      if (!ref) return ""
-      return signFileUrlAction(ref, file.key ?? file.path)
+      const ops = await opsPromise
+      if (!ops) return ""
+      return ops.signFileUrl(file.key ?? file.path)
     },
-    [ref]
+    [opsPromise]
   )
 
   const uploadFile = React.useCallback(
@@ -210,102 +336,90 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
       file: File,
       onProgress?: (progress: UploadProgress) => void
     ) => {
-      if (!ref) throw new Error("No active connection")
+      const ops = await opsPromise
+      if (!ops) throw new Error("No active connection")
       try {
-        const signed = await signUploadUrlAction(
-          ref,
-          key,
-          file.type || undefined
-        )
+        const signed = await ops.signUploadUrl(key, file.type || undefined)
         await uploadToSignedUrl(signed, file, onProgress)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [ref]
+    [opsPromise]
   )
 
   const createFolder = React.useCallback(
     async (path: string) => {
-      if (!ref) throw new Error("No active connection")
+      const ops = await opsPromise
+      if (!ops) throw new Error("No active connection")
       try {
-        await createFolderAction(ref, path)
+        await ops.createFolder(path)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [ref]
+    [opsPromise]
   )
 
   const downloadEntry = React.useCallback(
     async (item: FileSystemItem) => {
-      if (!ref) throw new Error("No active connection")
+      const ops = await opsPromise
+      if (!ops) throw new Error("No active connection")
 
       try {
         if (item.kind === "file") {
           const key = item.key ?? item.path
-          const url = await signFileUrlAction(ref, key)
+          const url = await ops.signFileUrl(key)
           const name = item.name ?? key.split("/").pop() ?? "download"
           saveDownload(url, name)
           return
         }
 
-        const response = await fetch(`${BASE_PATH}/api/zip`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ref, path: item.path }),
-        })
-        if (!response.ok) {
-          throw new Error(
-            (await response.text()) || "Could not download folder."
-          )
-        }
-
-        const blob = await response.blob()
-        const folderName =
-          item.name ?? item.path.replace(/\/$/, "").split("/").pop() ?? "folder"
-        saveDownload(URL.createObjectURL(blob), `${folderName}.zip`, true)
+        await ops.downloadFolder(item)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [ref]
+    [opsPromise]
   )
 
   const deleteEntry = React.useCallback(
     async (item: FileSystemItem) => {
-      if (!ref) throw new Error("No active connection")
+      const ops = await opsPromise
+      if (!ops) throw new Error("No active connection")
       try {
-        await deleteEntryAction(ref, toEntryRef(item))
+        await ops.deleteEntry(item)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [ref]
+    [opsPromise]
   )
 
   const renameEntry = React.useCallback(
     async (item: FileSystemItem, name: string) => {
-      if (!ref) throw new Error("No active connection")
+      const ops = await opsPromise
+      if (!ops) throw new Error("No active connection")
       try {
-        await renameEntryAction(ref, toEntryRef(item), name)
+        await ops.renameEntry(item, name)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [ref]
+    [opsPromise]
   )
 
   const moveEntry = React.useCallback(
     async (item: FileSystemItem, destinationFolder: string) => {
-      if (!ref) throw new Error("No active connection")
+      const ops = await opsPromise
+      if (!ops) throw new Error("No active connection")
       try {
-        await moveEntryAction(ref, toEntryRef(item), destinationFolder)
+        await ops.moveEntry(item, destinationFolder)
       } catch (err) {
         throw new Error(errorMessage(err))
       }
     },
-    [ref]
+    [opsPromise]
   )
 
   return {

@@ -75,6 +75,12 @@ export function SettingsDialog({
   )
   const timeFormat = usePreferencesStore((state) => state.timeFormat)
   const setTimeFormat = usePreferencesStore((state) => state.setTimeFormat)
+  const directClientRequests = usePreferencesStore(
+    (state) => state.directClientRequests
+  )
+  const setDirectClientRequests = usePreferencesStore(
+    (state) => state.setDirectClientRequests
+  )
 
   function changeLocale(next: Locale) {
     if (next === locale) return
@@ -236,6 +242,21 @@ export function SettingsDialog({
                     <Switch
                       checked={showFileExtensions}
                       onCheckedChange={setShowFileExtensions}
+                    />
+                  </label>
+
+                  <label className="flex cursor-pointer items-center justify-between gap-6 py-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {t("directClientRequests")}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {t("directClientRequestsHint")}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={directClientRequests}
+                      onCheckedChange={setDirectClientRequests}
                     />
                   </label>
                 </div>

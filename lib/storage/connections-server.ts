@@ -1,13 +1,13 @@
 import "server-only"
 
-import { createFiles as createFilesSdk, type Files } from "files-sdk"
+import { createFiles as createFilesSdk } from "files-sdk"
 import { alibaba } from "files-sdk/alibaba"
 import { backblazeB2 } from "files-sdk/backblaze-b2"
 import { minio } from "files-sdk/minio"
 import { r2 } from "files-sdk/r2"
 import { s3 } from "files-sdk/s3"
 import { tencent } from "files-sdk/tencent"
-import { zip, type ZipApi } from "files-sdk/zip"
+import { zip } from "files-sdk/zip"
 
 import type { ConnectionRef } from "@/lib/storage/connection-ref"
 import {
@@ -16,8 +16,9 @@ import {
   type Connection,
   type ConnectionProvider,
 } from "@/lib/storage/connections"
+import type { FilesClient } from "@/lib/storage/files-client"
 
-export type FilesClient = Files & ZipApi
+export type { FilesClient }
 
 /** Raw, provider-neutral env values for one bucket slot. */
 type RawEnvSlot = {
@@ -34,14 +35,14 @@ type RawEnvSlot = {
   readOnly?: string
 }
 
-// Highest `BUCKET_<N>_*` index scanned. These are server-only env vars (no
+// Highest `STORAGE_<N>_*` index scanned. These are server-only env vars (no
 // `NEXT_PUBLIC_` prefix), read at runtime — unlike client-inlined vars they can
 // be looked up by a computed key, so there's no need to spell out each slot.
 const MAX_ENV_BUCKETS = 50
 
-/** Read one numbered `BUCKET_<n>_*` slot. */
+/** Read one numbered `STORAGE_<n>_*` slot. */
 function numberedEnvSlot(n: number): RawEnvSlot {
-  const prefix = `BUCKET_${n}_`
+  const prefix = `STORAGE_${n}_`
   return {
     provider: process.env[`${prefix}PROVIDER`],
     name: process.env[`${prefix}NAME`],

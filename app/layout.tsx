@@ -105,11 +105,12 @@ export default async function RootLayout({
                 if (isDark) {
                   document.querySelector('meta[name="theme-color"]').setAttribute('content', '${META_THEME_COLORS.dark}')
                 }
+                const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
                 const favicon = document.querySelector('link[data-theme-favicon="true"]') || document.createElement('link')
                 favicon.setAttribute('rel', 'icon')
                 favicon.setAttribute('type', 'image/svg+xml')
                 favicon.setAttribute('data-theme-favicon', 'true')
-                favicon.setAttribute('href', isDark ? ${JSON.stringify(DARK_ICON_URL)} : ${JSON.stringify(LIGHT_ICON_URL)})
+                favicon.setAttribute('href', systemDark ? ${JSON.stringify(DARK_ICON_URL)} : ${JSON.stringify(LIGHT_ICON_URL)})
                 document.head.appendChild(favicon)
               } catch (_) {}
             `,
