@@ -12,8 +12,7 @@ import type { Connection } from "@/lib/storage/connections"
  *   bundle.
  */
 export type ConnectionRef =
-  | { source: "env"; id: string }
-  | { source: "local"; connection: Connection }
+  { source: "env"; id: string } | { source: "local"; connection: Connection }
 
 export function toConnectionRef(connection: Connection): ConnectionRef {
   return connection.source === "env"

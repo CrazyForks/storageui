@@ -51,11 +51,7 @@ export type FileSystemLoadChildrenResult = {
 }
 
 export type FileSystemSortKey =
-  | "createdAt"
-  | "kind"
-  | "name"
-  | "size"
-  | "updatedAt"
+  "createdAt" | "kind" | "name" | "size" | "updatedAt"
 
 export type FileSystemSortState = {
   direction: "asc" | "desc"

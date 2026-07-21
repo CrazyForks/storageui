@@ -145,8 +145,7 @@ export const useConnectionStore = create<ConnectionStore>()(
       }),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as
-          | Partial<PersistedConnectionState>
-          | undefined
+          Partial<PersistedConnectionState> | undefined
         return {
           ...currentState,
           connections: localConnections(
