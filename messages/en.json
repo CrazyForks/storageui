@@ -53,7 +53,7 @@
     "showExtensions": "Show filename extensions",
     "showExtensionsHint": "Display extensions like .pdf or .docx in the file browser.",
     "directClientRequests": "Direct client requests",
-    "directClientRequestsHint": "For connections you add here, send storage requests straight from your browser instead of through the server. The bucket must allow CORS for all operations.",
+    "directClientRequestsHint": "When on, connections you add in the app talk to storage directly from your browser instead of routing through this app's server. Requires the bucket to have CORS configured.",
     "appDescription": "Open-source file browser for S3, R2, and other storage backends. Browse, preview, search, and manage files in a modern, self-hosted web interface.",
     "version": "Version",
     "license": "License"
