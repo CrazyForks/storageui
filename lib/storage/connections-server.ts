@@ -141,6 +141,8 @@ export function listPublicEnvConnections(): Connection[] {
 }
 
 function buildFiles(connection: Connection): FilesClient {
+  const readonly = connection.readOnly
+
   if (connection.provider === "r2") {
     return createFilesSdk({
       adapter: r2({
@@ -150,6 +152,7 @@ function buildFiles(connection: Connection): FilesClient {
         secretAccessKey: connection.secretAccessKey,
         publicBaseUrl: connection.publicBaseUrl,
       }),
+      readonly,
       plugins: [zip()],
     })
   }
@@ -169,6 +172,7 @@ function buildFiles(connection: Connection): FilesClient {
         secretAccessKey: connection.secretAccessKey,
         publicBaseUrl: connection.publicBaseUrl,
       }),
+      readonly,
       plugins: [zip()],
     })
   }
@@ -188,6 +192,7 @@ function buildFiles(connection: Connection): FilesClient {
         secretAccessKey: connection.secretAccessKey,
         publicBaseUrl: connection.publicBaseUrl,
       }),
+      readonly,
       plugins: [zip()],
     })
   }
@@ -207,6 +212,7 @@ function buildFiles(connection: Connection): FilesClient {
         secretAccessKey: connection.secretAccessKey,
         publicBaseUrl: connection.publicBaseUrl,
       }),
+      readonly,
       plugins: [zip()],
     })
   }
@@ -226,6 +232,7 @@ function buildFiles(connection: Connection): FilesClient {
         secretAccessKey: connection.secretAccessKey,
         publicBaseUrl: connection.publicBaseUrl,
       }),
+      readonly,
       plugins: [zip()],
     })
   }
@@ -244,6 +251,7 @@ function buildFiles(connection: Connection): FilesClient {
       },
       publicBaseUrl: connection.publicBaseUrl || undefined,
     }),
+    readonly,
     plugins: [zip()],
   })
 }
