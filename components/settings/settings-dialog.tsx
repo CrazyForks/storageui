@@ -283,7 +283,7 @@ export function SettingsDialog({
                   </div>
                   <div className="flex items-center justify-between py-3">
                     <dt className="text-muted-foreground">{t("license")}</dt>
-                    <dd>AGPLv3</dd>
+                    <dd>Apache-2.0</dd>
                   </div>
                 </dl>
               </TabsPanel>

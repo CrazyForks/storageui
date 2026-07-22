@@ -41,4 +41,4 @@ preconfigure server-side buckets by filling the `STORAGE_1_*` variables in
 
 ## License
 
-AGPLv3
+[Apache-2.0](LICENSE.md)
