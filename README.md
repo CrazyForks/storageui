@@ -3,14 +3,17 @@
 # Storage UI
 
 <p align="start">
-  <a href="https://cloud.dify.ai">Website</a> ·
-  <a href="https://docs.dify.ai/getting-started/install-self-hosted">Self-hosting</a> ·
-  <a href="https://docs.dify.ai">Documentation</a> ·
+  <a href="https://storageui.dev">Website</a> ·
+  <a href="https://demo.storageui.dev">Demo</a> ·
+  <a href="https://storageui.dev/docs">Documentation</a>
 </p>
 
-A browser-based, Finder-style file explorer for AWS S3, Cloudflare R2, Alibaba
-Cloud OSS, Tencent Cloud COS, Backblaze B2, and other S3-compatible object
-storage. Built with Next.js and Extend UI.
+<p align="center">
+  <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
+  <a href="./docs/zh-CN/README.md"><img alt="简体中文文件" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
+</p>
+
+Open-source file browser for S3, R2, and other storage backends. Browse, preview, search, and manage files in a modern, self-hosted web interface.
 
 ## Features
 
@@ -35,9 +38,7 @@ cp .env.example .env.local
 bun run dev
 ```
 
-Open http://localhost:3000. You can add a storage connection from the UI, or
-preconfigure server-side buckets by filling the `STORAGE_1_*` variables in
-`.env.local`.
+Open `http://localhost:3000`. You can add a storage connection from the UI, or preconfigure server-side buckets by filling the `STORAGE_1_*` variables in `.env.local`.
 
 ## License
 
