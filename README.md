@@ -8,7 +8,7 @@
   <a href="https://storageui.dev/docs">Documentation</a>
 </p>
 
-<p align="center">
+<p align="start">
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
   <a href="./docs/zh-CN/README.md"><img alt="简体中文文件" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
 </p>
