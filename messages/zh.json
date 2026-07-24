@@ -1,7 +1,6 @@
 {
   "Metadata": {
-    "description": "类 Finder 的文件浏览器，支持 S3、R2、阿里云 OSS、腾讯云 COS、Backblaze B2 及兼容对象存储，内置文档预览。",
-    "indexDescription": "类 macOS Finder 的对象存储文件浏览器，内置 PDF、DOCX 和 XLSX 预览。"
+    "description": "一款面向 S3、R2 和其他存储后端的开源文件浏览器，提供现代化的自托管 Web 界面，让您轻松浏览、预览、搜索和管理文件。"
   },
   "Common": {
     "cancel": "取消",

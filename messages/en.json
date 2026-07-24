@@ -1,7 +1,6 @@
 {
   "Metadata": {
-    "description": "A Finder-style file browser for S3, R2, Alibaba OSS, Tencent COS, Backblaze B2, and compatible object stores, with built-in document preview.",
-    "indexDescription": "A macOS Finder-style file browser for flat object-store manifests, with built-in PDF, DOCX, and XLSX preview."
+    "description": "Open-source file browser for S3, R2, and other storage backends. Browse, preview, search, and manage files in a modern, self-hosted web interface."
   },
   "Common": {
     "cancel": "Cancel",

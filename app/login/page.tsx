@@ -33,7 +33,7 @@ export default async function LoginPage() {
         <LoginLocaleSwitcher />
         <span aria-hidden="true">·</span>
         <a
-          href={siteConfig.url}
+          href={siteConfig.websiteUrl}
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-1 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"

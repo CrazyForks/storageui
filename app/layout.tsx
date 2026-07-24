@@ -57,8 +57,8 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [
         {
           url: ogImageUrl,
-          width: 1200,
-          height: 630,
+          width: 1280,
+          height: 800,
           alt: siteConfig.name,
         },
       ],

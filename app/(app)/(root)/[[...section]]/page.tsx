@@ -1,16 +1,12 @@
 import { type Metadata } from "next"
-import { getTranslations } from "next-intl/server"
 
 import { siteConfig } from "@/lib/config/site"
 import { FileBrowser } from "@/components/storage/file-browser"
 import { SectionUrlSync } from "@/components/storage/section-url-sync"
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("Metadata")
-  return {
-    title: { absolute: siteConfig.name },
-    description: t("indexDescription"),
-  }
+// Only the title differs from the root layout; the description is inherited.
+export const metadata: Metadata = {
+  title: { absolute: siteConfig.name },
 }
 
 export default function IndexPage() {
