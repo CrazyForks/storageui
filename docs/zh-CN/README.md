@@ -1,4 +1,4 @@
-![storage ui cover](./public/readme/github-banner-zh-CN.png)
+![storage ui cover](/public/readme/github-banner-zh-CN.png)
 
 # Storage UI
 
