@@ -22,7 +22,6 @@ const LIGHT_ICON_URL = withUiBasePath("/icon.svg")
 const DARK_ICON_URL = withUiBasePath("/icon-dark.svg")
 const PNG_ICON_URL = withUiBasePath("/icon.png")
 
-/** Open Graph `locale` value per UI locale. */
 const OG_LOCALES: Record<string, string> = { en: "en_US", zh: "zh_CN" }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -57,8 +56,8 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [
         {
           url: ogImageUrl,
-          width: 1280,
-          height: 800,
+          width: 1200,
+          height: 630,
           alt: siteConfig.name,
         },
       ],
