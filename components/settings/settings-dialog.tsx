@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { localeNames, locales, type Locale } from "@/i18n/config"
+import { version } from "@/package.json"
 import { useLocale, useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs"
+import { AppIcon, ExternalLinkIcon } from "@/components/foundations/icons"
 import { Logo } from "@/components/foundations/logo"
 import { setLocale } from "@/app/actions/locale"
 
@@ -279,11 +281,39 @@ export function SettingsDialog({
                 <dl className="divide-y text-sm">
                   <div className="flex items-center justify-between py-3">
                     <dt className="text-muted-foreground">{t("version")}</dt>
-                    <dd>0.1.0</dd>
+                    <dd>{version}</dd>
                   </div>
                   <div className="flex items-center justify-between py-3">
                     <dt className="text-muted-foreground">{t("license")}</dt>
                     <dd>Apache-2.0</dd>
+                  </div>
+                  <div className="flex items-center justify-between py-3">
+                    <dt className="text-muted-foreground">{t("website")}</dt>
+                    <dd>
+                      <a
+                        href={siteConfig.websiteUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      >
+                        storageui.dev
+                        <AppIcon icon={ExternalLinkIcon} className="size-3.5" />
+                      </a>
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between py-3">
+                    <dt className="text-muted-foreground">{t("github")}</dt>
+                    <dd>
+                      <a
+                        href={siteConfig.githubUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      >
+                        hahahumble/storageui
+                        <AppIcon icon={ExternalLinkIcon} className="size-3.5" />
+                      </a>
+                    </dd>
                   </div>
                 </dl>
               </TabsPanel>
