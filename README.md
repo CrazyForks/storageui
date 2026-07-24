@@ -26,6 +26,23 @@ Open-source file browser for S3, R2, and other storage backends. Browse, preview
 
 ## Quick Start
 
+### Docker
+
+A prebuilt image is published on Docker Hub. Pull it, then run with your environment variables:
+
+```bash
+docker pull hahahumble/storageui
+
+docker run -d \
+  --name storage-ui \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  --env-file .env \
+  hahahumble/storageui
+```
+
+Create a `.env` file with the `STORAGE_1_*` variables (see [`.env.example`](.env.example)) before running.
+
 ### Deploy with Vercel
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/hahahumble/storageui)

@@ -18,13 +18,30 @@
 ## 功能特性
 
 - 图标、列表、分栏、画廊四种视图
-- 搜索、筛选、排序,以及文件夹懒加载
+- 搜索、筛选、排序，以及文件夹懒加载
 - PDF、DOCX、XLSX、图片、文本和代码预览
 - 多存储连接，数据本地持久化
-- 针对环境变量配置的连接,支持按桶的只读模式
+- 针对环境变量配置的连接，支持按桶的只读模式
 - 响应式布局与深色模式
 
 ## 快速开始
+
+### Docker
+
+已在 Docker Hub 发布预构建镜像。拉取后配合环境变量运行：
+
+```bash
+docker pull hahahumble/storageui
+
+docker run -d \
+  --name storage-ui \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  --env-file .env \
+  hahahumble/storageui
+```
+
+运行前创建一个 `.env` 文件并填写 `STORAGE_1_*` 变量（参考 `.env.example`）。
 
 ### 使用 Vercel 部署
 
