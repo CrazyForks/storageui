@@ -1,15 +1,16 @@
 import { type Metadata } from "next"
+import { getTranslations } from "next-intl/server"
 
 import { siteConfig } from "@/lib/config/site"
 import { FileBrowser } from "@/components/storage/file-browser"
 import { SectionUrlSync } from "@/components/storage/section-url-sync"
 
-const description =
-  "A macOS Finder-style file browser for flat object-store manifests, with built-in PDF, DOCX, and XLSX preview."
-
-export const metadata: Metadata = {
-  title: { absolute: siteConfig.name },
-  description,
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata")
+  return {
+    title: { absolute: siteConfig.name },
+    description: t("indexDescription"),
+  }
 }
 
 export default function IndexPage() {

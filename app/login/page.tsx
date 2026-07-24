@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
+import { getTranslations } from "next-intl/server"
 
 import {
   isAuthEnabled,
@@ -12,8 +13,9 @@ import { LoginForm } from "@/components/auth/login-form"
 import { LoginLocaleSwitcher } from "@/components/auth/login-locale-switcher"
 import { AppIcon, ExternalLinkIcon } from "@/components/foundations/icons"
 
-export const metadata: Metadata = {
-  title: "Sign in",
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Login")
+  return { title: t("signIn") }
 }
 
 export const dynamic = "force-dynamic"

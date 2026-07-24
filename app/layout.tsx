@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { NextIntlClientProvider } from "next-intl"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 
 import { withUiBasePath } from "@/lib/config/base-path"
@@ -22,67 +22,76 @@ const LIGHT_ICON_URL = withUiBasePath("/icon.svg")
 const DARK_ICON_URL = withUiBasePath("/icon-dark.svg")
 const PNG_ICON_URL = withUiBasePath("/icon.png")
 
-export const metadata: Metadata = {
-  title: {
-    default: siteConfig.name,
-    template: `%s - ${siteConfig.name}`,
-  },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? siteConfig.url),
-  description: siteConfig.description,
-  keywords: ["Next.js", "React", "Tailwind CSS", "Documents", "Components"],
-  authors: [
-    {
-      name: siteConfig.name,
-      url: siteConfig.url,
+/** Open Graph `locale` value per UI locale. */
+const OG_LOCALES: Record<string, string> = { en: "en_US", zh: "zh_CN" }
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata")
+  const locale = await getLocale()
+  const description = t("description")
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? siteConfig.url
+  const ogImageUrl = `${appUrl}/opengraph-image.png`
+
+  return {
+    title: {
+      default: siteConfig.name,
+      template: `%s - ${siteConfig.name}`,
     },
-  ],
-  creator: siteConfig.name,
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: process.env.NEXT_PUBLIC_APP_URL ?? siteConfig.url,
-    title: siteConfig.name,
-    description: siteConfig.description,
-    siteName: siteConfig.name,
-    images: [
+    metadataBase: new URL(appUrl),
+    description,
+    keywords: ["Next.js", "React", "Tailwind CSS", "Documents", "Components"],
+    authors: [
       {
-        url: `${process.env.NEXT_PUBLIC_APP_URL ?? siteConfig.url}/opengraph-image.png`,
-        width: 1200,
-        height: 630,
-        alt: siteConfig.name,
+        name: siteConfig.name,
+        url: siteConfig.url,
       },
     ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: siteConfig.name,
-    description: siteConfig.description,
-    images: [
-      `${process.env.NEXT_PUBLIC_APP_URL ?? siteConfig.url}/opengraph-image.png`,
-    ],
-  },
-  icons: {
-    icon: [
-      {
-        url: LIGHT_ICON_URL,
-        media: "(prefers-color-scheme: light)",
-        type: "image/svg+xml",
-      },
-      {
-        url: DARK_ICON_URL,
-        media: "(prefers-color-scheme: dark)",
-        type: "image/svg+xml",
-      },
-      {
-        url: PNG_ICON_URL,
-        sizes: "256x256",
-        type: "image/png",
-      },
-    ],
-    shortcut: PNG_ICON_URL,
-    apple: PNG_ICON_URL,
-  },
-  manifest: withUiBasePath("/site.webmanifest"),
+    creator: siteConfig.name,
+    openGraph: {
+      type: "website",
+      locale: OG_LOCALES[locale] ?? OG_LOCALES.en,
+      url: appUrl,
+      title: siteConfig.name,
+      description,
+      siteName: siteConfig.name,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: siteConfig.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: siteConfig.name,
+      description,
+      images: [ogImageUrl],
+    },
+    icons: {
+      icon: [
+        {
+          url: LIGHT_ICON_URL,
+          media: "(prefers-color-scheme: light)",
+          type: "image/svg+xml",
+        },
+        {
+          url: DARK_ICON_URL,
+          media: "(prefers-color-scheme: dark)",
+          type: "image/svg+xml",
+        },
+        {
+          url: PNG_ICON_URL,
+          sizes: "256x256",
+          type: "image/png",
+        },
+      ],
+      shortcut: PNG_ICON_URL,
+      apple: PNG_ICON_URL,
+    },
+    manifest: withUiBasePath("/site.webmanifest"),
+  }
 }
 
 export default async function RootLayout({
