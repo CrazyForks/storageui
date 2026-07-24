@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth/core"
 import { siteConfig } from "@/lib/config/site"
 import { LoginForm } from "@/components/auth/login-form"
+import { LoginLocaleSwitcher } from "@/components/auth/login-locale-switcher"
 import { AppIcon, ExternalLinkIcon } from "@/components/foundations/icons"
 
 export const metadata: Metadata = {
@@ -18,7 +19,6 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic"
 
 export default async function LoginPage() {
-  // With no credentials configured the gate is off, never show a login wall.
   if (!isAuthEnabled()) redirect("/")
 
   const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value
@@ -28,6 +28,8 @@ export default async function LoginPage() {
     <main className="relative flex min-h-svh items-center justify-center bg-background p-6 pb-16">
       <LoginForm />
       <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2 text-sm text-muted-foreground">
+        <LoginLocaleSwitcher />
+        <span aria-hidden="true">·</span>
         <a
           href={siteConfig.url}
           target="_blank"

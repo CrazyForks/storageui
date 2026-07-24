@@ -29,7 +29,8 @@
     "password": "Password",
     "usernamePlaceholder": "Enter your username",
     "passwordPlaceholder": "Enter your password",
-    "invalidCredentials": "Incorrect username or password."
+    "invalidCredentials": "Incorrect username or password.",
+    "language": "Language"
   },
   "Settings": {
     "title": "Settings",

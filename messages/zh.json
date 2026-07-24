@@ -29,7 +29,8 @@
     "password": "密码",
     "usernamePlaceholder": "请输入用户名",
     "passwordPlaceholder": "请输入密码",
-    "invalidCredentials": "用户名或密码错误。"
+    "invalidCredentials": "用户名或密码错误。",
+    "language": "语言"
   },
   "Settings": {
     "title": "设置",
