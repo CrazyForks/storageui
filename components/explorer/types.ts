@@ -78,6 +78,12 @@ export type FileSystemFilter = {
 
 export type FileSystemViewerKind = "docx" | "image" | "pdf" | "xlsx"
 
+/** Context a view can give `renderFilePreview` about the slot it will fill. */
+export type FileSystemPreviewOptions = {
+  /** Roughly how wide the preview renders, in CSS pixels. */
+  widthHint?: number
+}
+
 export type FileSystemProps = {
   items: FileSystemItem[]
   isLoading?: boolean
@@ -127,7 +133,10 @@ export type FileSystemProps = {
   loadChildren?: (
     args: FileSystemLoadChildrenArgs
   ) => Promise<FileSystemLoadChildrenResult>
-  renderFilePreview?: (file: FileSystemFileItem) => ReactNode
+  renderFilePreview?: (
+    file: FileSystemFileItem,
+    options?: FileSystemPreviewOptions
+  ) => ReactNode
   loadPreviewImageUrlAction?: (
     file: FileSystemFileItem,
     pageIndex: number
@@ -180,7 +189,10 @@ export type FileSystemViewProps = {
   pageUrlCache: Map<string, string>
   poolStagePath: (path: string) => void
   registerStageHost: (path: string, element: HTMLElement | null) => void
-  renderFilePreview?: (file: FileSystemFileItem) => ReactNode
+  renderFilePreview?: (
+    file: FileSystemFileItem,
+    options?: FileSystemPreviewOptions
+  ) => ReactNode
   searchQuery: string
   selectedEntry: FileSystemEntry | null
   selectedPath: string | null

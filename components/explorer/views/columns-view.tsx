@@ -259,6 +259,7 @@ export function FileSystemColumnsView(props: FileSystemViewProps) {
                   pageable
                   pageUrlCache={pageUrlCache}
                   previewAspectRatio={0.78}
+                  previewWidthHint={320}
                   renderFilePreview={renderFilePreview}
                 />
               </div>

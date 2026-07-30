@@ -10,6 +10,7 @@ import {
 import * as fileOps from "@/lib/storage/file-operations"
 import { normalizeError } from "@/lib/storage/file-operations"
 import type { EntryRef, SignedUpload } from "@/lib/storage/files-client"
+import { registerThumbnailConnection } from "@/lib/storage/thumbnails-server"
 import type { FileSystemLoadChildrenResult } from "@/components/explorer/types"
 
 /** The env connections, with credentials stripped, for the sidebar. */
@@ -41,6 +42,25 @@ export async function signFileUrlAction(
   key: string
 ): Promise<string> {
   return fileOps.signFileUrl(resolveFiles(ref), key)
+}
+
+/** Presigned GET URLs for a batch of keys, coalesced by the browser. */
+export async function signFileUrlsAction(
+  ref: ConnectionRef,
+  keys: string[]
+): Promise<Record<string, string>> {
+  return fileOps.signFileUrls(resolveFiles(ref), keys)
+}
+
+/**
+ * Register a bucket for server-rendered thumbnails. Called once per connection;
+ * the handle then addresses `/api/thumbnail` without putting bucket credentials
+ * in a URL.
+ */
+export async function registerThumbnailConnectionAction(
+  ref: ConnectionRef
+): Promise<string> {
+  return registerThumbnailConnection(ref)
 }
 
 /** Presigned direct-upload descriptor for a browser-to-storage transfer. */

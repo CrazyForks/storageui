@@ -117,6 +117,35 @@ export async function signFileUrl(
   }
 }
 
+/**
+ * Presigned GET URLs for many objects at once. Signing is local crypto, so the
+ * win is purely in collapsing N client round trips into one. A key that fails
+ * is omitted rather than failing the batch.
+ */
+export async function signFileUrls(
+  files: FilesClient,
+  keys: string[]
+): Promise<Record<string, string>> {
+  const signed = await Promise.all(
+    keys.map(async (key) => {
+      try {
+        return [
+          key,
+          await files.url(key, { expiresIn: URL_EXPIRES_IN }),
+        ] as const
+      } catch {
+        return [key, null] as const
+      }
+    })
+  )
+
+  const urls: Record<string, string> = {}
+  for (const [key, url] of signed) {
+    if (url) urls[key] = url
+  }
+  return urls
+}
+
 /** Presigned direct-upload descriptor for a browser-to-storage transfer. */
 export async function signUploadUrl(
   files: FilesClient,

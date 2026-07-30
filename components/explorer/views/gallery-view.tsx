@@ -72,7 +72,7 @@ export function FileSystemGalleryStage({
     pageIndex: number
   ) => Promise<string | null>
   pageUrlCache?: Map<string, string>
-  renderFilePreview?: (file: FileSystemFileItem) => React.ReactNode
+  renderFilePreview?: FileSystemViewProps["renderFilePreview"]
   /** Rendered in the viewer toolbar in the `"dialog"` variant. */
   toolbarActions?: React.ReactNode
   urlCache: Map<string, string>

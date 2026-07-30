@@ -18,6 +18,7 @@ import type {
   FileSystemFilterType,
   FileSystemIndex,
   FileSystemItem,
+  FileSystemPreviewOptions,
   FileSystemSortKey,
   FileSystemSortState,
   FileSystemViewerKind,
@@ -1029,6 +1030,7 @@ export function FileVisual({
   pageUrlCache,
   previewAspectRatio,
   previewClassName,
+  previewWidthHint,
   renderFilePreview,
 }: {
   file: FileEntry
@@ -1046,7 +1048,12 @@ export function FileVisual({
   pageUrlCache?: Map<string, string>
   previewAspectRatio?: number
   previewClassName?: string
-  renderFilePreview?: (file: FileSystemFileItem) => React.ReactNode
+  /** Approximate rendered width in CSS px, forwarded to `renderFilePreview`. */
+  previewWidthHint?: number
+  renderFilePreview?: (
+    file: FileSystemFileItem,
+    options?: FileSystemPreviewOptions
+  ) => React.ReactNode
 }) {
   const t = useTranslations("Upload")
   const previewUrls = filePreviewUrls(file)
@@ -1113,7 +1120,9 @@ export function FileVisual({
   ])
 
   const customPreview =
-    !previewUrl && !isLazyPagePending ? renderFilePreview?.(file) : null
+    !previewUrl && !isLazyPagePending
+      ? renderFilePreview?.(file, { widthHint: previewWidthHint })
+      : null
   const showPager = pageable && totalPages > 1
   const thumbnail = (
     <FileThumbnail
