@@ -367,6 +367,7 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
                       file={entry}
                       className="w-9 rounded-sm"
                       previewAspectRatio={0.78}
+                      previewWidthHint={36}
                       renderFilePreview={renderFilePreview}
                     />
                   )}
@@ -427,6 +428,9 @@ export function FileSystemGalleryView(props: FileSystemViewProps) {
                       : "w-9"
                   )}
                   previewAspectRatio={0.78}
+                  previewWidthHint={
+                    (activeFile.previewAspectRatio ?? 0.78) > 1.2 ? 64 : 36
+                  }
                   renderFilePreview={renderFilePreview}
                 />
               ) : (

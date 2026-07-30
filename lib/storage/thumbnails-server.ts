@@ -45,53 +45,93 @@ export type Thumbnail = {
   etag: string
 }
 
-// ─── Connection handles ──────────────────────────────────────────────────────
-
-const handles = new LRUCache<string, ConnectionRef>({
-  max: 64,
-  ttl: HANDLE_TTL_MS,
-  updateAgeOnGet: true,
-})
+// ─── Shared state ────────────────────────────────────────────────────────────
 
 /**
- * Derived rather than random, so re-registering after a restart mints the same
- * handle and every URL already in the browser's cache keeps working. For a
- * `local` ref the digest covers the secret key, so it cannot be guessed; for an
- * `env` ref it covers only an id the signed-in user can read off the sidebar.
+ * Next bundles a route handler and a server action into disjoint chunks — the
+ * route loads `chunks/*`, the action `chunks/ssr/*` — so each gets its own
+ * instance of this module and, with it, its own module-level state. Anything
+ * one side writes and the other reads has to hang off `globalThis` instead.
+ */
+function shared<T>(key: string, create: () => T): T {
+  const store = globalThis as unknown as Record<string, T | undefined>
+  return (store[key] ??= create())
+}
+
+// ─── Connection handles ──────────────────────────────────────────────────────
+
+const handles = shared(
+  "__storageui_thumbnail_handles",
+  () =>
+    new LRUCache<string, ConnectionRef>({
+      max: 64,
+      ttl: HANDLE_TTL_MS,
+      updateAgeOnGet: true,
+    })
+)
+
+const ENV_HANDLE_PREFIX = "e_"
+const LOCAL_HANDLE_PREFIX = "l_"
+
+/**
+ * An `env` handle carries the connection id outright and needs no registry: the
+ * credentials live in server env vars either way, and the id is one the
+ * signed-in user can already read off the sidebar. That keeps the common case
+ * working across restarts and across the bundle split above.
+ *
+ * A `local` ref has no server-side identity, so it stays a digest resolved
+ * through the registry. Derived rather than random so re-registering mints the
+ * same handle and URLs already in the browser's cache keep working; the digest
+ * covers the secret key, so it cannot be guessed.
  */
 function handleFor(ref: ConnectionRef): string {
-  const material =
-    ref.source === "env"
-      ? `env:${ref.id}`
-      : `local:${JSON.stringify(ref.connection)}`
-  return createHash("sha256").update(material).digest("hex").slice(0, 32)
+  if (ref.source === "env") return `${ENV_HANDLE_PREFIX}${ref.id}`
+
+  const digest = createHash("sha256")
+    .update(`local:${JSON.stringify(ref.connection)}`)
+    .digest("hex")
+    .slice(0, 32)
+  return `${LOCAL_HANDLE_PREFIX}${digest}`
 }
 
 export function registerThumbnailConnection(ref: ConnectionRef): string {
   const handle = handleFor(ref)
-  handles.set(handle, ref)
+  if (ref.source !== "env") handles.set(handle, ref)
   return handle
 }
 
 export function resolveThumbnailConnection(
   handle: string
 ): ConnectionRef | null {
+  if (handle.startsWith(ENV_HANDLE_PREFIX)) {
+    const id = handle.slice(ENV_HANDLE_PREFIX.length)
+    // `resolveFiles` rejects an id with no matching env slot.
+    return id ? { source: "env", id } : null
+  }
   return handles.get(handle) ?? null
 }
 
 // ─── Cache ───────────────────────────────────────────────────────────────────
 
-const thumbnails = new LRUCache<string, Thumbnail>({
-  maxSize: MAX_CACHE_BYTES,
-  sizeCalculation: (value) => value.body.byteLength + value.etag.length + 64,
-  ttl: CACHE_TTL_MS,
-})
+const thumbnails = shared(
+  "__storageui_thumbnail_cache",
+  () =>
+    new LRUCache<string, Thumbnail>({
+      maxSize: MAX_CACHE_BYTES,
+      sizeCalculation: (value) =>
+        value.body.byteLength + value.etag.length + 64,
+      ttl: CACHE_TTL_MS,
+    })
+)
 
 /**
  * Without this, a viewport of tiles missing at once would fetch and decode the
  * same object several times over.
  */
-const inFlight = new Map<string, Promise<Thumbnail>>()
+const inFlight = shared(
+  "__storageui_thumbnail_inflight",
+  () => new Map<string, Promise<Thumbnail>>()
+)
 
 function cacheKey(handle: string, key: string, width: number): string {
   return `${handle} ${key} ${width}`

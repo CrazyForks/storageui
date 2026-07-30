@@ -252,6 +252,7 @@ function TileGlyph({
             (entry.previewAspectRatio ?? 0.78) > 1.2 ? "w-19" : "w-12"
           )}
           previewAspectRatio={0.78}
+          previewWidthHint={(entry.previewAspectRatio ?? 0.78) > 1.2 ? 76 : 48}
           renderFilePreview={renderFilePreview}
         />
       )}
