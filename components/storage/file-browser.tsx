@@ -140,8 +140,6 @@ export function FileBrowser() {
     moveEntry,
     refresh,
     thumbnailHandle,
-    refreshThumbnailHandle,
-    thumbnailWarmer,
     isLoading,
     error,
   } = useS3FileSystem(activeConnection)
@@ -158,8 +156,6 @@ export function FileBrowser() {
           urlCache={imagePreviewUrlCache}
           thumbnailHandle={thumbnailHandle}
           widthHint={options?.widthHint}
-          thumbnailWarmer={thumbnailWarmer}
-          onThumbnailUnavailable={refreshThumbnailHandle}
         />
       )
     },
@@ -167,10 +163,8 @@ export function FileBrowser() {
       activeConnection?.id,
       getFileUrl,
       imagePreviewUrlCache,
-      refreshThumbnailHandle,
       showImagePreviews,
       thumbnailHandle,
-      thumbnailWarmer,
     ]
   )
   const [opened, setOpened] = React.useState<{

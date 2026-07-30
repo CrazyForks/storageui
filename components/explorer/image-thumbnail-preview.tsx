@@ -2,7 +2,6 @@
 
 import * as React from "react"
 
-import type { ThumbnailWarmer } from "@/lib/storage/thumbnail-warmer"
 import {
   DEFAULT_THUMBNAIL_WIDTH,
   thumbnailUrl,
@@ -16,19 +15,12 @@ type ImageThumbnailPreviewProps = {
   file: FileSystemFileItem
   getFileUrl: (file: FileSystemFileItem) => string | Promise<string>
   urlCache: Map<string, string>
-  /** Bucket handle for `/api/thumbnail`; `null` falls back to the original. */
+  /** `null` falls back to the presigned original. */
   thumbnailHandle?: string | null
-  /** Roughly how wide this preview renders, in CSS px. */
+  /** Rendered width in CSS px. */
   widthHint?: number
-  thumbnailWarmer?: ThumbnailWarmer | null
-  onThumbnailUnavailable?: () => void
 }
 
-/**
- * Prefers a server-rendered thumbnail, whose URL is derived synchronously — the
- * tile issues no presign at all. Falls back to the presigned original when no
- * handle is available (direct-client mode, or the route failed).
- */
 export function ImageThumbnailPreview({
   cacheKey,
   file,
@@ -36,8 +28,6 @@ export function ImageThumbnailPreview({
   urlCache,
   thumbnailHandle,
   widthHint,
-  thumbnailWarmer,
-  onThumbnailUnavailable,
 }: ImageThumbnailPreviewProps) {
   const [thumbnailFailed, setThumbnailFailed] = React.useState(false)
 
@@ -48,18 +38,12 @@ export function ImageThumbnailPreview({
 
   const serverThumbnail =
     thumbnailHandle && !thumbnailFailed
-      ? thumbnailUrl(thumbnailHandle, objectKey, width)
+      ? thumbnailUrl(thumbnailHandle, objectKey, width, file.etag)
       : null
 
   React.useEffect(() => {
     setThumbnailFailed(false)
   }, [thumbnailHandle])
-
-  // Runs on mount, so the whole viewport's keys land in one warm request while
-  // the browser is still working through its handful of connections.
-  React.useEffect(() => {
-    if (serverThumbnail) thumbnailWarmer?.warm(objectKey, width)
-  }, [objectKey, serverThumbnail, thumbnailWarmer, width])
 
   if (serverThumbnail) {
     return (
@@ -70,12 +54,7 @@ export function ImageThumbnailPreview({
         loading="lazy"
         decoding="async"
         className="size-full object-cover"
-        onError={() => {
-          // Usually an unknown handle after a restart: ask for a fresh one, and
-          // drop this tile to the original in the meantime.
-          onThumbnailUnavailable?.()
-          setThumbnailFailed(true)
-        }}
+        onError={() => setThumbnailFailed(true)}
       />
     )
   }
@@ -90,7 +69,17 @@ export function ImageThumbnailPreview({
   )
 }
 
-/** Resolves a presigned object URL only while the tile is actually mounted. */
+function FileGlyph({ file }: { file: FileSystemFileItem }) {
+  return (
+    <div className="flex size-full items-center justify-center bg-white dark:bg-neutral-100">
+      <FileTypeIcon
+        fileName={file.name ?? file.path}
+        className="size-1/3 min-h-4 min-w-4"
+      />
+    </div>
+  )
+}
+
 function OriginalImagePreview({
   cacheKey,
   file,
@@ -112,9 +101,8 @@ function OriginalImagePreview({
   const filePath = file.path
   const fileUrl = file.url ?? null
 
-  // Keyed by path, not object identity: the manifest re-creates file objects on
-  // every refresh, and re-running on identity would abandon an in-flight
-  // presign and immediately issue a duplicate.
+  // Keyed by path, not object identity: the manifest re-creates file objects,
+  // and re-running on identity would duplicate an in-flight presign.
   React.useEffect(() => {
     const cachedUrl = fileUrl ?? urlCache.get(cacheKey) ?? null
     if (cachedUrl) {
@@ -130,7 +118,6 @@ function OriginalImagePreview({
     void Promise.resolve(getFileUrl(fileRef.current))
       .then((nextUrl) => {
         if (!nextUrl) throw new Error("No preview URL")
-        // Cached even when stale, so an abandoned resolve still pays off.
         urlCache.set(cacheKey, nextUrl)
         if (isCurrent) setUrl(nextUrl)
       })
@@ -169,12 +156,5 @@ function OriginalImagePreview({
     )
   }
 
-  return (
-    <div className="flex size-full items-center justify-center bg-white dark:bg-neutral-100">
-      <FileTypeIcon
-        fileName={file.name ?? file.path}
-        className="size-1/3 min-h-4 min-w-4"
-      />
-    </div>
-  )
+  return <FileGlyph file={file} />
 }

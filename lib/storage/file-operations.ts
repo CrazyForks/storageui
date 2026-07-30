@@ -117,11 +117,7 @@ export async function signFileUrl(
   }
 }
 
-/**
- * Presigned GET URLs for many objects at once. Signing is local crypto, so the
- * win is purely in collapsing N client round trips into one. A key that fails
- * is omitted rather than failing the batch.
- */
+/** Batched presign. A key that fails is omitted rather than failing the batch. */
 export async function signFileUrls(
   files: FilesClient,
   keys: string[]

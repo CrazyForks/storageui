@@ -9,10 +9,7 @@ import {
 import type { Connection } from "@/lib/storage/connections"
 import * as clientFileOps from "@/lib/storage/file-operations"
 import type { EntryRef, SignedUpload } from "@/lib/storage/files-client"
-import {
-  createThumbnailWarmer,
-  type ThumbnailWarmer,
-} from "@/lib/storage/thumbnail-warmer"
+import { thumbnailHandleFor } from "@/lib/storage/thumbnails"
 import { createUrlBatcher } from "@/lib/storage/url-batcher"
 import { usePreferencesStore } from "@/lib/store/preferences-store"
 import type {
@@ -25,7 +22,6 @@ import {
   deleteEntryAction,
   listFolderAction,
   moveEntryAction,
-  registerThumbnailConnectionAction,
   renameEntryAction,
   signFileUrlAction,
   signFileUrlsAction,
@@ -74,16 +70,8 @@ export type S3FileSystem = {
   moveEntry: (item: FileSystemItem, destinationFolder: string) => Promise<void>
   /** Re-fetch the bucket root listing (e.g. after an upload). */
   refresh: () => void
-  /**
-   * Opaque id addressing this bucket at `/api/thumbnail`, or `null` when
-   * server-rendered thumbnails are unavailable (direct mode, or registration
-   * failed) and previews should fall back to presigned originals.
-   */
+  /** `null` when the route cannot serve this bucket; see `thumbnailHandleFor`. */
   thumbnailHandle: string | null
-  /** Re-register the bucket after the server rejects the current handle. */
-  refreshThumbnailHandle: () => void
-  /** Starts a batch of renders ahead of the per-tile `<img>` requests. */
-  thumbnailWarmer: ThumbnailWarmer | null
   isLoading: boolean
   error: string | null
 }
@@ -158,7 +146,6 @@ type FileOps = {
     cursor: string | null
   ) => Promise<FileSystemLoadChildrenResult>
   signFileUrl: (key: string) => Promise<string>
-  /** Batched form of `signFileUrl`; unsignable keys are omitted from the map. */
   signFileUrls: (keys: string[]) => Promise<Record<string, string>>
   signUploadUrl: (key: string, contentType?: string) => Promise<SignedUpload>
   createFolder: (path: string) => Promise<void>
@@ -342,8 +329,6 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     [opsPromise]
   )
 
-  // One batcher per transport, so a screenful of tiles costs a single round
-  // trip instead of one per tile.
   const urlBatcher = React.useMemo(
     () =>
       createUrlBatcher(async (keys) => {
@@ -359,49 +344,10 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     [urlBatcher]
   )
 
-  // Direct mode is excluded on purpose: the user asked for their credentials to
-  // stay in the browser, so those buckets keep using presigned originals.
-  const [thumbnailHandle, setThumbnailHandle] = React.useState<string | null>(
-    null
+  const thumbnailHandle = React.useMemo(
+    () => thumbnailHandleFor(connection),
+    [connection]
   )
-  const [thumbnailAttempt, setThumbnailAttempt] = React.useState(0)
-  const lastThumbnailRetryRef = React.useRef(0)
-
-  React.useEffect(() => {
-    if (!ref || direct) {
-      setThumbnailHandle(null)
-      return
-    }
-
-    let cancelled = false
-
-    registerThumbnailConnectionAction(ref)
-      .then((handle) => {
-        if (!cancelled) setThumbnailHandle(handle)
-      })
-      .catch(() => {
-        // An optimization only — previews fall back to presigned originals.
-        if (!cancelled) setThumbnailHandle(null)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [ref, direct, thumbnailAttempt])
-
-  const thumbnailWarmer = React.useMemo(
-    () => (thumbnailHandle ? createThumbnailWarmer(thumbnailHandle) : null),
-    [thumbnailHandle]
-  )
-
-  // Throttled: a viewport of broken tiles would otherwise each ask for the
-  // same repair.
-  const refreshThumbnailHandle = React.useCallback(() => {
-    const now = Date.now()
-    if (now - lastThumbnailRetryRef.current < 10_000) return
-    lastThumbnailRetryRef.current = now
-    setThumbnailAttempt((attempt) => attempt + 1)
-  }, [])
 
   const uploadFile = React.useCallback(
     async (
@@ -507,8 +453,6 @@ export function useS3FileSystem(connection: Connection | null): S3FileSystem {
     moveEntry,
     refresh,
     thumbnailHandle,
-    refreshThumbnailHandle,
-    thumbnailWarmer,
     isLoading: Boolean(
       connection && (isLoading || loadedConnection !== connection)
     ),

@@ -1,21 +1,17 @@
 /**
- * Collapses the burst of presign requests a viewport produces into one call.
- *
- * A grid fires one `getFileUrl` per tile in the same commit, and the default
- * transport is a server action — which the router dispatches through a queue,
- * making those sequential round trips. Buffering for a few milliseconds turns a
- * screenful into a single request. Keys already queued or in flight are shared,
- * so a tile that remounts mid-scroll never signs twice.
+ * Collapses the presign burst a viewport produces into one call: a grid fires one
+ * `getFileUrl` per tile in the same commit, and server actions are dispatched
+ * through a queue, making those sequential round trips.
  */
 
 export type UrlBatcher = {
-  /** Presigned URL for one key. Resolves to `""` when it could not be signed. */
+  /** Resolves to `""` when the key could not be signed. */
   get: (key: string) => Promise<string>
 }
 
 export type UrlBatcherOptions = {
   windowMs?: number
-  /** Upper bound on one request's payload; overflow goes to the next batch. */
+  /** Overflow goes to the next batch. */
   maxBatchSize?: number
 }
 
